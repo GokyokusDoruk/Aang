@@ -30,7 +30,8 @@ import type { Combatant } from './combat/Combatant';
 const app = document.getElementById('app')!;
 const params = new URLSearchParams(location.search);
 const isTouch = params.has('touch') || window.matchMedia('(pointer: coarse)').matches;
-const showDebug = params.has('debug') || (!isTouch && !params.has('nodebug'));
+// FPS / durum paneli yalnızca geliştirme için: adrese ?debug eklenince görünür
+const showDebug = params.has('debug');
 document.body.classList.toggle('is-touch', isTouch);
 
 // --- Mantık
