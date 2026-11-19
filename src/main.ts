@@ -2,89 +2,53 @@ import './style.css';
 import * as THREE from 'three';
 import { GameConfig } from './config/gameConfig';
 import { DefaultArena } from './config/arenaLayout';
-import { CollisionWorld } from './physics/CollisionWorld';
-import { PlayerController } from './game/PlayerController';
-import { ThirdPersonCamera } from './game/ThirdPersonCamera';
-import { PlayerCaster } from './game/PlayerCaster';
+import { GameSession, type Difficulty, type GameMode } from './game/GameSession';
 import { InputManager } from './input/InputManager';
-import type { Action, StepInput } from './input/InputActions';
+import type { Action } from './input/InputActions';
 import { GameRenderer } from './render/GameRenderer';
 import { buildArenaView } from './render/ArenaView';
 import { PlayerView } from './render/PlayerView';
 import { EffectsView } from './render/EffectsView';
-import { Hud } from './ui/Hud';
-import { AbilityBar } from './ui/AbilityBar';
-import { EventBus } from './core/EventBus';
-import { lerpAngle } from './core/math';
-import { AbilitySystem, type AbilityIntent } from './abilities/AbilitySystem';
-import { createDefaultRegistry } from './abilities/AbilityRegistry';
-import { ELEMENTS, ELEMENT_ORDER, type ElementId } from './abilities/elements';
-import type { GameEvents } from './abilities/types';
-import { Combatant } from './combat/Combatant';
-import { ProjectileSystem } from './combat/ProjectileSystem';
-import { WallSystem } from './combat/WallSystem';
-import { raycastCombatants } from './combat/targeting';
-import type { GameServices } from './game/GameServices';
 import { ProjectileView } from './render/ProjectileView';
 import { WallView } from './render/WallView';
 import { TrailView } from './render/TrailView';
+import { Hud } from './ui/Hud';
+import { AbilityBar } from './ui/AbilityBar';
 import { WorldOverlay } from './ui/WorldOverlay';
 import { PlayerStatus } from './ui/PlayerStatus';
+import { MatchHud } from './ui/MatchHud';
+import { Menu } from './ui/Menu';
+import { lerpAngle } from './core/math';
+import { ELEMENTS, ELEMENT_ORDER } from './abilities/elements';
+import { raycastCombatants } from './combat/targeting';
+import type { Combatant } from './combat/Combatant';
 
 /**
- * Bootstrap + oyun döngüsü.
- * Katmanlar:  input/ (cihaz)  →  game/ + physics/ + abilities/ (saf mantık, sabit adım)  →  render/ + ui/ (görsel)
- * Mantık → görsel iletişimi EventBus üzerinden; Capacitor/PWA'da yalnızca input/render katmanları uyarlanır.
+ * İstemci: input → GameSession (saf mantık, sabit adım) → render + UI.
+ * Platform bağımlı her şey (DOM, WebGL, pointer-lock, dokunmatik) burada ve render/ui/input katmanlarında.
  */
 const app = document.getElementById('app')!;
 const params = new URLSearchParams(location.search);
 const isTouch = params.has('touch') || window.matchMedia('(pointer: coarse)').matches;
-const showDebug = !isTouch || params.has('debug');
+const showDebug = params.has('debug') || (!isTouch && !params.has('nodebug'));
 document.body.classList.toggle('is-touch', isTouch);
 
 // --- Mantık
-const bus = new EventBus<GameEvents>();
-const world = new CollisionWorld(DefaultArena);
-const spawn = DefaultArena.spawnPoints[0];
-const player = new PlayerController(world, spawn);
-const camera = new ThirdPersonCamera(world);
-camera.yaw = spawn.yaw;
-const combatants: Combatant[] = [];
-const walls = new WallSystem(world, bus, combatants);
-const projectiles = new ProjectileSystem(world, bus, combatants, walls);
-const services: GameServices = { world, bus, combatants, projectiles, walls };
-
-const playerCombatant = new Combatant('player', player, bus, {
-  maxHp: GameConfig.combat.playerMaxHp,
-  respawnDelay: GameConfig.combat.playerRespawnDelay,
-}, spawn);
-combatants.push(playerCombatant);
-DefaultArena.dummySpawns.forEach((s, i) => {
-  combatants.push(
-    new Combatant(`dummy${i + 1}`, new PlayerController(world, s), bus, {
-      maxHp: GameConfig.combat.dummyMaxHp,
-      respawnDelay: GameConfig.combat.dummyRespawnDelay,
-      dummy: true,
-    }, s),
-  );
-});
-const dummies = combatants.filter((c) => c.opts.dummy);
-
-camera.aimProbe = (o, d, max) => raycastCombatants(o, d, max, combatants, 'player');
-
-const registry = createDefaultRegistry();
-const abilities = new AbilitySystem(new PlayerCaster('player', player, camera), registry, services);
+const session = new GameSession(DefaultArena);
+const { bus, player, playerCtl, playerAbilities: abilities, bot, camera } = session;
+camera.yaw = DefaultArena.spawnPoints[0].yaw;
+camera.aimProbe = (o, d, max) => raycastCombatants(o, d, max, session.combatants, 'player');
 
 // --- Render
 const gfx = new GameRenderer(app, isTouch);
 gfx.scene.add(buildArenaView(DefaultArena));
 const playerView = new PlayerView(gfx.scene);
-const dummyViews = dummies.map(() => new PlayerView(gfx.scene, 0xe0603a));
-const effects = new EffectsView(gfx.scene, bus);
-const projectileView = new ProjectileView(gfx.scene, projectiles);
-const wallView = new WallView(gfx.scene, walls);
+const botView = new PlayerView(gfx.scene, 0x9b5cff);
+const dummyViews = session.dummies.map(() => new PlayerView(gfx.scene, 0xe0603a));
+const effects = new EffectsView(gfx.scene, bus, isTouch ? GameConfig.render.mobileEffectScale : 1);
+const projectileView = new ProjectileView(gfx.scene, session.projectiles);
+const wallView = new WallView(gfx.scene, session.walls);
 const trailView = new TrailView(gfx.scene);
-const overlay = new WorldOverlay(app, bus, 'player');
 
 const aimMarker = new THREE.Mesh(
   new THREE.SphereGeometry(0.09, 10, 8),
@@ -93,9 +57,10 @@ const aimMarker = new THREE.Mesh(
 aimMarker.renderOrder = 10;
 gfx.scene.add(aimMarker);
 
-// --- Input + HUD
+// --- UI
+const overlay = new WorldOverlay(app, bus, 'player');
+const hud = new Hud(app, { touch: isTouch, debug: showDebug });
 let input: InputManager;
-const hud = new Hud(app, { touch: isTouch, debug: showDebug, onStart: () => input.keyboardMouse.requestLock() });
 const abilityBar = new AbilityBar(app, {
   touch: isTouch,
   onSelectElement: (e) => {
@@ -104,13 +69,60 @@ const abilityBar = new AbilityBar(app, {
     input.release(a);
   },
 });
+const playerStatus = new PlayerStatus(app, bus, player, isTouch);
+const matchHud = new MatchHud(app, bus, session.round, bot, isTouch);
+
+// --- Oturum akışı (menü / duraklat / yeniden başlat)
+let lastMode: GameMode = 'match';
+let lastDiff: Difficulty = 'normal';
+
+function lockPointer(): void {
+  if (!isTouch) input.keyboardMouse.requestLock();
+}
+
+function startGame(mode: GameMode, diff: Difficulty): void {
+  lastMode = mode;
+  lastDiff = diff;
+  session.start(mode, diff);
+  camera.yaw = DefaultArena.spawnPoints[0].yaw;
+  camera.pitch = GameConfig.camera.defaultPitch;
+  camera.snap();
+  matchHud.setVisible(mode === 'match');
+  menu.hide();
+  lockPointer();
+}
+
+function pause(): void {
+  if (!session.running || menu.visible) return;
+  session.paused = true;
+  menu.showPause();
+}
+
+const menu = new Menu(app, isTouch, {
+  onStart: startGame,
+  onResume: () => {
+    session.paused = false;
+    menu.hide();
+    lockPointer();
+  },
+  onRestart: () => startGame(lastMode, lastDiff),
+  onMainMenu: () => {
+    session.stop();
+    matchHud.setVisible(false);
+    menu.showMain();
+  },
+});
+
 input = new InputManager(app, gfx.canvas, {
   touch: isTouch,
-  onPointerLockChange: (locked) => hud.setPointerLocked(locked),
+  // Masaüstü: fare kilidi kalkınca (Esc) oyunu duraklat
+  onPointerLockChange: (locked) => {
+    if (!locked) pause();
+  },
 });
-const playerStatus = new PlayerStatus(app, bus, playerCombatant, isTouch);
-bus.on('combat:respawn', (e) => {
-  if (e.targetId === 'player') camera.snap();
+// Oyun alanına tıklayınca kilidi yeniden al (menü açık değilse)
+gfx.canvas.addEventListener('click', () => {
+  if (!menu.visible) lockPointer();
 });
 
 function refreshTouchLabels(): void {
@@ -119,39 +131,26 @@ function refreshTouchLabels(): void {
   input.touch?.setButton('secondary', abilities.slot('secondary')?.name ?? '—', color);
 }
 refreshTouchLabels();
-bus.on('element:changed', refreshTouchLabels);
+bus.on('element:changed', (e) => e.casterId === 'player' && refreshTouchLabels());
 bus.on('combat:damage', (e) => {
   if (e.sourceId === 'player') hud.hitMarker(e.killed);
+  if (e.targetId === 'player' && isTouch) navigator.vibrate?.(35);
+});
+bus.on('combat:respawn', (e) => {
+  if (e.targetId === 'player') camera.snap();
 });
 bus.on('ability:denied', (e) => {
   if (e.casterId !== 'player') return;
   abilityBar.flashDenied(e.slot);
   input.touch?.flash(e.slot);
 });
-
-// --- Input → yetenek niyeti
-const intent: AbilityIntent = {
-  selectElement: null,
-  cycle: 0,
-  primaryPressed: false,
-  secondaryPressed: false,
-  primaryHeld: false,
-  interrupt: false,
-};
-
-function toIntent(s: StepInput): AbilityIntent {
-  let select: ElementId | null = null;
-  for (let i = 0; i < ELEMENT_ORDER.length; i++) {
-    if (s.pressed[`element${i + 1}` as Action]) select = ELEMENT_ORDER[i];
+bus.on('round:phase', (e) => {
+  if (e.phase === 'matchEnd') {
+    session.paused = true;
+    if (!isTouch && document.pointerLockElement) document.exitPointerLock();
+    menu.showMatchEnd(e.winnerId === 'player', e.scores.player ?? 0, e.scores.bot ?? 0);
   }
-  intent.selectElement = select;
-  intent.cycle = (s.pressed.elementNext ? 1 : 0) - (s.pressed.elementPrev ? 1 : 0);
-  intent.primaryPressed = s.pressed.primary;
-  intent.secondaryPressed = s.pressed.secondary;
-  intent.primaryHeld = s.held.primary;
-  intent.interrupt = GameConfig.abilities.cancelCastOnDash && (s.pressed.dash || player.dashing);
-  return intent;
-}
+});
 
 // --- Döngü (sabit fizik adımı + render interpolasyonu)
 const STEP = 1 / GameConfig.physics.fixedHz;
@@ -161,99 +160,100 @@ let fps = 60;
 const renderPos = new THREE.Vector3();
 const tmpPos = new THREE.Vector3();
 
-function fixedStep(): void {
-  const s = input.sampleStep();
-  if (s.pressed.reset) {
-    playerCombatant.respawn();
-    abilities.reset();
-  }
-  // Sıra: yapılar (yükselen sütunlar) → yetenekler → hareket → kuklalar → mermiler
-  walls.update(STEP);
-  if (playerCombatant.alive) {
-    abilities.update(STEP, toIntent(s));
-    player.moveSpeedMultiplier = abilities.moveMultiplier;
-    const prevY = player.position.y;
-    player.fixedUpdate(STEP, s, camera.yaw);
-    // Işınlanma (respawn) olduysa kamerayı yumuşatmadan oturt
-    if (Math.abs(player.position.y - prevY) > 5) camera.snap();
-  } else {
-    // Yenik: yeniden doğana kadar input ve yetenekler devre dışı
-    abilities.reset();
-    player.prevPosition.copy(player.position);
-  }
-  for (const c of combatants) c.fixedUpdate(STEP, player.position);
-  projectiles.update(STEP);
+function drawFighter(view: PlayerView, c: Combatant, alpha: number, now: number, elementColor: number, castProgress: number): void {
+  const blink = c.spawnProtected && Math.floor(now / 90) % 2 === 0;
+  view.root.visible = c.alive && !blink;
+  if (!c.alive) return;
+  const ctl = c.controller;
+  tmpPos.lerpVectors(ctl.prevPosition, ctl.position, alpha);
+  const ratio = ctl.prevHeightRatio + (ctl.heightRatio - ctl.prevHeightRatio) * alpha;
+  const flash = c.hitFlash > 0;
+  view.update(tmpPos, lerpAngle(ctl.prevFacingYaw, ctl.facingYaw, alpha), ratio, ctl.dashing, 10, flash ? 0xffffff : elementColor, flash ? 1 : castProgress);
 }
 
 function frame(now: number): void {
   const dt = Math.min((now - last) / 1000, 0.1);
   last = now;
   fps += (1 / Math.max(dt, 1e-4) - fps) * 0.05;
+  gfx.adapt(fps, dt);
 
   const look = input.consumeLook();
-  camera.applyLook(look.dx, look.dy);
+  const active = session.running && !session.paused;
+  if (active) camera.applyLook(look.dx, look.dy);
 
-  accumulator += dt;
-  let steps = 0;
-  while (accumulator >= STEP && steps < GameConfig.physics.maxStepsPerFrame) {
-    fixedStep();
-    accumulator -= STEP;
-    steps++;
+  if (active) {
+    accumulator += dt;
+    let steps = 0;
+    while (accumulator >= STEP && steps < GameConfig.physics.maxStepsPerFrame) {
+      const s = input.sampleStep();
+      if (s.pressed.pause) pause();
+      session.fixedStep(STEP, s, camera.yaw);
+      accumulator -= STEP;
+      steps++;
+    }
+    if (steps === GameConfig.physics.maxStepsPerFrame) accumulator = 0;
+  } else {
+    accumulator = 0;
+    const s = input.sampleStep(); // menüdeyken birikmiş basışları at
+    void s;
   }
-  if (steps === GameConfig.physics.maxStepsPerFrame) accumulator = 0;
 
   const alpha = accumulator / STEP;
-  renderPos.lerpVectors(player.prevPosition, player.position, alpha);
-  const ratio = player.prevHeightRatio + (player.heightRatio - player.prevHeightRatio) * alpha;
-  const yaw = lerpAngle(player.prevFacingYaw, player.facingYaw, alpha);
-
+  renderPos.lerpVectors(playerCtl.prevPosition, playerCtl.position, alpha);
+  const ratio = playerCtl.prevHeightRatio + (playerCtl.heightRatio - playerCtl.prevHeightRatio) * alpha;
   camera.update(dt, renderPos, ratio);
   gfx.setCameraPose(camera.position, camera.yaw, camera.pitch);
-  const casting = abilities.castingAbility;
+
+  // Oyuncu (kendi görünümü kamera mesafesine göre saydamlaşır)
+  const blink = player.spawnProtected && Math.floor(now / 90) % 2 === 0;
+  playerView.root.visible = session.running && player.alive && !blink;
   playerView.update(
     renderPos,
-    yaw,
+    lerpAngle(playerCtl.prevFacingYaw, playerCtl.facingYaw, alpha),
     ratio,
-    player.dashing,
+    playerCtl.dashing,
     camera.currentDistance,
     ELEMENTS[abilities.activeElement].color,
-    casting ? Math.max(0.01, abilities.castProgress) : 0,
+    abilities.castingAbility ? Math.max(0.01, abilities.castProgress) : 0,
   );
-  // Doğuş korumasında yanıp sön; yenikken gizli
-  playerView.root.visible = playerCombatant.alive && !(playerCombatant.spawnProtected && Math.floor(now / 90) % 2 === 0);
-  playerStatus.update(dt);
-  dummies.forEach((d, i) => {
-    const v = dummyViews[i];
-    v.root.visible = d.alive;
-    if (!d.alive) return;
-    const c = d.controller;
-    tmpPos.lerpVectors(c.prevPosition, c.position, alpha);
-    v.update(tmpPos, lerpAngle(c.prevFacingYaw, c.facingYaw, alpha), c.heightRatio, false, 10, d.hitFlash > 0 ? 0xffffff : 0x331a10, d.hitFlash > 0 ? 1 : 0);
+
+  const inMatch = session.running && session.mode === 'match';
+  const inTraining = session.running && session.mode === 'training';
+  if (inMatch) {
+    const ba = session.botAbilities;
+    drawFighter(botView, bot, alpha, now, ELEMENTS[ba.activeElement].color, ba.castingAbility ? Math.max(0.01, ba.castProgress) : 0);
+  } else botView.root.visible = false;
+  session.dummies.forEach((d, i) => {
+    if (inTraining) drawFighter(dummyViews[i], d, alpha, now, 0x331a10, 0);
+    else dummyViews[i].root.visible = false;
   });
+
   aimMarker.position.copy(camera.aimPoint);
-  aimMarker.visible = camera.aimHit;
+  aimMarker.visible = active && camera.aimHit;
   effects.update(dt);
   projectileView.update(dt, alpha);
   wallView.update();
-  trailView.update(dt, combatants);
-  overlay.update(dt, gfx.camera, combatants, alpha, window.innerWidth, window.innerHeight);
+  trailView.update(dt, session.combatants);
+  overlay.update(dt, gfx.camera, session.combatants, alpha, window.innerWidth, window.innerHeight);
 
-  const dashCd = player.dashCooldown / GameConfig.dash.cooldown;
-  const slideCd = player.slideCooldown / GameConfig.slide.cooldown;
+  const dashCd = playerCtl.dashCooldown / GameConfig.dash.cooldown;
+  const slideCd = playerCtl.slideCooldown / GameConfig.slide.cooldown;
   hud.update(
     {
       fps,
-      speed: player.horizontalSpeed,
-      state: player.state,
+      speed: playerCtl.horizontalSpeed,
+      state: playerCtl.state,
       dashCd,
       slideCd,
-      airJumps: player.airJumpsLeft,
-      airDashes: player.airDashesLeft,
-      pos: player.position,
+      airJumps: playerCtl.airJumpsLeft,
+      airDashes: playerCtl.airDashesLeft,
+      pos: playerCtl.position,
     },
     now,
   );
   abilityBar.update(abilities);
+  playerStatus.update(dt);
+  if (inMatch) matchHud.update(dt);
   if (input.touch) {
     input.touch.setCooldown('dash', dashCd);
     input.touch.setCooldown('slide', slideCd);
@@ -269,7 +269,7 @@ function frame(now: number): void {
 
 requestAnimationFrame(frame);
 
-// Tarayıcı konsolundan hata ayıklama için
+// Tarayıcı konsolundan hata ayıklama / test için
 Object.assign(window as unknown as Record<string, unknown>, {
-  __game: { player, playerCombatant, camera, world, input, abilities, registry, bus, services, config: GameConfig, fixedStep },
+  __game: { session, camera, input, menu, matchHud, config: GameConfig, startGame },
 });

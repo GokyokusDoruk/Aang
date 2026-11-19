@@ -15,7 +15,8 @@ export const ACTIONS = [
   'element4', // Task 2: Hava
   'elementNext', // Q / fare tekerleği aşağı
   'elementPrev', // fare tekerleği yukarı
-  'reset', // test: yeniden doğ
+  'reset', // test: yeniden doğ (antrenman)
+  'pause', // mobil duraklat menüsü
 ] as const;
 
 export type Action = (typeof ACTIONS)[number];

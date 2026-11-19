@@ -246,6 +246,42 @@ export const GameConfig = {
     },
   },
 
+  /** Raund / maç (Task 6) */
+  match: {
+    /** Maçı kazanmak için gereken raund sayısı (3 → 5 raundun en iyisi) */
+    roundsToWin: 3,
+    countdown: 3,
+    /** Raund süresi (s); dolarsa can oranı yüksek olan kazanır */
+    roundTime: 90,
+    roundEndDelay: 2.5,
+  },
+
+  /** Test botu (Task 6). Zorluk çarpanları `botDifficulty` içinde. */
+  bot: {
+    /** Karar verme aralığı (s) */
+    thinkInterval: 0.3,
+    preferredRange: 11,
+    rangeTolerance: 3,
+    /** Can bu oranın altına inince siper arar */
+    coverHpThreshold: 0.5,
+    coverMinTime: 1.8,
+    coverMaxTime: 3.5,
+    /** Arena kenarına bu mesafeden yakınsa merkeze döner */
+    edgeMargin: 4,
+    strafeMinTime: 0.7,
+    strafeMaxTime: 1.8,
+    elementSwitchMinTime: 3,
+    elementSwitchMaxTime: 7,
+    /** Mermi hedef önleme oranı (hedefin hızına göre ileri nişan) */
+    leadFactor: 0.85,
+  },
+
+  botDifficulty: {
+    easy: { reactionTime: 0.55, aimErrorDeg: 7, attackChance: 0.55, dodgeChance: 0.05 },
+    normal: { reactionTime: 0.32, aimErrorDeg: 3.5, attackChance: 0.8, dodgeChance: 0.12 },
+    hard: { reactionTime: 0.18, aimErrorDeg: 1.5, attackChance: 1, dodgeChance: 0.22 },
+  },
+
   camera: {
     fov: 70,
     near: 0.1,
@@ -288,6 +324,11 @@ export const GameConfig = {
     skyColor: 0x9fc4e8,
     fogNear: 45,
     fogFar: 140,
+    /** Mobilde efekt parça sayısı çarpanı */
+    mobileEffectScale: 0.5,
+    /** Uyarlamalı kalite: FPS bu değerin altında kalırsa çözünürlük düşürülür */
+    adaptiveMinFps: 45,
+    adaptiveMinPixelRatio: 0.75,
   },
 };
 

@@ -25,11 +25,10 @@ const STATE_LABEL: Record<MoveState, string> = {
 export class Hud {
   private readonly root: HTMLDivElement;
   private readonly debug: HTMLDivElement;
-  private readonly overlay: HTMLDivElement | null;
   private readonly pills = new Map<string, { el: HTMLDivElement; fill: HTMLDivElement }>();
   private lastText = 0;
 
-  constructor(container: HTMLElement, opts: { touch: boolean; debug: boolean; onStart?: () => void }) {
+  constructor(container: HTMLElement, opts: { touch: boolean; debug: boolean }) {
     this.root = document.createElement('div');
     this.root.className = `hud${opts.touch ? ' touch' : ''}`;
     this.root.innerHTML = `<div class="crosshair"></div>`;
@@ -55,30 +54,6 @@ export class Hud {
     }
     this.root.appendChild(cds);
 
-    if (!opts.touch) {
-      this.overlay = document.createElement('div');
-      this.overlay.className = 'overlay';
-      this.overlay.innerHTML = `
-        <div class="card">
-          <h1>Element Arena</h1>
-          <p class="sub">Task 5 · Ateş/Yıldırım, Hasar &amp; Arena Dışı</p>
-          <p class="cta">Oynamak için tıkla</p>
-          <ul>
-            <li><b>WASD</b> hareket · <b>Fare</b> bakış</li>
-            <li><b>1-4</b> / <b>Q</b> / <b>Tekerlek</b> element seç</li>
-            <li><b>Sol tık</b> ana yetenek · <b>Sağ tık</b> ikincil</li>
-            <li><b>Space</b> zıpla (havada 2. zıplama)</li>
-            <li><b>Shift</b> dash (havada 1 kez)</li>
-            <li><b>C</b> kayma · <b>R</b> yeniden doğ</li>
-            <li><b>Esc</b> fareyi bırak</li>
-          </ul>
-        </div>`;
-      this.overlay.addEventListener('click', () => opts.onStart?.());
-      this.root.appendChild(this.overlay);
-    } else {
-      this.overlay = null;
-    }
-
     container.appendChild(this.root);
   }
 
@@ -89,10 +64,6 @@ export class Hud {
     ch.classList.remove('hit', 'kill');
     void ch.offsetWidth;
     ch.classList.add(kill ? 'kill' : 'hit');
-  }
-
-  setPointerLocked(locked: boolean): void {
-    this.overlay?.classList.toggle('hidden', locked);
   }
 
   update(info: HudInfo, now: number): void {

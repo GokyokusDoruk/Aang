@@ -194,6 +194,196 @@ body {
   }
 }
 
+/* ---------------------------------------------------------------- Menü */
+.menu {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(5, 8, 14, 0.6);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  z-index: 20;
+  padding: 16px;
+  touch-action: manipulation;
+}
+.menu.hidden {
+  display: none;
+}
+.menu .card {
+  width: min(380px, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+  background: rgba(14, 19, 30, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  padding: 22px 22px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.menu h1 {
+  margin: 0;
+  font-size: 26px;
+}
+.menu h1.win {
+  color: #7af07a;
+}
+.menu h1.lose {
+  color: #ff6b5a;
+}
+.menu .sub {
+  margin: -4px 0 4px;
+  color: var(--ui-dim);
+  font-size: 13px;
+}
+.menu .score {
+  margin: 0;
+  font: 800 34px system-ui, sans-serif;
+  text-align: center;
+}
+.menu .label {
+  font-size: 12px;
+  color: var(--ui-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.menu .segs {
+  display: flex;
+  gap: 6px;
+}
+.menu .seg {
+  flex: 1;
+  padding: 9px 0;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: transparent;
+  color: var(--ui);
+  font: 600 14px system-ui, sans-serif;
+  cursor: pointer;
+}
+.menu .seg.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #1a1306;
+}
+.menu .btn {
+  min-height: 46px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ui);
+  font: 700 16px system-ui, sans-serif;
+  cursor: pointer;
+}
+.menu .btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #1a1306;
+}
+.menu .btn:active,
+.menu .seg:active {
+  transform: scale(0.97);
+}
+.menu .help {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+/* ---------------------------------------------------------------- Maç göstergeleri */
+.match-hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.match-hud.hidden {
+  display: none;
+}
+.match-hud .top {
+  position: absolute;
+  left: 50%;
+  top: calc(10px + var(--sat));
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.match-hud.touch .top {
+  top: calc(84px + var(--sat));
+}
+.match-hud .score {
+  background: var(--panel);
+  padding: 4px 14px;
+  border-radius: 999px;
+  font: 800 18px system-ui, sans-serif;
+}
+.match-hud .score b {
+  font-size: 12px;
+  color: var(--ui-dim);
+  letter-spacing: 0.06em;
+}
+.match-hud .info {
+  font: 600 12px ui-monospace, Menlo, Consolas, monospace;
+  text-shadow: 0 1px 2px #000;
+}
+.match-hud .bothp {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font: 700 11px system-ui, sans-serif;
+}
+.match-hud .bothp .bar {
+  width: 160px;
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.55);
+  overflow: hidden;
+}
+.match-hud .bothp .fill {
+  height: 100%;
+  background: #b77cff;
+  transition: width 0.1s;
+}
+.match-hud .banner {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 30%;
+  text-align: center;
+}
+.match-hud .banner .big {
+  font: 900 54px system-ui, sans-serif;
+  letter-spacing: 0.05em;
+  text-shadow: 0 3px 16px rgba(0, 0, 0, 0.75);
+}
+.match-hud .banner .big.pop {
+  animation: pop 0.35s ease-out;
+}
+.match-hud .banner .small {
+  font: 600 16px system-ui, sans-serif;
+  text-shadow: 0 1px 4px #000;
+}
+@keyframes pop {
+  0% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+@media (max-width: 500px) {
+  .match-hud .banner .big {
+    font-size: 38px;
+  }
+}
+
 /* ---------------------------------------------------------------- Oyuncu canı / hasar / yenilgi */
 .player-hp {
   position: absolute;

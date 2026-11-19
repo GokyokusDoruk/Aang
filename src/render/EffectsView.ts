@@ -30,6 +30,8 @@ export class EffectsView {
   constructor(
     private readonly scene: THREE.Scene,
     bus: EventBus<GameEvents>,
+    /** Parça sayısı çarpanı (mobilde düşük) */
+    private readonly effectScale = 1,
   ) {
     // Yer tutucu efekt yalnızca gerçek etkisi (execute) olmayan yetenekler için
     bus.on('ability:cast', (e) => !e.ability.execute && this.spawnCast(e));
@@ -54,6 +56,7 @@ export class EffectsView {
   /** Balistik kaya parçaları (paylaşılan geometri/malzeme; ölçekle söner). */
   private debris(at: THREE.Vector3, normal: THREE.Vector3 | null, color: number, count: number, size: number, speed: number): void {
     const mat = this.chunkMat(color);
+    count = Math.max(2, Math.round(count * this.effectScale));
     for (let i = 0; i < count; i++) {
       const m = new THREE.Mesh(this.chunk, mat);
       m.position.copy(at);

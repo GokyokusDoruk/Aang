@@ -127,8 +127,9 @@ export const DefaultArena: ArenaLayout = {
     { x: -12.5, z: 0, w: 3, l: 5, h: 1.2, dir: '-x' },
   ],
   spawnPoints: [
-    { x: 0, y: 0, z: 17, yaw: 0 },
-    { x: 0, y: 0, z: -17, yaw: Math.PI },
+    // Çaprazlama doğuş: arkada sınır duvarı var (kenar boşluklarının önünde değil)
+    { x: -8, y: 0, z: 15, yaw: -0.49 },
+    { x: 8, y: 0, z: -15, yaw: Math.PI - 0.49 },
   ],
   dummySpawns: [
     { x: 0, y: 2, z: -1, yaw: 0 },

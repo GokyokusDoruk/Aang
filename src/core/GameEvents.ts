@@ -26,6 +26,14 @@ export type GameEvents = {
   'fx:shockwave': { origin: Vector3; direction: Vector3; range: number; halfAngle: number; element: ElementId };
   'projectile:deflect': { ownerId: string; count: number };
 
+  'round:phase': {
+    phase: 'idle' | 'countdown' | 'fight' | 'roundEnd' | 'matchEnd';
+    round: number;
+    scores: Record<string, number>;
+    winnerId: string | null;
+    reason: 'hp' | 'ringout' | 'time' | null;
+  };
+
   /** Genel görsel patlama (toz, parça) */
   'fx:burst': { point: Vector3; element: ElementId; size: number };
 };
