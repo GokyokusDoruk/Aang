@@ -1,7 +1,7 @@
 import { Vector3 } from 'three';
 import { GameConfig } from '../config/gameConfig';
 import type { EventBus } from '../core/EventBus';
-import type { CollisionWorld } from '../physics/CollisionWorld';
+import type { GameServices } from '../game/GameServices';
 import { ELEMENT_ORDER, type ElementId } from './elements';
 import type { AbilityRegistry } from './AbilityRegistry';
 import type { AbilityCaster, AbilityDef, AbilitySlot, GameEvents } from './types';
@@ -46,11 +46,14 @@ export class AbilitySystem {
   constructor(
     private readonly caster: AbilityCaster,
     private readonly registry: AbilityRegistry,
-    private readonly bus: EventBus<GameEvents>,
-    private readonly world: CollisionWorld,
+    private readonly services: GameServices,
     initialElement: ElementId = ELEMENT_ORDER[0],
   ) {
     this.activeElement = initialElement;
+  }
+
+  private get bus(): EventBus<GameEvents> {
+    return this.services.bus;
   }
 
   // ------------------------------------------------------------ sorgular (UI / AI)
@@ -194,14 +197,19 @@ export class AbilitySystem {
     const def = this.cast.def;
     this.cast = null;
     this.caster.getAim(this.origin, this.direction, this.target);
-    def.execute?.({
+    const ok = def.execute?.({
       caster: this.caster,
       origin: this.origin,
       direction: this.direction,
       target: this.target,
-      world: this.world,
+      world: this.services.world,
       bus: this.bus,
+      services: this.services,
     });
+    if (ok === false) {
+      this.bus.emit('ability:denied', { casterId: this.caster.id, slot: def.slot, reason: 'invalid' });
+      return;
+    }
     if (def.tuning.cooldown > 0) this.cooldowns.set(def, def.tuning.cooldown);
     this.bus.emit('ability:cast', {
       casterId: this.caster.id,

@@ -45,6 +45,8 @@ export interface ArenaLayout {
   boxes: BoxDef[];
   ramps: RampDef[];
   spawnPoints: SpawnPoint[];
+  /** Test kuklaları (Task 6'da botlarla değişecek) */
+  dummySpawns: SpawnPoint[];
 }
 
 const SIZE = 44;
@@ -127,5 +129,11 @@ export const DefaultArena: ArenaLayout = {
   spawnPoints: [
     { x: 0, y: 0, z: 17, yaw: 0 },
     { x: 0, y: 0, z: -17, yaw: Math.PI },
+  ],
+  dummySpawns: [
+    { x: 0, y: 2, z: -1, yaw: 0 },
+    { x: -7, y: 0, z: 6, yaw: 0 },
+    { x: 7, y: 0, z: 6, yaw: 0 },
+    { x: 17, y: 1.2, z: 0, yaw: Math.PI / 2 },
   ],
 };

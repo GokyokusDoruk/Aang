@@ -20,6 +20,13 @@ import { AbilitySystem, type AbilityIntent } from './abilities/AbilitySystem';
 import { createDefaultRegistry } from './abilities/AbilityRegistry';
 import { ELEMENTS, ELEMENT_ORDER, type ElementId } from './abilities/elements';
 import type { GameEvents } from './abilities/types';
+import { Combatant } from './combat/Combatant';
+import { ProjectileSystem } from './combat/ProjectileSystem';
+import { WallSystem } from './combat/WallSystem';
+import type { GameServices } from './game/GameServices';
+import { ProjectileView } from './render/ProjectileView';
+import { WallView } from './render/WallView';
+import { WorldOverlay } from './ui/WorldOverlay';
 
 /**
  * Bootstrap + oyun döngüsü.
@@ -39,14 +46,36 @@ const spawn = DefaultArena.spawnPoints[0];
 const player = new PlayerController(world, spawn);
 const camera = new ThirdPersonCamera(world);
 camera.yaw = spawn.yaw;
+const combatants: Combatant[] = [];
+const walls = new WallSystem(world, bus, combatants);
+const projectiles = new ProjectileSystem(world, bus, combatants, walls);
+const services: GameServices = { world, bus, combatants, projectiles, walls };
+
+const playerCombatant = new Combatant('player', player, bus, { maxHp: GameConfig.combat.playerMaxHp, respawnDelay: null }, spawn);
+combatants.push(playerCombatant);
+DefaultArena.dummySpawns.forEach((s, i) => {
+  combatants.push(
+    new Combatant(`dummy${i + 1}`, new PlayerController(world, s), bus, {
+      maxHp: GameConfig.combat.dummyMaxHp,
+      respawnDelay: GameConfig.combat.dummyRespawnDelay,
+      dummy: true,
+    }, s),
+  );
+});
+const dummies = combatants.filter((c) => c.opts.dummy);
+
 const registry = createDefaultRegistry();
-const abilities = new AbilitySystem(new PlayerCaster('player', player, camera), registry, bus, world);
+const abilities = new AbilitySystem(new PlayerCaster('player', player, camera), registry, services);
 
 // --- Render
 const gfx = new GameRenderer(app, isTouch);
 gfx.scene.add(buildArenaView(DefaultArena));
 const playerView = new PlayerView(gfx.scene);
+const dummyViews = dummies.map(() => new PlayerView(gfx.scene, 0xe0603a));
 const effects = new EffectsView(gfx.scene, bus);
+const projectileView = new ProjectileView(gfx.scene, projectiles);
+const wallView = new WallView(gfx.scene, walls);
+const overlay = new WorldOverlay(app, bus, 'player');
 
 const aimMarker = new THREE.Mesh(
   new THREE.SphereGeometry(0.09, 10, 8),
@@ -78,6 +107,9 @@ function refreshTouchLabels(): void {
 }
 refreshTouchLabels();
 bus.on('element:changed', refreshTouchLabels);
+bus.on('combat:damage', (e) => {
+  if (e.sourceId === 'player') hud.hitMarker(e.killed);
+});
 bus.on('ability:denied', (e) => {
   if (e.casterId !== 'player') return;
   abilityBar.flashDenied(e.slot);
@@ -114,16 +146,21 @@ let accumulator = 0;
 let last = performance.now();
 let fps = 60;
 const renderPos = new THREE.Vector3();
+const tmpPos = new THREE.Vector3();
 
 function fixedStep(): void {
   const s = input.sampleStep();
   if (s.pressed.reset) abilities.reset();
+  // Sıra: yapılar (yükselen sütunlar) → yetenekler → hareket → kuklalar → mermiler
+  walls.update(STEP);
   abilities.update(STEP, toIntent(s));
   player.moveSpeedMultiplier = abilities.moveMultiplier;
   const prevY = player.position.y;
   player.fixedUpdate(STEP, s, camera.yaw);
   // Işınlanma (respawn) olduysa kamerayı yumuşatmadan oturt
   if (Math.abs(player.position.y - prevY) > 5) camera.snap();
+  for (const c of combatants) c.fixedUpdate(STEP, player.position);
+  projectiles.update(STEP);
 }
 
 function frame(now: number): void {
@@ -160,9 +197,20 @@ function frame(now: number): void {
     ELEMENTS[abilities.activeElement].color,
     casting ? Math.max(0.01, abilities.castProgress) : 0,
   );
+  dummies.forEach((d, i) => {
+    const v = dummyViews[i];
+    v.root.visible = d.alive;
+    if (!d.alive) return;
+    const c = d.controller;
+    tmpPos.lerpVectors(c.prevPosition, c.position, alpha);
+    v.update(tmpPos, lerpAngle(c.prevFacingYaw, c.facingYaw, alpha), c.heightRatio, false, 10, d.hitFlash > 0 ? 0xffffff : 0x331a10, d.hitFlash > 0 ? 1 : 0);
+  });
   aimMarker.position.copy(camera.aimPoint);
   aimMarker.visible = camera.aimHit;
   effects.update(dt);
+  projectileView.update(dt, alpha);
+  wallView.update();
+  overlay.update(dt, gfx.camera, combatants, alpha, window.innerWidth, window.innerHeight);
 
   const dashCd = player.dashCooldown / GameConfig.dash.cooldown;
   const slideCd = player.slideCooldown / GameConfig.slide.cooldown;
@@ -197,5 +245,5 @@ requestAnimationFrame(frame);
 
 // Tarayıcı konsolundan hata ayıklama için
 Object.assign(window as unknown as Record<string, unknown>, {
-  __game: { player, camera, world, input, abilities, registry, bus, config: GameConfig, fixedStep },
+  __game: { player, camera, world, input, abilities, registry, bus, services, config: GameConfig, fixedStep },
 });

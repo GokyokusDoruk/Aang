@@ -106,6 +106,51 @@ export const GameConfig = {
     },
   },
 
+  /** Hasar / itme genel ayarları (Task 5'te HP, dokunulmazlık vb. genişleyecek). */
+  combat: {
+    playerMaxHp: 100,
+    /** İtme sonrası kontrol kaybı süresi (s): bu sürede koşu input'u devre dışı, karakter kayar. */
+    knockbackControlLoss: 0.35,
+    /** İtme sırasında yerdeki kayma sürtünmesi (m/s²). Düşük = daha uzağa savrulur. */
+    knockbackGroundFriction: 10,
+    dummyMaxHp: 100,
+    dummyRespawnDelay: 2.5,
+  },
+
+  /** Toprak bükme (Task 3) */
+  earth: {
+    rock: {
+      radius: 0.35,
+      speed: 40,
+      /** Kayanın düşüşü (m/s²); nişan bu düşüşü otomatik telafi eder. */
+      gravity: 7,
+      damage: 20,
+      /** Yatay itme hızı (m/s) */
+      knockback: 9,
+      /** Dikey itme hızı (m/s) */
+      knockbackUp: 4,
+      wallDamage: 30,
+      lifetime: 2.5,
+      /** Yerdeyken kaya karakterin bu kadar önünden, yerden kopar. */
+      groundSpawnForward: 0.9,
+    },
+    wall: {
+      /** Duvar = yan yana yükselen bazalt sütunlar */
+      columns: 5,
+      columnWidth: 0.95,
+      /** Sütun aralığı (genişliğin oranı; <1 = üst üste biner, boşluk kalmaz) */
+      spacing: 0.88,
+      height: 2.6,
+      riseTime: 0.22,
+      sinkTime: 0.45,
+      hp: 150,
+      lifetime: 9,
+      maxPerCaster: 2,
+      minDistance: 2.5,
+      maxDistance: 14,
+    },
+  },
+
   camera: {
     fov: 70,
     near: 0.1,

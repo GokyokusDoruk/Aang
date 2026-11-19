@@ -59,7 +59,7 @@ export class Hud {
       this.overlay.innerHTML = `
         <div class="card">
           <h1>Element Arena</h1>
-          <p class="sub">Task 2 · Element &amp; Yetenek Altyapısı</p>
+          <p class="sub">Task 3 · Toprak Bükme (Duvar &amp; Kaya)</p>
           <p class="cta">Oynamak için tıkla</p>
           <ul>
             <li><b>WASD</b> hareket · <b>Fare</b> bakış</li>
@@ -78,6 +78,15 @@ export class Hud {
     }
 
     container.appendChild(this.root);
+  }
+
+  /** Kendi saldırın bir hedefe isabet ettiğinde crosshair işareti. */
+  hitMarker(kill: boolean): void {
+    const ch = this.root.querySelector('.crosshair') as HTMLElement | null;
+    if (!ch) return;
+    ch.classList.remove('hit', 'kill');
+    void ch.offsetWidth;
+    ch.classList.add(kill ? 'kill' : 'hit');
   }
 
   setPointerLocked(locked: boolean): void {

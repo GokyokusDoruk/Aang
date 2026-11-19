@@ -166,6 +166,72 @@ body {
   line-height: 1.7;
 }
 
+.crosshair.hit::before,
+.crosshair.hit::after,
+.crosshair.kill::before,
+.crosshair.kill::after {
+  animation: hitmark 0.25s ease-out;
+}
+.crosshair.kill::before,
+.crosshair.kill::after {
+  animation-duration: 0.45s;
+}
+@keyframes hitmark {
+  0% {
+    background: #fff;
+    box-shadow: 0 0 6px #ff5a5a;
+    transform: scale(1.6);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* ---------------------------------------------------------------- Dünya üstü (can barı, hasar) */
+.world-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.hpbar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 54px;
+  height: 7px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  overflow: hidden;
+  will-change: transform;
+}
+.hpbar .fill {
+  height: 100%;
+  background: #6ee36e;
+  transition: width 0.12s;
+}
+.hpbar.low .fill {
+  background: #ff6b4a;
+}
+.dmg {
+  position: absolute;
+  left: 0;
+  top: 0;
+  font: 800 16px system-ui, sans-serif;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  white-space: nowrap;
+  will-change: transform, opacity;
+}
+.dmg.mine {
+  color: #ffd166;
+}
+.dmg.kill {
+  color: #ff5a5a;
+  font-size: 18px;
+}
+
 /* ---------------------------------------------------------------- Yetenek çubuğu */
 .ability-bar {
   position: absolute;

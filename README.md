@@ -37,6 +37,13 @@ npm run build      # typecheck + production build
 - Ayarlar: `gameConfig.abilities.tuning.<yetenekId>` → `cooldown`, `castTime`, `castMoveMult`
 - Mantık → görsel: `EventBus` olayları (`ability:castStart`, `ability:cast`, `ability:cancel`, `ability:denied`, `element:changed`)
 
+## Savaş altyapısı (Task 3)
+
+- `src/combat/Combatant.ts`: HP, hasar, itme (knockback), ölüm/yeniden doğma; oyuncu + test kuklaları
+- `src/combat/ProjectileSystem.ts`: genel mermi sistemi (süpürmeli çarpışma, duvar/karakter isabeti)
+- `src/combat/WallSystem.ts`: bükülen yapılar; her sütun gerçek çarpışma kutusu, HP'si var, yükselirken üstündekini kaldırır
+- Toprak ayarları: `gameConfig.earth.rock` / `gameConfig.earth.wall`, itme: `gameConfig.combat`
+
 **Yeni yetenek/element eklemek:** elements.ts'e element ekle → definitions/ altına dosya ekle → registry'ye kaydet → config'e tuning ekle.
 
 ## Mimari

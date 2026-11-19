@@ -17,6 +17,10 @@ export class PlayerCaster implements AbilityCaster {
     return this.player.position;
   }
 
+  get grounded(): boolean {
+    return this.player.grounded;
+  }
+
   getAim(outOrigin: Vector3, outDirection: Vector3, outTarget: Vector3): void {
     const yaw = this.camera.yaw;
     this.right.set(Math.cos(yaw), 0, -Math.sin(yaw));

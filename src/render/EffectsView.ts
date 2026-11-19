@@ -3,12 +3,16 @@ import { ELEMENTS } from '../abilities/elements';
 import type { GameEvents } from '../abilities/types';
 import type { EventBus } from '../core/EventBus';
 
+const ROCK_COLOR = 0x7d5f3e;
+const DUST_COLOR = 0xb89a74;
+const UP = new THREE.Vector3(0, 1, 0);
+
 interface Fx {
   obj: THREE.Object3D;
   mats: THREE.Material[];
   life: number;
   max: number;
-  tick(t: number): void; // t: 0..1
+  tick(t: number, dt: number): void; // t: 0..1
 }
 
 /**
@@ -20,12 +24,86 @@ export class EffectsView {
   private readonly items: Fx[] = [];
   private readonly sphere = new THREE.SphereGeometry(1, 16, 12);
   private readonly ring = new THREE.RingGeometry(0.75, 1, 32);
+  private readonly chunk = new THREE.DodecahedronGeometry(1, 0);
+  private readonly chunkMats = new Map<number, THREE.MeshStandardMaterial>();
 
   constructor(
     private readonly scene: THREE.Scene,
     bus: EventBus<GameEvents>,
   ) {
-    bus.on('ability:cast', (e) => this.spawnCast(e));
+    // Yer tutucu efekt yalnızca gerçek etkisi (execute) olmayan yetenekler için
+    bus.on('ability:cast', (e) => !e.ability.execute && this.spawnCast(e));
+    bus.on('projectile:impact', (e) => {
+      const color = e.kind === 'rock' ? ROCK_COLOR : ELEMENTS[e.element].color;
+      this.debris(e.point, e.normal, color, e.hitCombatant ? 6 : 9, 0.12, 5);
+      this.dust(e.point, color, 0.9);
+    });
+    bus.on('wall:destroyed', (e) => {
+      for (const c of e.columns) this.debris(c, null, ROCK_COLOR, 7, 0.2, 6);
+    });
+    bus.on('fx:burst', (e) => {
+      const color = e.element === 'earth' ? DUST_COLOR : ELEMENTS[e.element].color;
+      this.dust(e.point, color, e.size * 2.2);
+      if (e.element === 'earth') this.debris(e.point, UP, ROCK_COLOR, 4, 0.08 * (1 + e.size), 3.5);
+    });
+  }
+
+  /** Balistik kaya parçaları (paylaşılan geometri/malzeme; ölçekle söner). */
+  private debris(at: THREE.Vector3, normal: THREE.Vector3 | null, color: number, count: number, size: number, speed: number): void {
+    const mat = this.chunkMat(color);
+    for (let i = 0; i < count; i++) {
+      const m = new THREE.Mesh(this.chunk, mat);
+      m.position.copy(at);
+      const s = size * (0.6 + Math.random() * 0.8);
+      m.scale.setScalar(s);
+      m.castShadow = true;
+      const v = new THREE.Vector3(Math.random() - 0.5, Math.random() * 0.8 + 0.4, Math.random() - 0.5).normalize();
+      if (normal) v.addScaledVector(normal, 0.8).normalize();
+      v.multiplyScalar(speed * (0.5 + Math.random()));
+      const spin = new THREE.Vector3(Math.random(), Math.random(), Math.random());
+      const floorY = at.y - 3;
+      this.add({
+        obj: m,
+        mats: [],
+        life: 0,
+        max: 0.7 + Math.random() * 0.5,
+        tick: (t) => {
+          const dt = 1 / 60;
+          v.y -= 22 * dt;
+          m.position.addScaledVector(v, dt);
+          if (m.position.y < floorY) m.position.y = floorY;
+          m.rotation.x += spin.x * 0.3;
+          m.rotation.y += spin.y * 0.3;
+          m.scale.setScalar(s * (1 - t * t));
+        },
+      });
+    }
+  }
+
+  /** Genişleyen toz halkası */
+  private dust(at: THREE.Vector3, color: number, size: number): void {
+    const mat = new THREE.MeshBasicMaterial({ color, transparent: true, depthWrite: false });
+    const m = new THREE.Mesh(this.sphere, mat);
+    m.position.copy(at);
+    this.add({
+      obj: m,
+      mats: [mat],
+      life: 0,
+      max: 0.35,
+      tick: (t) => {
+        m.scale.set(size * (0.3 + t), size * 0.45 * (0.3 + t), size * (0.3 + t));
+        mat.opacity = 0.55 * (1 - t);
+      },
+    });
+  }
+
+  private chunkMat(color: number): THREE.MeshStandardMaterial {
+    let m = this.chunkMats.get(color);
+    if (!m) {
+      m = new THREE.MeshStandardMaterial({ color, roughness: 0.95, flatShading: true });
+      this.chunkMats.set(color, m);
+    }
+    return m;
   }
 
   private spawnCast(e: GameEvents['ability:cast']): void {
@@ -86,7 +164,7 @@ export class EffectsView {
   }
 
   private add(fx: Fx): void {
-    fx.tick(0);
+    fx.tick(0, 0);
     this.scene.add(fx.obj);
     this.items.push(fx);
   }
@@ -96,7 +174,7 @@ export class EffectsView {
       const fx = this.items[i];
       fx.life += dt;
       const t = Math.min(1, fx.life / fx.max);
-      fx.tick(t);
+      fx.tick(t, dt);
       if (t >= 1) {
         this.scene.remove(fx.obj);
         for (const m of fx.mats) m.dispose();
