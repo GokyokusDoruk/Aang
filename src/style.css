@@ -94,7 +94,7 @@ body {
 .cooldowns {
   position: absolute;
   left: 50%;
-  bottom: calc(18px + var(--sab));
+  bottom: calc(132px + var(--sab));
   transform: translateX(-50%);
   display: flex;
   gap: 8px;
@@ -166,6 +166,134 @@ body {
   line-height: 1.7;
 }
 
+/* ---------------------------------------------------------------- Yetenek çubuğu */
+.ability-bar {
+  position: absolute;
+  left: 50%;
+  bottom: calc(14px + var(--sab));
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+}
+.ability-bar.touch {
+  bottom: auto;
+  top: calc(42px + var(--sat));
+}
+
+.slots {
+  display: flex;
+  gap: 10px;
+}
+.slot {
+  position: relative;
+  width: 132px;
+  height: 58px;
+  border-radius: 10px;
+  background: var(--panel);
+  border: 2px solid color-mix(in srgb, var(--c) 70%, transparent);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 10px;
+  isolation: isolate;
+}
+.slot .sweep {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: conic-gradient(rgba(0, 0, 0, 0.6) calc(var(--cd, 0) * 360deg), transparent 0);
+}
+.slot .key {
+  font-size: 10px;
+  color: var(--ui-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.slot .name {
+  font-size: 14px;
+  font-weight: 700;
+}
+.slot .cd {
+  position: absolute;
+  right: 8px;
+  top: 6px;
+  font: 600 13px ui-monospace, Menlo, Consolas, monospace;
+}
+.slot.ready {
+  box-shadow: 0 0 10px color-mix(in srgb, var(--c) 55%, transparent);
+}
+
+.chips {
+  display: flex;
+  gap: 6px;
+}
+.chip {
+  pointer-events: auto;
+  touch-action: none;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px 4px 6px;
+  border-radius: 999px;
+  background: var(--panel);
+  border: 2px solid transparent;
+  font-size: 12px;
+  cursor: pointer;
+  opacity: 0.7;
+}
+.chip .num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--c);
+  color: #111;
+  font-weight: 700;
+  font-size: 11px;
+}
+.chip.active {
+  opacity: 1;
+  border-color: var(--c);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--c) 60%, transparent);
+}
+.ability-bar.touch .chip {
+  padding: 6px 12px 6px 7px;
+}
+
+.cast-bar {
+  position: absolute;
+  left: 50%;
+  top: calc(50% + 34px);
+  transform: translateX(-50%);
+  width: 170px;
+  height: 18px;
+  border-radius: 9px;
+  background: var(--panel);
+  overflow: hidden;
+  font-size: 11px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  isolation: isolate;
+}
+.cast-bar.hidden {
+  display: none;
+}
+.cast-bar .fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: color-mix(in srgb, var(--c) 75%, transparent);
+  z-index: -1;
+}
+
 /* ---------------------------------------------------------------- Dokunmatik */
 .touch-ui {
   position: absolute;
@@ -202,10 +330,10 @@ body {
 
 .touch-buttons {
   position: absolute;
-  right: calc(18px + var(--sar));
-  bottom: calc(18px + var(--sab));
-  width: 210px;
-  height: 190px;
+  right: calc(16px + var(--sar));
+  bottom: calc(16px + var(--sab));
+  width: 240px;
+  height: 172px;
   transform-origin: bottom right;
 }
 
@@ -240,23 +368,63 @@ body {
   background: rgba(255, 209, 102, 0.5);
   transform: scale(0.94);
 }
-.tbtn.jump {
-  width: 92px;
-  height: 92px;
+/* Ana saldırı en büyük ve başparmağın doğal yerinde; yetenek butonları element rengini alır */
+.tbtn.primary,
+.tbtn.secondary {
+  border-color: var(--accent-c, rgba(255, 255, 255, 0.5));
+  font-size: 10px;
+  text-align: center;
+  line-height: 1.15;
+  padding: 0 6px;
+}
+.tbtn.primary {
+  width: 90px;
+  height: 90px;
   right: 0;
+  bottom: 0;
+  border-width: 3px;
+}
+.tbtn.secondary {
+  width: 66px;
+  height: 66px;
+  right: 8px;
+  bottom: 102px;
+}
+.tbtn.jump {
+  width: 72px;
+  height: 72px;
+  right: 100px;
   bottom: 0;
 }
 .tbtn.dash {
-  width: 70px;
-  height: 70px;
-  right: 104px;
-  bottom: 4px;
+  width: 58px;
+  height: 58px;
+  right: 92px;
+  bottom: 86px;
 }
 .tbtn.slide {
-  width: 70px;
-  height: 70px;
-  right: 14px;
-  bottom: 104px;
+  width: 54px;
+  height: 54px;
+  right: 182px;
+  bottom: 10px;
+}
+.tbtn.denied,
+.slot.denied {
+  animation: denied 0.3s ease;
+}
+@keyframes denied {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-4px);
+    box-shadow: 0 0 0 2px #ff4d4d;
+  }
+  75% {
+    transform: translateX(4px);
+    box-shadow: 0 0 0 2px #ff4d4d;
+  }
 }
 .tbtn.reset {
   width: 40px;

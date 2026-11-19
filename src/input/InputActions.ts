@@ -13,6 +13,8 @@ export const ACTIONS = [
   'element2', // Task 2: Su/Buz
   'element3', // Task 2: Ateş/Yıldırım
   'element4', // Task 2: Hava
+  'elementNext', // Q / fare tekerleği aşağı
+  'elementPrev', // fare tekerleği yukarı
   'reset', // test: yeniden doğ
 ] as const;
 
