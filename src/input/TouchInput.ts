@@ -60,7 +60,7 @@ export class TouchInput implements InputSource {
     for (const def of TOUCH_BUTTONS) cluster.appendChild(this.makeButton(def, signal));
     this.ui.appendChild(cluster);
 
-    const reset = this.makeButton({ action: 'reset', label: '↺', cls: 'reset' }, signal);
+    const reset = this.makeButton({ action: 'pause', label: 'II', cls: 'reset' }, signal);
     this.ui.appendChild(reset);
 
     root.appendChild(this.ui);

@@ -52,6 +52,31 @@ export class GameRenderer {
     this.resize();
   }
 
+  private lowFpsTime = 0;
+
+  /**
+   * Uyarlamalı kalite: FPS uzun süre düşük kalırsa çözünürlüğü kademeli düşür
+   * (mobil tarayıcılarda ısınma / düşük güç modunda akıcılığı korur).
+   */
+  adapt(fps: number, dt: number): void {
+    const R = GameConfig.render;
+    if (fps < R.adaptiveMinFps) this.lowFpsTime += dt;
+    else this.lowFpsTime = Math.max(0, this.lowFpsTime - dt);
+    if (this.lowFpsTime > 2.5) {
+      this.lowFpsTime = 0;
+      const current = this.renderer.getPixelRatio();
+      const next = Math.max(R.adaptiveMinPixelRatio, current - 0.25);
+      if (next < current) {
+        this.renderer.setPixelRatio(next);
+        this.resize();
+        if (next <= 1 && this.renderer.shadowMap.enabled) {
+          this.renderer.shadowMap.type = THREE.BasicShadowMap;
+          this.renderer.shadowMap.needsUpdate = true;
+        }
+      }
+    }
+  }
+
   get canvas(): HTMLCanvasElement {
     return this.renderer.domElement;
   }

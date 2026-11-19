@@ -60,6 +60,16 @@ npm run build      # typecheck + production build
 - **Yenilgi:** can 0 → "YENİLDİN", arena dışına düşme → "ARENA DIŞI"; geri sayımla yeniden doğuş; arena dışı eleme son vurana yazılır
 - Ayarlar: `gameConfig.fire`, `gameConfig.combat`
 
+## Bot, raund ve menü (Task 6)
+
+- **Ana menü:** bot zorluğu (Kolay / Normal / Zor), "Bota Karşı Maç" veya "Antrenman (Kuklalar)"
+- **Maç:** 5 raundun en iyisi (3 galibiyet), 3 sn geri sayım, 90 sn raund süresi (süre dolarsa canı yüksek olan kazanır), raund/maç sonu ekranları, "Tekrar Oyna"
+- **Duraklat:** masaüstünde `Esc`, mobilde sağ üstteki `II` → Devam / Yeniden Başlat / Ana Menü
+- **Bot** (`src/ai/`): oyuncuyla aynı hareket ve yetenek sistemlerini kullanır — mesafeye göre element seçer, yan adım atar, engelin üstünden zıplar, boşluğa yürümez, canı azalınca siper arar (yoksa toprak duvar diker), kenara itilince merkeze döner (hava zıplaması / dash / rüzgar sıçrayışı), gelen mermiden kaçar
+- **Mimari:** tüm oyun mantığı `src/game/GameSession.ts` içinde (DOM/sahne yok); `main.ts` yalnızca input → oturum → render/UI
+- **Mobil:** uyarlamalı çözünürlük (FPS düşerse), mobilde azaltılmış efekt parçası, hasar alınca titreşim (Android)
+- Ayarlar: `gameConfig.match`, `gameConfig.bot`, `gameConfig.botDifficulty`
+
 **Yeni yetenek/element eklemek:** elements.ts'e element ekle → definitions/ altına dosya ekle → registry'ye kaydet → config'e tuning ekle.
 
 ## Mimari
