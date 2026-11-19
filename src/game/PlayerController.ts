@@ -5,7 +5,7 @@ import type { CollisionWorld } from '../physics/CollisionWorld';
 import type { StepInput } from '../input/InputActions';
 import { damp, wrapAngle } from '../core/math';
 
-export type MoveState = 'grounded' | 'airborne' | 'sliding' | 'dashing';
+export type MoveState = 'grounded' | 'airborne' | 'sliding' | 'dashing' | 'gliding' | 'floating';
 
 const tmpPush = new Vector3();
 
@@ -38,6 +38,10 @@ export class PlayerController {
   knockbackTimer = 0;
   /** Arena dışına düşüp yeniden doğduğunda true olur (Combatant tüketir). */
   fellOut = false;
+  /** >0 iken Buz Kayması modu (Su). */
+  glideTimer = 0;
+  /** >0 iken Rüzgar süzülmesi (Hava): zıplama basılıyken yavaş düşüş. */
+  floatTimer = 0;
   dashCooldown = 0;
   slideCooldown = 0;
 
@@ -46,6 +50,8 @@ export class PlayerController {
   private coyoteTimer = 0;
   private jumpBufferTimer = 0;
   private jumpHeld = false;
+  /** Yükseliş bir zıplamadan mı geliyor (değişken zıplama yüksekliği için). */
+  private jumpRising = false;
 
   constructor(
     private readonly world: CollisionWorld,
@@ -65,6 +71,8 @@ export class PlayerController {
   get state(): MoveState {
     if (this.dashing) return 'dashing';
     if (this.sliding) return 'sliding';
+    if (this.glideTimer > 0) return 'gliding';
+    if (this.floatTimer > 0 && !this.grounded) return 'floating';
     return this.grounded ? 'grounded' : 'airborne';
   }
 
@@ -81,6 +89,7 @@ export class PlayerController {
     this.dashTimer = this.slideTimer = this.coyoteTimer = this.jumpBufferTimer = 0;
     this.dashCooldown = this.slideCooldown = 0;
     this.knockbackTimer = 0;
+    this.glideTimer = this.floatTimer = 0;
     this.airJumpsLeft = GameConfig.player.maxAirJumps;
     this.airDashesLeft = GameConfig.dash.maxAirDashes;
   }
@@ -98,6 +107,8 @@ export class PlayerController {
 
     // --- Zamanlayıcılar
     this.knockbackTimer = Math.max(0, this.knockbackTimer - dt);
+    this.glideTimer = Math.max(0, this.glideTimer - dt);
+    this.floatTimer = Math.max(0, this.floatTimer - dt);
     this.dashCooldown = Math.max(0, this.dashCooldown - dt);
     this.slideCooldown = Math.max(0, this.slideCooldown - dt);
     this.coyoteTimer = this.grounded ? P.coyoteTime : Math.max(0, this.coyoteTimer - dt);
@@ -136,9 +147,15 @@ export class PlayerController {
     // --- Dikey hız (dash sırasında yerçekimi askıda)
     if (!this.dashing) {
       let g = GameConfig.physics.gravity;
-      if (this.velocity.y > 0 && !this.jumpHeld) g *= P.jumpCutGravityMult;
+      if (this.velocity.y <= 0) this.jumpRising = false;
+      // Değişken zıplama yalnızca gerçek zıplamalarda (fırlatma/itme yüksekliğini kesmez)
+      if (this.velocity.y > 0 && this.jumpRising && !this.jumpHeld) g *= P.jumpCutGravityMult;
       else if (this.velocity.y < 0) g *= P.fallGravityMult;
+      if (this.glideTimer > 0 && this.velocity.y < 0) g *= GameConfig.water.glide.airGravityMult;
       this.velocity.y = Math.max(this.velocity.y - g * dt, -GameConfig.physics.maxFallSpeed);
+      // Rüzgar süzülmesi: zıplama basılı tutulurken düşüş hızı sınırlanır
+      const fall = GameConfig.air.leap.floatFallSpeed;
+      if (this.floatTimer > 0 && this.jumpHeld && this.velocity.y < -fall) this.velocity.y = -fall;
     }
 
     // --- Boy (kayma çömelmesi)
@@ -148,10 +165,11 @@ export class PlayerController {
     // --- Entegrasyon + çarpışma
     this.moveHorizontal(dt);
     this.moveVertical(dt);
+    if (this.grounded && this.velocity.y <= 0) this.floatTimer = 0;
 
     // --- Bakış yönü
     let targetYaw = cameraYaw;
-    if ((this.dashing || this.sliding) && this.horizontalSpeed > 1) {
+    if ((this.dashing || this.sliding || this.glideTimer > 0) && this.horizontalSpeed > 1) {
       targetYaw = Math.atan2(-this.velocity.x, -this.velocity.z);
     }
     this.facingYaw = wrapAngle(this.facingYaw + wrapAngle(targetYaw - this.facingYaw) * damp(P.turnSharpness, dt));
@@ -170,10 +188,39 @@ export class PlayerController {
     this.velocity.z += impulse.z;
     if (impulse.y > 0) {
       this.velocity.y = Math.max(this.velocity.y, 0) + impulse.y;
+      this.jumpRising = false;
       this.grounded = false;
       this.coyoteTimer = 0;
     }
     this.knockbackTimer = GameConfig.combat.knockbackControlLoss;
+  }
+
+  /** Buz Kayması: verilen yönde (yatay) momentumlu süzülmeyi başlat. */
+  startGlide(dirX: number, dirZ: number): void {
+    const G = GameConfig.water.glide;
+    const l = Math.hypot(dirX, dirZ) || 1;
+    if (this.sliding) this.endSlide();
+    const speed = Math.max(this.horizontalSpeed, G.startSpeed);
+    this.velocity.x = (dirX / l) * speed;
+    this.velocity.z = (dirZ / l) * speed;
+    this.glideTimer = G.duration;
+  }
+
+  /** Rüzgar Sıçrayışı: yukarı + ileri fırlat, ardından süzülme penceresi aç. */
+  launch(dirX: number, dirZ: number): void {
+    const L = GameConfig.air.leap;
+    const l = Math.hypot(dirX, dirZ) || 1;
+    if (this.sliding) this.endSlide();
+    this.dashing = false;
+    const fwd = Math.max(L.forwardVelocity, this.horizontalSpeed * 0.6);
+    this.velocity.x = (dirX / l) * fwd;
+    this.velocity.z = (dirZ / l) * fwd;
+    this.velocity.y = L.upVelocity;
+    this.jumpRising = false;
+    this.grounded = false;
+    this.coyoteTimer = 0;
+    this.floatTimer = L.floatDuration;
+    this.airJumpsLeft = GameConfig.player.maxAirJumps;
   }
 
   // ---------------------------------------------------------------- aksiyonlar
@@ -187,12 +234,14 @@ export class PlayerController {
       if (this.sliding) this.endSlide();
       if (this.dashing) this.endDash();
       this.velocity.y = P.jumpVelocity;
+      this.jumpRising = true;
       this.grounded = false;
       this.coyoteTimer = 0;
       this.jumpBufferTimer = 0;
     } else if (this.airJumpsLeft > 0 && !this.dashing) {
       // Hava zıplaması: yön değiştirmeye izin verir, hız kazandırmaz.
       this.velocity.y = P.airJumpVelocity;
+      this.jumpRising = true;
       this.airJumpsLeft--;
       this.jumpBufferTimer = 0;
       if (wishMag > 0.1) {
@@ -233,7 +282,7 @@ export class PlayerController {
 
   private trySlide(wx: number, wz: number, wishMag: number): void {
     const S = GameConfig.slide;
-    if (!this.grounded || this.sliding || this.dashing || this.slideCooldown > 0) return;
+    if (!this.grounded || this.sliding || this.dashing || this.glideTimer > 0 || this.slideCooldown > 0) return;
     let speed = this.horizontalSpeed;
     let dx: number;
     let dz: number;
@@ -282,6 +331,23 @@ export class PlayerController {
     if (speed < S.endSpeed || this.slideTimer <= 0) this.endSlide();
   }
 
+  /** Buz Kayması: geniş dönüşlü, düşük sürtünmeli hareket (yerde ve havada). */
+  private updateGlide(dt: number, wx: number, wz: number, wishMag: number): void {
+    const G = GameConfig.water.glide;
+    let speed = this.horizontalSpeed;
+    let ang = Math.atan2(this.velocity.x, this.velocity.z);
+    if (wishMag > 0.1) {
+      const delta = wrapAngle(Math.atan2(wx, wz) - ang);
+      const maxTurn = G.turnRate * dt;
+      ang += Math.max(-maxTurn, Math.min(maxTurn, delta));
+      speed = Math.min(G.maxSpeed * this.moveSpeedMultiplier, speed + G.accel * wishMag * dt);
+    } else {
+      speed = Math.max(0, speed - G.friction * dt);
+    }
+    this.velocity.x = Math.sin(ang) * speed;
+    this.velocity.z = Math.cos(ang) * speed;
+  }
+
   private updateRun(dt: number, wx: number, wz: number, wishMag: number): void {
     const P = GameConfig.player;
     const v = this.velocity;
@@ -294,6 +360,11 @@ export class PlayerController {
         v.x *= ns / speed;
         v.z *= ns / speed;
       }
+      return;
+    }
+
+    if (this.glideTimer > 0) {
+      this.updateGlide(dt, wx, wz, wishMag);
       return;
     }
 
@@ -316,8 +387,9 @@ export class PlayerController {
       }
     } else {
       // Hava kontrolü: yön verilebilir, ama mevcut momentumun üstüne hız eklenmez.
-      v.x += wx * P.airAccel * dt;
-      v.z += wz * P.airAccel * dt;
+      const airAccel = P.airAccel * (this.floatTimer > 0 ? GameConfig.air.leap.floatAirAccelMult : 1);
+      v.x += wx * airAccel * dt;
+      v.z += wz * airAccel * dt;
       const limit = Math.max(speed, P.runSpeed);
       let ns = Math.hypot(v.x, v.z);
       if (ns > limit) {

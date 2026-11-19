@@ -73,6 +73,29 @@ export class ProjectileSystem {
     this.list.length = 0;
   }
 
+  /**
+   * Koni içindeki rakip mermilerini geri savur (Hava şok dalgası).
+   * Mermi yeni sahibine geçer: sahibine geri dönüp ona hasar verebilir.
+   */
+  deflectInCone(origin: Vector3, direction: Vector3, range: number, cosHalf: number, pointBlank: number, newOwner: string, speedMult: number): number {
+    let count = 0;
+    for (const p of this.list) {
+      if (p.ownerId === newOwner) continue;
+      probe.subVectors(p.position, origin);
+      const d = probe.length();
+      if (d > range) continue;
+      if (d > pointBlank && probe.dot(direction) / d < cosHalf) continue;
+      const speed = p.velocity.length() * speedMult;
+      if (d > 1e-3) probe.divideScalar(d).add(direction).normalize();
+      else probe.copy(direction);
+      p.velocity.copy(probe).multiplyScalar(speed);
+      p.ownerId = newOwner;
+      p.age = 0;
+      count++;
+    }
+    return count;
+  }
+
   update(dt: number): void {
     for (let i = this.list.length - 1; i >= 0; i--) {
       const p = this.list[i];

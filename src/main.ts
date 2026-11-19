@@ -23,9 +23,11 @@ import type { GameEvents } from './abilities/types';
 import { Combatant } from './combat/Combatant';
 import { ProjectileSystem } from './combat/ProjectileSystem';
 import { WallSystem } from './combat/WallSystem';
+import { raycastCombatants } from './combat/targeting';
 import type { GameServices } from './game/GameServices';
 import { ProjectileView } from './render/ProjectileView';
 import { WallView } from './render/WallView';
+import { TrailView } from './render/TrailView';
 import { WorldOverlay } from './ui/WorldOverlay';
 
 /**
@@ -64,6 +66,8 @@ DefaultArena.dummySpawns.forEach((s, i) => {
 });
 const dummies = combatants.filter((c) => c.opts.dummy);
 
+camera.aimProbe = (o, d, max) => raycastCombatants(o, d, max, combatants, 'player');
+
 const registry = createDefaultRegistry();
 const abilities = new AbilitySystem(new PlayerCaster('player', player, camera), registry, services);
 
@@ -75,6 +79,7 @@ const dummyViews = dummies.map(() => new PlayerView(gfx.scene, 0xe0603a));
 const effects = new EffectsView(gfx.scene, bus);
 const projectileView = new ProjectileView(gfx.scene, projectiles);
 const wallView = new WallView(gfx.scene, walls);
+const trailView = new TrailView(gfx.scene);
 const overlay = new WorldOverlay(app, bus, 'player');
 
 const aimMarker = new THREE.Mesh(
@@ -210,6 +215,7 @@ function frame(now: number): void {
   effects.update(dt);
   projectileView.update(dt, alpha);
   wallView.update();
+  trailView.update(dt, combatants);
   overlay.update(dt, gfx.camera, combatants, alpha, window.innerWidth, window.innerHeight);
 
   const dashCd = player.dashCooldown / GameConfig.dash.cooldown;

@@ -44,6 +44,14 @@ npm run build      # typecheck + production build
 - `src/combat/WallSystem.ts`: bükülen yapılar; her sütun gerçek çarpışma kutusu, HP'si var, yükselirken üstündekini kaldırır
 - Toprak ayarları: `gameConfig.earth.rock` / `gameConfig.earth.wall`, itme: `gameConfig.combat`
 
+## Su / Buz ve Hava (Task 4)
+
+- **Buz Kıymığı** (Su, sol tık): hızlı, hafif mermi; basılı tut = seri atış
+- **Buz Kayması** (Su, sağ tık): düşük sürtünmeli momentumlu süzülme, geniş dönüşler, havada yavaş düşüş, buz izi
+- **Şok Dalgası** (Hava, sol tık): koni içindeki rakipleri iter, rakip mermilerini sahibine geri savurur; duvar arkası korunur
+- **Rüzgar Sıçrayışı** (Hava, sağ tık): yukarı + ileri fırlatma; ardından zıplamayı basılı tut = yavaş süzül
+- Ayarlar: `gameConfig.water` / `gameConfig.air`; hareket modları `PlayerController` (`startGlide`, `launch`)
+
 **Yeni yetenek/element eklemek:** elements.ts'e element ekle → definitions/ altına dosya ekle → registry'ye kaydet → config'e tuning ekle.
 
 ## Mimari
