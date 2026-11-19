@@ -1,7 +1,11 @@
 import type { Vector3 } from 'three';
 import type { EventBus } from '../core/EventBus';
+import type { GameEvents } from '../core/GameEvents';
+import type { GameServices } from '../game/GameServices';
 import type { CollisionWorld } from '../physics/CollisionWorld';
 import type { ElementId } from './elements';
+
+export type { GameEvents } from '../core/GameEvents';
 
 export type AbilitySlot = 'primary' | 'secondary';
 
@@ -17,7 +21,9 @@ export interface AbilityTuning {
  */
 export interface AbilityCaster {
   readonly id: string;
+  /** Ayak tabanı */
   readonly position: Vector3;
+  readonly grounded: boolean;
   /** Yeteneğin çıkış noktası, yönü (normalize) ve hedef noktası. */
   getAim(outOrigin: Vector3, outDirection: Vector3, outTarget: Vector3): void;
 }
@@ -29,6 +35,7 @@ export interface AbilityContext {
   target: Vector3;
   world: CollisionWorld;
   bus: EventBus<GameEvents>;
+  services: GameServices;
 }
 
 export interface AbilityDef {
@@ -39,15 +46,10 @@ export interface AbilityDef {
   description: string;
   /** gameConfig'teki nesneye referans: ayar değişikliği anında yansır. */
   tuning: AbilityTuning;
-  /** Cast tamamlandığında çalışır. Task 3-5'te gerçek etkiler burada. */
-  execute?(ctx: AbilityContext): void;
+  /**
+   * Cast tamamlandığında çalışır. `false` dönerse yetenek geçersiz sayılır
+   * (örn. duvar boşluğa konamaz): cooldown harcanmaz, 'ability:denied' yayılır.
+   * Tanımlı değilse yer tutucu efekt gösterilir.
+   */
+  execute?(ctx: AbilityContext): boolean | void;
 }
-
-/** Oyun genelindeki olaylar (render, UI, ses ve ileride ağ katmanı dinler). */
-export type GameEvents = {
-  'element:changed': { casterId: string; element: ElementId };
-  'ability:castStart': { casterId: string; ability: AbilityDef };
-  'ability:cast': { casterId: string; ability: AbilityDef; origin: Vector3; direction: Vector3; target: Vector3 };
-  'ability:cancel': { casterId: string; ability: AbilityDef };
-  'ability:denied': { casterId: string; slot: AbilitySlot; reason: 'cooldown' | 'switching' | 'empty' };
-};

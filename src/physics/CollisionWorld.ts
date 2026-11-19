@@ -2,11 +2,11 @@ import { Vector3 } from 'three';
 import type { ArenaLayout, RampDir } from '../config/arenaLayout';
 
 /**
- * Render'dan bağımsız, hafif statik çarpışma dünyası.
- * - Kutular: eksen hizalı AABB (zemin, siper, platform, duvar...)
- * - Rampalar: dikdörtgen alan üzerinde lineer yükseklik fonksiyonu
- * Three.js yalnızca Vector3 matematiği için kullanılır; sahne/mesh bilgisi yoktur.
- * İleride Task 3'teki toprak duvarlar `addBox/removeBox` ile dinamik eklenir.
+ * Render'dan baÄŸÄ±msÄ±z, hafif statik Ã§arpÄ±ÅŸma dÃ¼nyasÄ±.
+ * - Kutular: eksen hizalÄ± AABB (zemin, siper, platform, duvar...)
+ * - Rampalar: dikdÃ¶rtgen alan Ã¼zerinde lineer yÃ¼kseklik fonksiyonu
+ * Three.js yalnÄ±zca Vector3 matematiÄŸi iÃ§in kullanÄ±lÄ±r; sahne/mesh bilgisi yoktur.
+ * Ä°leride Task 3'teki toprak duvarlar `addBox/removeBox` ile dinamik eklenir.
  */
 export interface AABB {
   minX: number;
@@ -31,6 +31,8 @@ export interface RayHit {
   distance: number;
   point: Vector3;
   normal: Vector3;
+  /** Çarpılan kutu (rampa ise null) */
+  box: AABB | null;
 }
 
 export class CollisionWorld {
@@ -83,7 +85,7 @@ export class CollisionWorld {
     return dx * dx + dz * dz < r * r;
   }
 
-  /** Rampanın 0..1 ilerleme parametresinin x/z gradyanı. */
+  /** RampanÄ±n 0..1 ilerleme parametresinin x/z gradyanÄ±. */
   private static rampGrad(r: Ramp): { gx: number; gz: number } {
     switch (r.dir) {
       case '+x':
@@ -110,7 +112,7 @@ export class CollisionWorld {
     }
   }
 
-  /** (x,z) noktasındaki en yüksek rampa yüzeyi; rampa yoksa -Infinity. */
+  /** (x,z) noktasÄ±ndaki en yÃ¼ksek rampa yÃ¼zeyi; rampa yoksa -Infinity. */
   rampHeightAt(x: number, z: number): number {
     let best = -Infinity;
     for (const r of this.ramps) {
@@ -122,8 +124,8 @@ export class CollisionWorld {
   }
 
   /**
-   * Karakter tabanının altındaki en yüksek yürünebilir yüzey (maxY'den yüksek olanlar yok sayılır).
-   * Hiç yüzey yoksa -Infinity (boşluk).
+   * Karakter tabanÄ±nÄ±n altÄ±ndaki en yÃ¼ksek yÃ¼rÃ¼nebilir yÃ¼zey (maxY'den yÃ¼ksek olanlar yok sayÄ±lÄ±r).
+   * HiÃ§ yÃ¼zey yoksa -Infinity (boÅŸluk).
    */
   groundHeight(x: number, z: number, footRadius: number, maxY: number): number {
     let best = -Infinity;
@@ -137,9 +139,9 @@ export class CollisionWorld {
   }
 
   /**
-   * Silindir (daire + yükseklik aralığı) ile kutular arasında yatay itme çözümü.
-   * Tepesi stepTop'un altında kalan kutular engel sayılmaz (basamak çıkılabilir).
-   * Toplam itme vektörünü outPush'a yazar; çarpışma varsa true döner.
+   * Silindir (daire + yÃ¼kseklik aralÄ±ÄŸÄ±) ile kutular arasÄ±nda yatay itme Ã§Ã¶zÃ¼mÃ¼.
+   * Tepesi stepTop'un altÄ±nda kalan kutular engel sayÄ±lmaz (basamak Ã§Ä±kÄ±labilir).
+   * Toplam itme vektÃ¶rÃ¼nÃ¼ outPush'a yazar; Ã§arpÄ±ÅŸma varsa true dÃ¶ner.
    */
   pushOut(pos: Vector3, r: number, feetY: number, headY: number, stepTop: number, outPush: Vector3): boolean {
     let hit = false;
@@ -159,7 +161,7 @@ export class CollisionWorld {
         mx = (dx / d) * push;
         mz = (dz / d) * push;
       } else {
-        // Merkez kutunun içinde: en kısa eksenden dışarı it.
+        // Merkez kutunun iÃ§inde: en kÄ±sa eksenden dÄ±ÅŸarÄ± it.
         const left = pos.x - b.minX;
         const right = b.maxX - pos.x;
         const back = pos.z - b.minZ;
@@ -179,7 +181,7 @@ export class CollisionWorld {
     return hit;
   }
 
-  /** Yükselirken kafanın çarptığı en alçak tavan; yoksa null. */
+  /** YÃ¼kselirken kafanÄ±n Ã§arptÄ±ÄŸÄ± en alÃ§ak tavan; yoksa null. */
   ceilingY(x: number, z: number, r: number, headFrom: number, headTo: number): number | null {
     let best: number | null = null;
     for (const b of this.boxes) {
@@ -190,10 +192,11 @@ export class CollisionWorld {
     return best;
   }
 
-  /** Işın testi (dir normalize olmalı). Başlangıç noktasını içeren kutular yok sayılır. */
+  /** IÅŸÄ±n testi (dir normalize olmalÄ±). BaÅŸlangÄ±Ã§ noktasÄ±nÄ± iÃ§eren kutular yok sayÄ±lÄ±r. */
   raycast(origin: Vector3, dir: Vector3, maxDist: number): RayHit | null {
     let best = maxDist;
     let bestNormal: Vector3 | null = null;
+    let bestBox: AABB | null = null;
 
     const o = [origin.x, origin.y, origin.z];
     const d = [dir.x, dir.y, dir.z];
@@ -234,6 +237,7 @@ export class CollisionWorld {
       }
       if (miss || tNear < 0 || tNear >= best || axis < 0) continue;
       best = tNear;
+      bestBox = b;
       bestNormal = new Vector3(axis === 0 ? sign : 0, axis === 1 ? sign : 0, axis === 2 ? sign : 0);
     }
 
@@ -241,7 +245,7 @@ export class CollisionWorld {
       const { gx, gz } = CollisionWorld.rampGrad(r);
       const hx = gx * r.h;
       const hz = gz * r.h;
-      // f(p) = rampHeight(p) - p.y ; ışın yukarıdan gelmeli (f(o) < 0)
+      // f(p) = rampHeight(p) - p.y ; Ä±ÅŸÄ±n yukarÄ±dan gelmeli (f(o) < 0)
       const fo = r.baseY + r.h * CollisionWorld.rampT(r, origin.x, origin.z) - origin.y;
       if (fo >= 0) continue;
       const denom = hx * dir.x + hz * dir.z - dir.y;
@@ -252,6 +256,7 @@ export class CollisionWorld {
       const pz = origin.z + dir.z * s;
       if (px < r.minX || px > r.maxX || pz < r.minZ || pz > r.maxZ) continue;
       best = s;
+      bestBox = null;
       bestNormal = new Vector3(-hx, 1, -hz).normalize();
     }
 
@@ -260,6 +265,7 @@ export class CollisionWorld {
       distance: best,
       point: origin.clone().addScaledVector(dir, best),
       normal: bestNormal,
+      box: bestBox,
     };
   }
 }

@@ -34,6 +34,10 @@ export class PlayerController {
   airDashesLeft = 0;
   /** Dış sistemlerin (yetenek hazırlığı, ileride yavaşlatma etkileri) koşu hızına çarpanı. */
   moveSpeedMultiplier = 1;
+  /** >0 iken itilmiş durumda: koşu kontrolü yok, karakter savrulur. */
+  knockbackTimer = 0;
+  /** Arena dışına düşüp yeniden doğduğunda true olur (Combatant tüketir). */
+  fellOut = false;
   dashCooldown = 0;
   slideCooldown = 0;
 
@@ -76,6 +80,7 @@ export class PlayerController {
     this.heightRatio = this.prevHeightRatio = 1;
     this.dashTimer = this.slideTimer = this.coyoteTimer = this.jumpBufferTimer = 0;
     this.dashCooldown = this.slideCooldown = 0;
+    this.knockbackTimer = 0;
     this.airJumpsLeft = GameConfig.player.maxAirJumps;
     this.airDashesLeft = GameConfig.dash.maxAirDashes;
   }
@@ -92,6 +97,7 @@ export class PlayerController {
     }
 
     // --- Zamanlayıcılar
+    this.knockbackTimer = Math.max(0, this.knockbackTimer - dt);
     this.dashCooldown = Math.max(0, this.dashCooldown - dt);
     this.slideCooldown = Math.max(0, this.slideCooldown - dt);
     this.coyoteTimer = this.grounded ? P.coyoteTime : Math.max(0, this.coyoteTimer - dt);
@@ -150,7 +156,24 @@ export class PlayerController {
     }
     this.facingYaw = wrapAngle(this.facingYaw + wrapAngle(targetYaw - this.facingYaw) * damp(P.turnSharpness, dt));
 
-    if (this.position.y < GameConfig.physics.killY) this.respawn();
+    if (this.position.y < GameConfig.physics.killY) {
+      this.respawn();
+      this.fellOut = true;
+    }
+  }
+
+  /** Dış kuvvet (hasar itmesi, rüzgar...). Yatay hız eklenir, dikey bileşen yerden kaldırır. */
+  applyKnockback(impulse: Vector3): void {
+    if (this.sliding) this.endSlide();
+    this.dashing = false;
+    this.velocity.x += impulse.x;
+    this.velocity.z += impulse.z;
+    if (impulse.y > 0) {
+      this.velocity.y = Math.max(this.velocity.y, 0) + impulse.y;
+      this.grounded = false;
+      this.coyoteTimer = 0;
+    }
+    this.knockbackTimer = GameConfig.combat.knockbackControlLoss;
   }
 
   // ---------------------------------------------------------------- aksiyonlar
@@ -263,6 +286,16 @@ export class PlayerController {
     const P = GameConfig.player;
     const v = this.velocity;
     const speed = this.horizontalSpeed;
+
+    if (this.knockbackTimer > 0) {
+      // Savrulma: input yok, yerde sürtünmeyle yavaşla, havada momentumu koru
+      if (this.grounded && speed > 0) {
+        const ns = Math.max(0, speed - GameConfig.combat.knockbackGroundFriction * dt);
+        v.x *= ns / speed;
+        v.z *= ns / speed;
+      }
+      return;
+    }
 
     if (this.grounded) {
       const run = P.runSpeed * this.moveSpeedMultiplier;
