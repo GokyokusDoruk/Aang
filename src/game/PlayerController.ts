@@ -32,6 +32,8 @@ export class PlayerController {
 
   airJumpsLeft = 0;
   airDashesLeft = 0;
+  /** Dış sistemlerin (yetenek hazırlığı, ileride yavaşlatma etkileri) koşu hızına çarpanı. */
+  moveSpeedMultiplier = 1;
   dashCooldown = 0;
   slideCooldown = 0;
 
@@ -263,8 +265,9 @@ export class PlayerController {
     const speed = this.horizontalSpeed;
 
     if (this.grounded) {
-      const tx = wx * P.runSpeed;
-      const tz = wz * P.runSpeed;
+      const run = P.runSpeed * this.moveSpeedMultiplier;
+      const tx = wx * run;
+      const tz = wz * run;
       let accel = wishMag > 0.01 ? P.groundAccel : P.groundDecel;
       if (speed > P.runSpeed + 0.5) accel = P.overspeedDecel;
       const dx = tx - v.x;

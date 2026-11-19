@@ -10,6 +10,7 @@ const KEY_ACTIONS: Record<string, Action> = {
   Digit2: 'element2',
   Digit3: 'element3',
   Digit4: 'element4',
+  KeyQ: 'elementNext',
   KeyR: 'reset',
 };
 
@@ -47,6 +48,7 @@ export class KeyboardMouseInput implements InputSource {
       document.addEventListener('mousedown', (e) => this.onMouse(e, true), { signal });
       document.addEventListener('mouseup', (e) => this.onMouse(e, false), { signal });
       lockTarget.addEventListener('contextmenu', (e) => e.preventDefault(), { signal });
+      document.addEventListener('wheel', (e) => this.onWheel(e), { signal, passive: true });
     }
   }
 
@@ -91,6 +93,13 @@ export class KeyboardMouseInput implements InputSource {
     if (!a) return;
     if (down) this.pressAction(a);
     else this.releaseAction(a);
+  }
+
+  private onWheel(e: WheelEvent): void {
+    if (!this.locked || Math.abs(e.deltaY) < 1) return;
+    const a: Action = e.deltaY > 0 ? 'elementNext' : 'elementPrev';
+    this.sink.press(a);
+    this.sink.release(a);
   }
 
   private onMouseMove(e: MouseEvent): void {

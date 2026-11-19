@@ -9,6 +9,8 @@ interface ButtonDef {
 
 /** Dokunmatik buton yerleşimi; Task 2+ yetenek butonları buraya eklenir. */
 export const TOUCH_BUTTONS: ButtonDef[] = [
+  { action: 'primary', label: 'SALDIR', cls: 'primary' },
+  { action: 'secondary', label: 'YETENEK', cls: 'secondary' },
   { action: 'jump', label: 'ZIPLA', cls: 'jump' },
   { action: 'dash', label: 'DASH', cls: 'dash' },
   { action: 'slide', label: 'KAY', cls: 'slide' },
@@ -78,6 +80,24 @@ export class TouchInput implements InputSource {
   setCooldown(action: Action, ratio: number): void {
     const el = this.buttons.get(action);
     if (el) el.style.setProperty('--cd', ratio.toFixed(3));
+  }
+
+  /** Buton etiketini ve vurgu rengini değiştir (aktif elemente göre yetenek adı). */
+  setButton(action: Action, label: string, color?: string): void {
+    const el = this.buttons.get(action);
+    if (!el) return;
+    const lbl = el.querySelector('.lbl');
+    if (lbl && lbl.textContent !== label) lbl.textContent = label;
+    if (color) el.style.setProperty('--accent-c', color);
+  }
+
+  /** Kullanılamayan yetenek için kısa uyarı animasyonu. */
+  flash(action: Action): void {
+    const el = this.buttons.get(action);
+    if (!el) return;
+    el.classList.remove('denied');
+    void el.offsetWidth; // animasyonu yeniden başlat
+    el.classList.add('denied');
   }
 
   private makeButton(def: ButtonDef, signal: AbortSignal): HTMLElement {

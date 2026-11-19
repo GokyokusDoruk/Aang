@@ -26,6 +26,18 @@ npm run build      # typecheck + production build
 | Dash (havada 1 kez) | Shift | DASH |
 | Kayma | C | KAY |
 | Yeniden doğ | R | ↺ |
+| Element seç | 1-4 · Q · fare tekerleği | Üstteki element çipleri |
+| Ana / ikincil yetenek | Sol tık (basılı tut = tekrar) / Sağ tık | SALDIR / YETENEK (etiket aktif yeteneği gösterir) |
+
+## Yetenek sistemi
+
+- `src/abilities/elements.ts`: element listesi (ad, renk)
+- `src/abilities/definitions/*.ts`: element başına yetenekler (`primary` / `secondary` slotu, `execute`)
+- `src/abilities/AbilitySystem.ts`: aktif element, yetenek başına cooldown, cast süresi, input buffer, dash ile iptal
+- Ayarlar: `gameConfig.abilities.tuning.<yetenekId>` → `cooldown`, `castTime`, `castMoveMult`
+- Mantık → görsel: `EventBus` olayları (`ability:castStart`, `ability:cast`, `ability:cancel`, `ability:denied`, `element:changed`)
+
+**Yeni yetenek/element eklemek:** elements.ts'e element ekle → definitions/ altına dosya ekle → registry'ye kaydet → config'e tuning ekle.
 
 ## Mimari
 

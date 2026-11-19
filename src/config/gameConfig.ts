@@ -74,6 +74,38 @@ export const GameConfig = {
     cooldown: 0.35,
   },
 
+  /**
+   * Yetenek sistemi. Her yeteneğin ayarı `tuning` altında, yetenek id'si ile.
+   * cooldown: yetenek tamamlandıktan sonra bekleme (s)
+   * castTime: basıştan etkiye kadar geçen hazırlık süresi (s)
+   * castMoveMult: hazırlık sırasında koşu hızı çarpanı
+   */
+  abilities: {
+    /** Element değiştirdikten sonra kısa süre yetenek kullanılamaz (inputBuffer'dan kısa tutun: basış kaybolmaz). */
+    switchCooldown: 0.12,
+    /** Cooldown/cast bitmeden hemen önce basılan tuş bu süre kadar hatırlanır. */
+    inputBuffer: 0.15,
+    /** Ana saldırı tuşu basılı tutulursa hazır oldukça tekrar kullanılır. */
+    primaryRepeatOnHold: true,
+    /** Dash hazırlanan yeteneği iptal eder (cooldown harcanmaz). */
+    cancelCastOnDash: true,
+
+    tuning: {
+      // Toprak
+      earthRock: { cooldown: 0.9, castTime: 0.25, castMoveMult: 0.6 },
+      earthWall: { cooldown: 4.0, castTime: 0.35, castMoveMult: 0.3 },
+      // Su / Buz
+      waterShard: { cooldown: 0.45, castTime: 0.1, castMoveMult: 0.85 },
+      iceGlide: { cooldown: 6.0, castTime: 0.15, castMoveMult: 1.0 },
+      // Ateş / Yıldırım
+      fireBall: { cooldown: 0.6, castTime: 0.15, castMoveMult: 0.8 },
+      lightningLine: { cooldown: 3.5, castTime: 0.45, castMoveMult: 0.4 },
+      // Hava
+      airShockwave: { cooldown: 3.0, castTime: 0.2, castMoveMult: 0.7 },
+      airLeap: { cooldown: 5.0, castTime: 0.1, castMoveMult: 1.0 },
+    },
+  },
+
   camera: {
     fov: 70,
     near: 0.1,
