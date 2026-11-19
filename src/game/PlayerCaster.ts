@@ -17,6 +17,10 @@ export class PlayerCaster implements AbilityCaster {
     return this.player.position;
   }
 
+  get controller(): PlayerController {
+    return this.player;
+  }
+
   get grounded(): boolean {
     return this.player.grounded;
   }

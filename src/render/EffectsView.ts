@@ -41,6 +41,7 @@ export class EffectsView {
     bus.on('wall:destroyed', (e) => {
       for (const c of e.columns) this.debris(c, null, ROCK_COLOR, 7, 0.2, 6);
     });
+    bus.on('fx:shockwave', (e) => this.shockwave(e));
     bus.on('fx:burst', (e) => {
       const color = e.element === 'earth' ? DUST_COLOR : ELEMENTS[e.element].color;
       this.dust(e.point, color, e.size * 2.2);
@@ -75,6 +76,51 @@ export class EffectsView {
           m.rotation.x += spin.x * 0.3;
           m.rotation.y += spin.y * 0.3;
           m.scale.setScalar(s * (1 - t * t));
+        },
+      });
+    }
+  }
+
+  /** Koni biçimli rüzgar dalgası + ileri giden halkalar */
+  private shockwave(e: GameEvents['fx:shockwave']): void {
+    const color = ELEMENTS[e.element].color;
+    const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, -1, 0), e.direction);
+
+    const radius = Math.tan(Math.min(e.halfAngle, 1.3)) * e.range;
+    const coneGeo = new THREE.ConeGeometry(radius, e.range, 28, 1, true);
+    coneGeo.translate(0, -e.range / 2, 0); // tepe noktası orijinde, ağız -Y yönünde
+    const coneMat = new THREE.MeshBasicMaterial({ color, transparent: true, side: THREE.DoubleSide, depthWrite: false });
+    const cone = new THREE.Mesh(coneGeo, coneMat);
+    cone.position.copy(e.origin);
+    cone.quaternion.copy(q);
+    this.add({
+      obj: cone,
+      mats: [coneMat],
+      life: 0,
+      max: 0.35,
+      tick: (t) => {
+        cone.scale.setScalar(0.25 + 0.75 * Math.sqrt(t));
+        coneMat.opacity = 0.32 * (1 - t);
+        if (t >= 1) coneGeo.dispose();
+      },
+    });
+
+    for (let i = 0; i < 3; i++) {
+      const ringMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, side: THREE.DoubleSide, depthWrite: false });
+      const ring = new THREE.Mesh(this.ring, ringMat);
+      const delay = i * 0.06;
+      this.add({
+        obj: ring,
+        mats: [ringMat],
+        life: 0,
+        max: 0.45,
+        tick: (t) => {
+          const k = Math.max(0, (t * 0.45 - delay) / (0.45 - delay));
+          const dist = e.range * k;
+          ring.position.copy(e.origin).addScaledVector(e.direction, dist);
+          ring.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), e.direction);
+          ring.scale.setScalar(0.3 + Math.tan(Math.min(e.halfAngle, 1.3)) * dist * 0.9);
+          ringMat.opacity = k > 0 ? 0.55 * (1 - k) : 0;
         },
       });
     }

@@ -17,6 +17,8 @@ const STATE_LABEL: Record<MoveState, string> = {
   airborne: 'Havada',
   sliding: 'Kayma',
   dashing: 'Dash',
+  gliding: 'Buz Kayması',
+  floating: 'Rüzgar Süzülmesi',
 };
 
 /** DOM tabanlı HUD: crosshair, debug paneli, cooldown göstergeleri, başlangıç ekranı. */
@@ -59,7 +61,7 @@ export class Hud {
       this.overlay.innerHTML = `
         <div class="card">
           <h1>Element Arena</h1>
-          <p class="sub">Task 3 · Toprak Bükme (Duvar &amp; Kaya)</p>
+          <p class="sub">Task 4 · Su/Buz Kayma &amp; Hava/Rüzgar</p>
           <p class="cta">Oynamak için tıkla</p>
           <ul>
             <li><b>WASD</b> hareket · <b>Fare</b> bakış</li>

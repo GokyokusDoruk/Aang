@@ -27,6 +27,8 @@ export class ThirdPersonCamera {
   private readonly shoulder = new Vector3();
   private readonly tmp = new Vector3();
   private initialized = false;
+  /** Ek nişan hedefleri (karakterler). Mesafe döndürür; yoksa null. */
+  aimProbe: ((origin: Vector3, dir: Vector3, maxDist: number) => number | null) | null = null;
 
   constructor(private readonly world: CollisionWorld) {}
 
@@ -82,8 +84,10 @@ export class ThirdPersonCamera {
     // Nişan: oyuncu düzleminden başlayan ışın (kamera ile oyuncu arasındaki engeller yok sayılır)
     this.tmp.copy(this.position).addScaledVector(this.forward, this.currentDistance);
     const aim = this.world.raycast(this.tmp, this.forward, C.aimMaxDistance);
-    this.aimHit = aim !== null;
-    if (aim) this.aimPoint.copy(aim.point);
-    else this.aimPoint.copy(this.tmp).addScaledVector(this.forward, C.aimMaxDistance);
+    let dist = aim ? aim.distance : C.aimMaxDistance;
+    const body = this.aimProbe?.(this.tmp, this.forward, dist) ?? null;
+    if (body !== null) dist = body;
+    this.aimHit = aim !== null || body !== null;
+    this.aimPoint.copy(this.tmp).addScaledVector(this.forward, dist);
   }
 }

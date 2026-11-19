@@ -151,6 +151,58 @@ export const GameConfig = {
     },
   },
 
+  /** Su / Buz (Task 4) */
+  water: {
+    shard: {
+      radius: 0.18,
+      speed: 55,
+      gravity: 2,
+      damage: 9,
+      knockback: 3,
+      knockbackUp: 1,
+      wallDamage: 8,
+      lifetime: 1.2,
+    },
+    /** Buz Kayması: düşük sürtünmeli, momentumlu süzülme modu */
+    glide: {
+      duration: 2.6,
+      /** Başlarken nişan yönünde en az bu hız verilir. */
+      startSpeed: 13,
+      maxSpeed: 17,
+      /** Yön tuşuna basılıyken hızlanma (m/s²) */
+      accel: 10,
+      /** Yön tuşu bırakılınca yavaşlama (m/s²). Düşük = buz gibi kayar. */
+      friction: 2.5,
+      /** Yön değiştirme hızı (rad/s): düşük = geniş, akıcı dönüşler */
+      turnRate: 3.0,
+      /** Havada düşüş yerçekimi çarpanı (süzülme) */
+      airGravityMult: 0.35,
+    },
+  },
+
+  /** Hava / Rüzgar (Task 4) */
+  air: {
+    shockwave: {
+      range: 7.5,
+      coneHalfAngleDeg: 65,
+      damage: 6,
+      knockback: 18,
+      knockbackUp: 7.5,
+      /** Koni içindeki rakip mermileri geri yollar; hız çarpanı */
+      deflectSpeedMult: 1.15,
+      /** Bu mesafeden yakındakiler koni dışında da itilir */
+      pointBlank: 1.3,
+    },
+    leap: {
+      upVelocity: 15,
+      forwardVelocity: 9,
+      /** Sıçrayıştan sonra süzülme süresi: zıplama basılı tutulursa yavaş düşülür */
+      floatDuration: 3.0,
+      floatFallSpeed: 2.5,
+      floatAirAccelMult: 1.6,
+    },
+  },
+
   camera: {
     fov: 70,
     near: 0.1,

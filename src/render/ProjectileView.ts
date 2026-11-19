@@ -8,6 +8,18 @@ export class ProjectileView {
   private readonly rockGeo = new THREE.DodecahedronGeometry(1, 0);
   private readonly rockMat = new THREE.MeshStandardMaterial({ color: 0x8a6a45, roughness: 0.95, flatShading: true });
   private readonly orbGeo = new THREE.SphereGeometry(1, 12, 10);
+  private readonly shardGeo = new THREE.OctahedronGeometry(1, 0);
+  private readonly shardMat = new THREE.MeshStandardMaterial({
+    color: 0xbfefff,
+    emissive: 0x2a9fd6,
+    emissiveIntensity: 0.6,
+    roughness: 0.15,
+    metalness: 0.1,
+    flatShading: true,
+    transparent: true,
+    opacity: 0.9,
+  });
+  private readonly look = new THREE.Vector3();
 
   constructor(
     private readonly scene: THREE.Scene,
@@ -19,6 +31,11 @@ export class ProjectileView {
     if (p.kind === 'rock') {
       mesh = new THREE.Mesh(this.rockGeo, this.rockMat);
       mesh.scale.setScalar(p.spec.radius * 1.25);
+    } else if (p.kind === 'shard') {
+      // Uzun buz kıymığı: hız yönüne bakar (lookAt ile +Z ekseni)
+      mesh = new THREE.Mesh(this.shardGeo, this.shardMat);
+      mesh.scale.set(p.spec.radius, p.spec.radius, p.spec.radius * 3.2);
+      mesh.userData.aligned = true;
     } else {
       const color = ELEMENTS[p.element].color;
       mesh = new THREE.Mesh(this.orbGeo, new THREE.MeshBasicMaterial({ color }));
@@ -37,12 +54,17 @@ export class ProjectileView {
       seen.add(p.id);
       const m = this.meshes.get(p.id) ?? this.create(p);
       m.position.lerpVectors(p.prevPosition, p.position, alpha);
-      m.rotateOnAxis(p.spin, dt * 14);
+      if (m.userData.aligned) {
+        m.lookAt(this.look.copy(m.position).add(p.velocity));
+        m.rotateZ(p.age * 20);
+      } else {
+        m.rotateOnAxis(p.spin, dt * 14);
+      }
     }
     for (const [id, m] of this.meshes) {
       if (seen.has(id)) continue;
       this.scene.remove(m);
-      if (m.material !== this.rockMat) (m.material as THREE.Material).dispose();
+      if (m.material !== this.rockMat && m.material !== this.shardMat) (m.material as THREE.Material).dispose();
       this.meshes.delete(id);
     }
   }

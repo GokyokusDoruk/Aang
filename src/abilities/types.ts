@@ -2,6 +2,7 @@ import type { Vector3 } from 'three';
 import type { EventBus } from '../core/EventBus';
 import type { GameEvents } from '../core/GameEvents';
 import type { GameServices } from '../game/GameServices';
+import type { PlayerController } from '../game/PlayerController';
 import type { CollisionWorld } from '../physics/CollisionWorld';
 import type { ElementId } from './elements';
 
@@ -24,6 +25,8 @@ export interface AbilityCaster {
   /** Ayak tabanı */
   readonly position: Vector3;
   readonly grounded: boolean;
+  /** Hareket gövdesi: hareket yetenekleri (kayma, sıçrayış) bunu kullanır. */
+  readonly controller: PlayerController;
   /** Yeteneğin çıkış noktası, yönü (normalize) ve hedef noktası. */
   getAim(outOrigin: Vector3, outDirection: Vector3, outTarget: Vector3): void;
 }
