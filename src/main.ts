@@ -29,6 +29,7 @@ import { ProjectileView } from './render/ProjectileView';
 import { WallView } from './render/WallView';
 import { TrailView } from './render/TrailView';
 import { WorldOverlay } from './ui/WorldOverlay';
+import { PlayerStatus } from './ui/PlayerStatus';
 
 /**
  * Bootstrap + oyun döngüsü.
@@ -53,7 +54,10 @@ const walls = new WallSystem(world, bus, combatants);
 const projectiles = new ProjectileSystem(world, bus, combatants, walls);
 const services: GameServices = { world, bus, combatants, projectiles, walls };
 
-const playerCombatant = new Combatant('player', player, bus, { maxHp: GameConfig.combat.playerMaxHp, respawnDelay: null }, spawn);
+const playerCombatant = new Combatant('player', player, bus, {
+  maxHp: GameConfig.combat.playerMaxHp,
+  respawnDelay: GameConfig.combat.playerRespawnDelay,
+}, spawn);
 combatants.push(playerCombatant);
 DefaultArena.dummySpawns.forEach((s, i) => {
   combatants.push(
@@ -103,6 +107,10 @@ const abilityBar = new AbilityBar(app, {
 input = new InputManager(app, gfx.canvas, {
   touch: isTouch,
   onPointerLockChange: (locked) => hud.setPointerLocked(locked),
+});
+const playerStatus = new PlayerStatus(app, bus, playerCombatant, isTouch);
+bus.on('combat:respawn', (e) => {
+  if (e.targetId === 'player') camera.snap();
 });
 
 function refreshTouchLabels(): void {
@@ -155,15 +163,24 @@ const tmpPos = new THREE.Vector3();
 
 function fixedStep(): void {
   const s = input.sampleStep();
-  if (s.pressed.reset) abilities.reset();
+  if (s.pressed.reset) {
+    playerCombatant.respawn();
+    abilities.reset();
+  }
   // Sıra: yapılar (yükselen sütunlar) → yetenekler → hareket → kuklalar → mermiler
   walls.update(STEP);
-  abilities.update(STEP, toIntent(s));
-  player.moveSpeedMultiplier = abilities.moveMultiplier;
-  const prevY = player.position.y;
-  player.fixedUpdate(STEP, s, camera.yaw);
-  // Işınlanma (respawn) olduysa kamerayı yumuşatmadan oturt
-  if (Math.abs(player.position.y - prevY) > 5) camera.snap();
+  if (playerCombatant.alive) {
+    abilities.update(STEP, toIntent(s));
+    player.moveSpeedMultiplier = abilities.moveMultiplier;
+    const prevY = player.position.y;
+    player.fixedUpdate(STEP, s, camera.yaw);
+    // Işınlanma (respawn) olduysa kamerayı yumuşatmadan oturt
+    if (Math.abs(player.position.y - prevY) > 5) camera.snap();
+  } else {
+    // Yenik: yeniden doğana kadar input ve yetenekler devre dışı
+    abilities.reset();
+    player.prevPosition.copy(player.position);
+  }
   for (const c of combatants) c.fixedUpdate(STEP, player.position);
   projectiles.update(STEP);
 }
@@ -202,6 +219,9 @@ function frame(now: number): void {
     ELEMENTS[abilities.activeElement].color,
     casting ? Math.max(0.01, abilities.castProgress) : 0,
   );
+  // Doğuş korumasında yanıp sön; yenikken gizli
+  playerView.root.visible = playerCombatant.alive && !(playerCombatant.spawnProtected && Math.floor(now / 90) % 2 === 0);
+  playerStatus.update(dt);
   dummies.forEach((d, i) => {
     const v = dummyViews[i];
     v.root.visible = d.alive;
@@ -251,5 +271,5 @@ requestAnimationFrame(frame);
 
 // Tarayıcı konsolundan hata ayıklama için
 Object.assign(window as unknown as Record<string, unknown>, {
-  __game: { player, camera, world, input, abilities, registry, bus, services, config: GameConfig, fixedStep },
+  __game: { player, playerCombatant, camera, world, input, abilities, registry, bus, services, config: GameConfig, fixedStep },
 });

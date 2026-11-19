@@ -61,7 +61,7 @@ export class Hud {
       this.overlay.innerHTML = `
         <div class="card">
           <h1>Element Arena</h1>
-          <p class="sub">Task 4 · Su/Buz Kayma &amp; Hava/Rüzgar</p>
+          <p class="sub">Task 5 · Ateş/Yıldırım, Hasar &amp; Arena Dışı</p>
           <p class="cta">Oynamak için tıkla</p>
           <ul>
             <li><b>WASD</b> hareket · <b>Fare</b> bakış</li>

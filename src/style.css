@@ -102,6 +102,13 @@ body {
 .hud.touch .cooldowns {
   bottom: auto;
   top: calc(10px + var(--sat));
+  left: auto;
+  right: calc(62px + var(--sar));
+  transform: none;
+}
+.hud.touch .pill {
+  width: 64px;
+  font-size: 11px;
 }
 
 .pill {
@@ -185,6 +192,100 @@ body {
   100% {
     transform: scale(1);
   }
+}
+
+/* ---------------------------------------------------------------- Oyuncu canı / hasar / yenilgi */
+.player-hp {
+  position: absolute;
+  left: calc(16px + var(--sal));
+  bottom: calc(18px + var(--sab));
+  width: 240px;
+  height: 22px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  overflow: hidden;
+  pointer-events: none;
+}
+.player-hp.touch {
+  left: calc(12px + var(--sal));
+  top: calc(10px + var(--sat));
+  bottom: auto;
+  width: 170px;
+  height: 18px;
+}
+.player-hp .ghost,
+.player-hp .fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+}
+.player-hp .ghost {
+  background: rgba(255, 255, 255, 0.55);
+}
+.player-hp .fill {
+  background: linear-gradient(#7af07a, #3fbf4f);
+  transition: width 0.08s;
+}
+.player-hp.low .fill {
+  background: linear-gradient(#ff8a6a, #e0442a);
+}
+.player-hp.shield {
+  box-shadow: 0 0 0 2px #8fd6ff, 0 0 12px #8fd6ff;
+}
+.player-hp .txt {
+  position: relative;
+  display: block;
+  text-align: center;
+  font: 700 12px/22px ui-monospace, Menlo, Consolas, monospace;
+  text-shadow: 0 1px 2px #000;
+}
+.player-hp.touch .txt {
+  line-height: 18px;
+  font-size: 11px;
+}
+
+.vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(ellipse at center, transparent 55%, rgba(220, 30, 30, 0.55) 100%);
+}
+.vignette.flash {
+  animation: vignette 0.45s ease-out;
+}
+@keyframes vignette {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.defeat {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: rgba(40, 0, 0, 0.45);
+  pointer-events: none;
+}
+.defeat.hidden {
+  display: none;
+}
+.defeat .title {
+  font: 900 44px system-ui, sans-serif;
+  letter-spacing: 0.08em;
+  color: #ff5a5a;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.8);
+}
+.defeat .sub {
+  font-size: 15px;
+  color: var(--ui);
 }
 
 /* ---------------------------------------------------------------- Dünya üstü (can barı, hasar) */

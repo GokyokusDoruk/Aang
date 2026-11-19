@@ -11,7 +11,7 @@ export type GameEvents = {
   'ability:denied': { casterId: string; slot: AbilitySlot; reason: 'cooldown' | 'switching' | 'empty' | 'invalid' };
 
   'combat:damage': { targetId: string; sourceId: string; amount: number; point: Vector3; killed: boolean };
-  'combat:death': { targetId: string };
+  'combat:death': { targetId: string; cause: 'hp' | 'ringout'; killerId: string | null };
   'combat:respawn': { targetId: string };
   'combat:ringout': { targetId: string };
 
@@ -21,6 +21,8 @@ export type GameEvents = {
   'wall:hit': { wallId: number; point: Vector3; amount: number };
   'wall:destroyed': { wallId: number; columns: Vector3[]; element: ElementId };
 
+  'fx:explosion': { point: Vector3; radius: number; element: ElementId };
+  'fx:lightning': { from: Vector3; to: Vector3; element: ElementId };
   'fx:shockwave': { origin: Vector3; direction: Vector3; range: number; halfAngle: number; element: ElementId };
   'projectile:deflect': { ownerId: string; count: number };
 
