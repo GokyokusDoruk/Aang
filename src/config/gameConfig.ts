@@ -115,6 +115,49 @@ export const GameConfig = {
     knockbackGroundFriction: 10,
     dummyMaxHp: 100,
     dummyRespawnDelay: 2.5,
+    /** Hasar sonrası kısa dokunulmazlık (s): aynı anda gelen çoklu isabetleri sınırlar. */
+    invulnTime: 0.2,
+    /** Hasar alınca kısa sersemleme (s): hareket kontrolü yok. */
+    hitStun: 0.12,
+    /** Doğunca dokunulmazlık (s) — karakter yanıp söner. */
+    spawnInvuln: 1.5,
+    playerRespawnDelay: 3,
+    /** Can azaldıkça itme artar: itme × (1 + eksikCanOranı × bonus). Arena dışına atmayı ödüllendirir. */
+    lowHpKnockbackBonus: 0.8,
+  },
+
+  /** Ateş / Yıldırım (Task 5) */
+  fire: {
+    ball: {
+      radius: 0.3,
+      speed: 34,
+      gravity: 1.5,
+      damage: 14,
+      knockback: 6,
+      knockbackUp: 3,
+      wallDamage: 20,
+      lifetime: 2,
+      /** Çarpınca patlama: alan hasarı + itme (merkezden uzaklaştıkça azalır) */
+      explosionRadius: 2.4,
+      splashDamage: 8,
+      splashKnockback: 9,
+      splashKnockbackUp: 5,
+      /** Kendi patlamanın seni yatay itme oranı (hasar yok) — "roket zıplaması" */
+      selfKnockbackMult: 0.8,
+      /** Kendi patlamanın seni yukarı fırlatma hızı (m/s) */
+      selfLaunchUp: 10,
+    },
+    lightning: {
+      range: 24,
+      /** Hattın karakterlere çarpma kalınlığı (gövde yarıçapına eklenir) */
+      width: 0.45,
+      damage: 22,
+      knockback: 7,
+      knockbackUp: 2.5,
+      wallDamage: 40,
+      /** Ek sersemletme süresi (s) */
+      stun: 0.35,
+    },
   },
 
   /** Toprak bükme (Task 3) */

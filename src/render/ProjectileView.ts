@@ -20,6 +20,14 @@ export class ProjectileView {
     opacity: 0.9,
   });
   private readonly look = new THREE.Vector3();
+  private readonly fireCore = new THREE.MeshBasicMaterial({ color: 0xfff1a8 });
+  private readonly fireShell = new THREE.MeshBasicMaterial({
+    color: 0xff6b1a,
+    transparent: true,
+    opacity: 0.55,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  });
 
   constructor(
     private readonly scene: THREE.Scene,
@@ -36,6 +44,15 @@ export class ProjectileView {
       mesh = new THREE.Mesh(this.shardGeo, this.shardMat);
       mesh.scale.set(p.spec.radius, p.spec.radius, p.spec.radius * 3.2);
       mesh.userData.aligned = true;
+    } else if (p.kind === 'fireball') {
+      // Sarı çekirdek + titreyen turuncu kabuk (toplamalı karışım: ışık gibi parlar)
+      mesh = new THREE.Mesh(this.orbGeo, this.fireCore);
+      mesh.scale.setScalar(p.spec.radius * 0.7);
+      const shell = new THREE.Mesh(this.orbGeo, this.fireShell);
+      shell.scale.setScalar(1.7);
+      shell.name = 'shell';
+      mesh.add(shell);
+      mesh.userData.flicker = true;
     } else {
       const color = ELEMENTS[p.element].color;
       mesh = new THREE.Mesh(this.orbGeo, new THREE.MeshBasicMaterial({ color }));
@@ -54,7 +71,10 @@ export class ProjectileView {
       seen.add(p.id);
       const m = this.meshes.get(p.id) ?? this.create(p);
       m.position.lerpVectors(p.prevPosition, p.position, alpha);
-      if (m.userData.aligned) {
+      if (m.userData.flicker) {
+        const shell = m.getObjectByName('shell');
+        if (shell) shell.scale.setScalar(1.55 + Math.random() * 0.4);
+      } else if (m.userData.aligned) {
         m.lookAt(this.look.copy(m.position).add(p.velocity));
         m.rotateZ(p.age * 20);
       } else {
@@ -64,7 +84,8 @@ export class ProjectileView {
     for (const [id, m] of this.meshes) {
       if (seen.has(id)) continue;
       this.scene.remove(m);
-      if (m.material !== this.rockMat && m.material !== this.shardMat) (m.material as THREE.Material).dispose();
+      const shared = [this.rockMat, this.shardMat, this.fireCore];
+      if (!shared.includes(m.material as never)) (m.material as THREE.Material).dispose();
       this.meshes.delete(id);
     }
   }

@@ -52,6 +52,14 @@ npm run build      # typecheck + production build
 - **Rüzgar Sıçrayışı** (Hava, sağ tık): yukarı + ileri fırlatma; ardından zıplamayı basılı tut = yavaş süzül
 - Ayarlar: `gameConfig.water` / `gameConfig.air`; hareket modları `PlayerController` (`startGlide`, `launch`)
 
+## Ateş / Yıldırım ve savaş döngüsü (Task 5)
+
+- **Ateş Topu** (Ateş, sol tık): çarpınca patlar — doğrudan hasar + alan hasarı/itme; kendi patlaman seni hasarsız fırlatır (roket zıplaması)
+- **Yıldırım Hattı** (Ateş, sağ tık): anlık, delici hat; yoldaki herkese hasar + itme + sersemletme, ilk duvarda durur
+- **Can / hasar:** kısa dokunulmazlık, sersemleme, düşük canda artan itme, doğuş koruması (yanıp sönme)
+- **Yenilgi:** can 0 → "YENİLDİN", arena dışına düşme → "ARENA DIŞI"; geri sayımla yeniden doğuş; arena dışı eleme son vurana yazılır
+- Ayarlar: `gameConfig.fire`, `gameConfig.combat`
+
 **Yeni yetenek/element eklemek:** elements.ts'e element ekle → definitions/ altına dosya ekle → registry'ye kaydet → config'e tuning ekle.
 
 ## Mimari

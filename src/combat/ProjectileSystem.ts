@@ -16,6 +16,15 @@ export interface ProjectileSpec {
   knockbackUp: number;
   wallDamage: number;
   lifetime: number;
+  /** İsteğe bağlı patlama (ateş topu) */
+  explosionRadius?: number;
+  splashDamage?: number;
+  splashKnockback?: number;
+  splashKnockbackUp?: number;
+  /** Sahibini patlamanın yatay itme oranı (hasarsız). 0 = etkilemez */
+  selfKnockbackMult?: number;
+  /** Sahibini yukarı fırlatma hızı (roket zıplaması) */
+  selfLaunchUp?: number;
 }
 
 export interface Projectile {
@@ -71,6 +80,45 @@ export class ProjectileSystem {
 
   clear(): void {
     this.list.length = 0;
+  }
+
+  /**
+   * Alan patlaması: yarıçap içindeki karakterlere uzaklıkla azalan hasar + itme.
+   * Doğrudan vurulan hedef alan hasarı almaz (itmesi zaten uygulandı).
+   * Sahibi hasar almaz, yalnızca itilir (roket zıplaması). Siper arkası korunur.
+   */
+  private explode(p: Projectile, at: Vector3, directHitId: string | null): void {
+    const s = p.spec;
+    const radius = s.explosionRadius ?? 0;
+    if (radius <= 0) return;
+    for (const c of this.combatants) {
+      if (!c.alive || c.id === directHitId) continue;
+      c.center(probe);
+      const off = probe.clone().sub(at);
+      const d = off.length();
+      if (d > radius + c.radius) continue;
+      if (d > 0.3) {
+        const block = this.world.raycast(at, off.clone().divideScalar(d), d);
+        if (block && block.distance < d - c.radius) continue;
+      }
+      const falloff = Math.max(0.25, 1 - d / (radius + c.radius));
+      impulse.set(off.x, 0, off.z);
+      if (impulse.lengthSq() < 1e-4) impulse.set(0, 0, 0);
+      else impulse.normalize().multiplyScalar((s.splashKnockback ?? 0) * falloff);
+      impulse.y = (s.splashKnockbackUp ?? 0) * falloff;
+      if (c.id === p.ownerId) {
+        const m = s.selfKnockbackMult ?? 0;
+        if (m > 0) {
+          impulse.x *= m;
+          impulse.z *= m;
+          impulse.y = s.selfLaunchUp ?? 0; // yarıçap içindeyse tam güç: güvenilir roket zıplaması
+          c.push(impulse);
+        }
+      } else {
+        c.takeDamage((s.splashDamage ?? 0) * falloff, impulse, p.ownerId, probe);
+      }
+    }
+    this.bus.emit('fx:explosion', { point: at.clone(), radius, element: p.element });
   }
 
   /**
@@ -142,6 +190,7 @@ export class ProjectileSystem {
         impulse.y = p.spec.knockbackUp;
         target.takeDamage(p.spec.damage, impulse, p.ownerId, p.position);
         this.bus.emit('projectile:impact', { kind: p.kind, element: p.element, point: p.position.clone(), normal: null, hitCombatant: true });
+        this.explode(p, p.position, target.id);
         this.list.splice(i, 1);
       } else if (worldHit) {
         p.position.copy(worldHit.point).addScaledVector(dir, -r * 0.5);
@@ -153,6 +202,7 @@ export class ProjectileSystem {
           normal: worldHit.normal.clone(),
           hitCombatant: false,
         });
+        this.explode(p, p.position, null);
         this.list.splice(i, 1);
       } else {
         p.position.addScaledVector(dir, travel);
