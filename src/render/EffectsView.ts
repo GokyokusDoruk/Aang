@@ -6,6 +6,8 @@ import { boulderGeometry } from './rockGeometry';
 
 const ROCK_COLOR = 0x857d74;
 const DUST_COLOR = 0xb89a74;
+const WOOD_COLOR = 0xb07a3e;
+const WOOD_DARK = 0x7a4f24;
 const UP = new THREE.Vector3(0, 1, 0);
 
 interface Fx {
@@ -26,6 +28,8 @@ export class EffectsView {
   private readonly sphere = new THREE.SphereGeometry(1, 16, 12);
   private readonly ring = new THREE.RingGeometry(0.75, 1, 32);
   private readonly chunks = [1, 2, 3, 4].map((i) => boulderGeometry(i + 40));
+  /** Tahta kıymığı / kalas parçası */
+  private readonly plank = new THREE.BoxGeometry(0.35, 0.12, 1.6);
   private readonly crater = (() => {
     // Düzensiz kenarlı zemin çatlağı / krater lekesi
     const g = new THREE.CircleGeometry(1, 14);
@@ -54,6 +58,12 @@ export class EffectsView {
     });
     bus.on('wall:destroyed', (e) => {
       for (const c of e.columns) this.debris(c, null, ROCK_COLOR, 7, 0.2, 6);
+    });
+    bus.on('crate:hit', (e) => this.debris(e.point, null, WOOD_COLOR, 3, 0.06, 4, true));
+    bus.on('crate:broken', (e) => {
+      this.debris(e.center, UP, WOOD_COLOR, 12, 0.22 * e.size, 7, true);
+      this.debris(e.center, UP, WOOD_DARK, 5, 0.18 * e.size, 5, true);
+      this.dust(e.center, DUST_COLOR, 1.6 * e.size);
     });
     bus.on('fx:shockwave', (e) => this.shockwave(e));
     bus.on('fx:explosion', (e) => this.explosion(e));
@@ -96,11 +106,11 @@ export class EffectsView {
   }
 
   /** Balistik kaya parçaları (paylaşılan geometri/malzeme; ölçekle söner). */
-  private debris(at: THREE.Vector3, normal: THREE.Vector3 | null, color: number, count: number, size: number, speed: number): void {
+  private debris(at: THREE.Vector3, normal: THREE.Vector3 | null, color: number, count: number, size: number, speed: number, wood = false): void {
     const mat = this.chunkMat(color);
     count = Math.max(2, Math.round(count * this.effectScale));
     for (let i = 0; i < count; i++) {
-      const m = new THREE.Mesh(this.chunks[i % this.chunks.length], mat);
+      const m = new THREE.Mesh(wood ? this.plank : this.chunks[i % this.chunks.length], mat);
       m.position.copy(at);
       const s = size * (0.6 + Math.random() * 0.8);
       m.scale.setScalar(s);

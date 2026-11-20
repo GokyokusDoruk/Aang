@@ -21,6 +21,9 @@ export type GameEvents = {
   'wall:hit': { wallId: number; point: Vector3; amount: number };
   'wall:destroyed': { wallId: number; columns: Vector3[]; element: ElementId };
 
+  'crate:hit': { crateId: number; point: Vector3 };
+  'crate:broken': { crateId: number; center: Vector3; size: number };
+
   'fx:explosion': { point: Vector3; radius: number; element: ElementId };
   'fx:lightning': { from: Vector3; to: Vector3; element: ElementId };
   'fx:shockwave': { origin: Vector3; direction: Vector3; range: number; halfAngle: number; element: ElementId };

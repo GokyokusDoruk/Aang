@@ -44,6 +44,8 @@ const easeOutBack = (t: number) => {
  */
 export class WallSystem {
   readonly walls: Wall[] = [];
+  /** Duvara ait olmayan kutular için ek hasar alıcı (ör. kırılabilen kasalar). */
+  extraDamage: ((box: AABB | null, amount: number, point: Vector3) => boolean) | null = null;
   private readonly byBox = new Map<AABB, Wall>();
   private nextId = 1;
 
@@ -143,7 +145,8 @@ export class WallSystem {
   /** Mermi isabeti; kutu bir duvara aitse hasar uygular ve true döner. */
   damageByBox(box: AABB | null, amount: number, point: Vector3): boolean {
     const wall = this.wallOfBox(box);
-    if (!wall || wall.state === 'sinking') return !!wall;
+    if (!wall) return this.extraDamage?.(box, amount, point) ?? false;
+    if (wall.state === 'sinking') return true;
     wall.hp -= amount;
     wall.hitFlash = 0.12;
     this.bus.emit('wall:hit', { wallId: wall.id, point: point.clone(), amount });

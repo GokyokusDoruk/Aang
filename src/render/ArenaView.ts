@@ -5,9 +5,15 @@ function gridTexture(): THREE.CanvasTexture {
   const c = document.createElement('canvas');
   c.width = c.height = 256;
   const g = c.getContext('2d')!;
-  g.fillStyle = '#4a5468';
+  // Açık mavi-gri taş karolar (hafif ton farklarıyla)
+  g.fillStyle = '#9eacc2';
   g.fillRect(0, 0, 256, 256);
-  g.strokeStyle = 'rgba(255,255,255,0.08)';
+  for (let i = 0; i < 4; i++)
+    for (let j = 0; j < 4; j++) {
+      g.fillStyle = `rgba(255,255,255,${(((i * 7 + j * 13) % 5) * 0.012).toFixed(3)})`;
+      g.fillRect(i * 64, j * 64, 64, 64);
+    }
+  g.strokeStyle = 'rgba(40,50,70,0.18)';
   g.lineWidth = 2;
   for (let i = 0; i <= 256; i += 64) {
     g.beginPath();
@@ -17,7 +23,7 @@ function gridTexture(): THREE.CanvasTexture {
     g.lineTo(256, i);
     g.stroke();
   }
-  g.strokeStyle = 'rgba(255,255,255,0.2)';
+  g.strokeStyle = 'rgba(40,50,70,0.3)';
   g.lineWidth = 4;
   g.strokeRect(0, 0, 256, 256);
   const t = new THREE.CanvasTexture(c);
@@ -29,11 +35,11 @@ function gridTexture(): THREE.CanvasTexture {
 
 const COLORS: Record<BoxKind, number> = {
   floor: 0xffffff,
-  wall: 0x6b7590,
-  cover: 0xa7825a,
-  platform: 0x8590a6,
-  step: 0x8590a6,
-  pillar: 0x5d677d,
+  wall: 0x8a7f96,
+  cover: 0x3f8f72,
+  platform: 0xb3a58c,
+  step: 0xb3a58c,
+  pillar: 0x6d6680,
 };
 
 const RAMP_YAW: Record<RampDir, number> = { '-z': 0, '+z': Math.PI, '+x': -Math.PI / 2, '-x': Math.PI / 2 };
@@ -79,7 +85,7 @@ export function buildArenaView(layout: ArenaLayout): THREE.Group {
     group.add(mesh);
   }
 
-  const rampMat = new THREE.MeshStandardMaterial({ color: 0x96a2b8, roughness: 0.8 });
+  const rampMat = new THREE.MeshStandardMaterial({ color: 0xc2b498, roughness: 0.8 });
   for (const r of layout.ramps) {
     const mesh = new THREE.Mesh(wedgeGeometry(r.w, r.h, r.l), rampMat);
     mesh.position.set(r.x, (r.y ?? 0) + r.h / 2, r.z);

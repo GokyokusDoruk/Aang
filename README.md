@@ -72,6 +72,11 @@ npm run build      # typecheck + production build
 - **Mobil:** uyarlamalı çözünürlük (FPS düşerse), mobilde azaltılmış efekt parçası, hasar alınca titreşim (Android)
 - Ayarlar: `gameConfig.match`, `gameConfig.bot`, `gameConfig.botDifficulty`
 
+## Arena süsleri
+
+- `src/render/ArenaDecor.ts`: düşme çukuru, stadyum duvarı, kademeli tribünler + seyirciler, duvar/sütun bayrakları (element sembolleri), zemindeki renkli bölgeler. Yalnızca görsel, çarpışma yok.
+- **Kırılabilen kasalar:** `src/combat/CrateSystem.ts` (gerçek çarpışma kutusu, mermi/yıldırımla kırılır, üst üste kasalar birlikte düşer, raund başında yenilenir). Yerleşim: `arenaLayout.ts` → `crates`, ayar: `gameConfig.crate`.
+
 **Yeni yetenek/element eklemek:** elements.ts'e element ekle → definitions/ altına dosya ekle → registry'ye kaydet → config'e tuning ekle.
 
 ## Mimari

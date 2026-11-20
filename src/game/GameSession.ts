@@ -6,6 +6,7 @@ import { CollisionWorld } from '../physics/CollisionWorld';
 import { Combatant } from '../combat/Combatant';
 import { ProjectileSystem } from '../combat/ProjectileSystem';
 import { WallSystem } from '../combat/WallSystem';
+import { CrateSystem } from '../combat/CrateSystem';
 import { AbilitySystem, type AbilityIntent } from '../abilities/AbilitySystem';
 import { createDefaultRegistry, type AbilityRegistry } from '../abilities/AbilityRegistry';
 import { ELEMENT_ORDER, type ElementId } from '../abilities/elements';
@@ -33,6 +34,7 @@ export class GameSession {
   readonly world: CollisionWorld;
   readonly combatants: Combatant[] = [];
   readonly walls: WallSystem;
+  readonly crates: CrateSystem;
   readonly projectiles: ProjectileSystem;
   readonly services: GameServices;
   readonly registry: AbilityRegistry;
@@ -70,6 +72,8 @@ export class GameSession {
     this.world = new CollisionWorld(layout);
     const camera = (this.camera = new ThirdPersonCamera(this.world));
     this.walls = new WallSystem(this.world, bus, this.combatants);
+    this.crates = new CrateSystem(this.world, bus, layout.crates);
+    this.walls.extraDamage = (box, amount, point) => this.crates.damageByBox(box, amount, point);
     this.projectiles = new ProjectileSystem(this.world, bus, this.combatants, this.walls);
     this.services = { world: this.world, bus, combatants: this.combatants, projectiles: this.projectiles, walls: this.walls };
     this.registry = createDefaultRegistry();
@@ -141,6 +145,7 @@ export class GameSession {
   /** Raund başı: alanı temizle, dövüşçüleri doğuş noktalarına koy. */
   private resetRound(): void {
     this.walls.clear();
+    this.crates.reset();
     this.projectiles.clear();
     this.player.respawn();
     this.playerAbilities.reset();
@@ -166,6 +171,7 @@ export class GameSession {
 
     // Sıra: yapılar → oyuncu → bot → dövüşçü durumları → mermiler → raund
     this.walls.update(dt);
+    this.crates.update(dt);
 
     if (this.player.alive) {
       const inp = fighting ? s : FROZEN;
