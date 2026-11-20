@@ -2,8 +2,9 @@ import * as THREE from 'three';
 import { ELEMENTS } from '../abilities/elements';
 import type { GameEvents } from '../abilities/types';
 import type { EventBus } from '../core/EventBus';
+import { boulderGeometry } from './rockGeometry';
 
-const ROCK_COLOR = 0x7d5f3e;
+const ROCK_COLOR = 0x857d74;
 const DUST_COLOR = 0xb89a74;
 const UP = new THREE.Vector3(0, 1, 0);
 
@@ -24,7 +25,18 @@ export class EffectsView {
   private readonly items: Fx[] = [];
   private readonly sphere = new THREE.SphereGeometry(1, 16, 12);
   private readonly ring = new THREE.RingGeometry(0.75, 1, 32);
-  private readonly chunk = new THREE.DodecahedronGeometry(1, 0);
+  private readonly chunks = [1, 2, 3, 4].map((i) => boulderGeometry(i + 40));
+  private readonly crater = (() => {
+    // Düzensiz kenarlı zemin çatlağı / krater lekesi
+    const g = new THREE.CircleGeometry(1, 14);
+    const p = g.getAttribute('position');
+    for (let i = 1; i < p.count; i++) {
+      const k = 0.65 + Math.random() * 0.5;
+      p.setXY(i, p.getX(i) * k, p.getY(i) * k);
+    }
+    g.rotateX(-Math.PI / 2);
+    return g;
+  })();
   private readonly chunkMats = new Map<number, THREE.MeshStandardMaterial>();
 
   constructor(
@@ -49,7 +61,37 @@ export class EffectsView {
     bus.on('fx:burst', (e) => {
       const color = e.element === 'earth' ? DUST_COLOR : ELEMENTS[e.element].color;
       this.dust(e.point, color, e.size * 2.2);
-      if (e.element === 'earth') this.debris(e.point, UP, ROCK_COLOR, 4, 0.08 * (1 + e.size), 3.5);
+      if (e.element === 'earth') {
+        this.debris(e.point, UP, ROCK_COLOR, 5, 0.08 * (1 + e.size), 4);
+        this.craterMark(e.point, 0.35 + e.size * 0.6);
+      }
+    });
+  }
+
+  /** Toprak duvarı yükselirken: her sütunun dibinden toz bulutu, fırlayan taşlar ve zemin çatlağı. */
+  earthEruption(points: THREE.Vector3[]): void {
+    points.forEach((p, i) => {
+      this.dust(p, DUST_COLOR, 1.8);
+      if (i % 2 === 0) this.debris(p, UP, ROCK_COLOR, 4, 0.12, 6);
+      this.craterMark(p, 0.9);
+    });
+  }
+
+  /** Zeminde kısa süre kalan koyu çatlak izi. */
+  private craterMark(at: THREE.Vector3, size: number): void {
+    const mat = new THREE.MeshBasicMaterial({ color: 0x3b332b, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 });
+    const m = new THREE.Mesh(this.crater, mat);
+    m.position.set(at.x, at.y + 0.02, at.z);
+    m.rotation.y = Math.random() * Math.PI * 2;
+    this.add({
+      obj: m,
+      mats: [mat],
+      life: 0,
+      max: 1.6,
+      tick: (t) => {
+        m.scale.setScalar(size * Math.min(1, 0.6 + t * 4));
+        mat.opacity = 0.5 * (1 - t * t);
+      },
     });
   }
 
@@ -58,7 +100,7 @@ export class EffectsView {
     const mat = this.chunkMat(color);
     count = Math.max(2, Math.round(count * this.effectScale));
     for (let i = 0; i < count; i++) {
-      const m = new THREE.Mesh(this.chunk, mat);
+      const m = new THREE.Mesh(this.chunks[i % this.chunks.length], mat);
       m.position.copy(at);
       const s = size * (0.6 + Math.random() * 0.8);
       m.scale.setScalar(s);

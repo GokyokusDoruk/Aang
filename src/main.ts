@@ -7,7 +7,7 @@ import { InputManager } from './input/InputManager';
 import type { Action } from './input/InputActions';
 import { GameRenderer } from './render/GameRenderer';
 import { buildArenaView } from './render/ArenaView';
-import { PlayerView } from './render/PlayerView';
+import { PlayerView, type FighterMotion } from './render/PlayerView';
 import { EffectsView } from './render/EffectsView';
 import { ProjectileView } from './render/ProjectileView';
 import { WallView } from './render/WallView';
@@ -48,8 +48,13 @@ const botView = new PlayerView(gfx.scene, 0x9b5cff);
 const dummyViews = session.dummies.map(() => new PlayerView(gfx.scene, 0xe0603a));
 const effects = new EffectsView(gfx.scene, bus, isTouch ? GameConfig.render.mobileEffectScale : 1);
 const projectileView = new ProjectileView(gfx.scene, session.projectiles);
-const wallView = new WallView(gfx.scene, session.walls);
+const wallView = new WallView(gfx.scene, session.walls, (pts) => effects.earthEruption(pts));
 const trailView = new TrailView(gfx.scene);
+// Yetenek çıktığı an karakter vuruş hamlesi yapar
+bus.on('ability:cast', (e) => {
+  if (e.casterId === 'player') playerView.triggerCast();
+  else if (e.casterId === 'bot') botView.triggerCast();
+});
 
 const aimMarker = new THREE.Mesh(
   new THREE.SphereGeometry(0.09, 10, 8),
@@ -169,11 +174,18 @@ function drawFighter(view: PlayerView, c: Combatant, alpha: number, now: number,
   tmpPos.lerpVectors(ctl.prevPosition, ctl.position, alpha);
   const ratio = ctl.prevHeightRatio + (ctl.heightRatio - ctl.prevHeightRatio) * alpha;
   const flash = c.hitFlash > 0;
-  view.update(tmpPos, lerpAngle(ctl.prevFacingYaw, ctl.facingYaw, alpha), ratio, ctl.dashing, 10, flash ? 0xffffff : elementColor, flash ? 1 : castProgress);
+  view.update(tmpPos, lerpAngle(ctl.prevFacingYaw, ctl.facingYaw, alpha), ratio, ctl.dashing, 10, elementColor, castProgress, motionOf(ctl), frameDt, flash);
 }
+
+function motionOf(ctl: Combatant['controller']): FighterMotion {
+  return { velocity: ctl.velocity, grounded: ctl.grounded, state: ctl.state };
+}
+
+let frameDt = 1 / 60;
 
 function frame(now: number): void {
   const dt = Math.min((now - last) / 1000, 0.1);
+  frameDt = dt;
   last = now;
   fps += (1 / Math.max(dt, 1e-4) - fps) * 0.05;
   gfx.adapt(fps, dt);
@@ -216,6 +228,9 @@ function frame(now: number): void {
     camera.currentDistance,
     ELEMENTS[abilities.activeElement].color,
     abilities.castingAbility ? Math.max(0.01, abilities.castProgress) : 0,
+    motionOf(playerCtl),
+    dt,
+    player.hitFlash > 0,
   );
 
   const inMatch = session.running && session.mode === 'match';
@@ -272,5 +287,5 @@ requestAnimationFrame(frame);
 
 // Tarayıcı konsolundan hata ayıklama / test için
 Object.assign(window as unknown as Record<string, unknown>, {
-  __game: { session, camera, input, menu, matchHud, config: GameConfig, startGame },
+  __game: { session, camera, input, menu, matchHud, config: GameConfig, startGame, playerView },
 });
