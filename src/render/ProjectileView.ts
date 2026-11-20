@@ -1,12 +1,13 @@
 import * as THREE from 'three';
 import { ELEMENTS } from '../abilities/elements';
 import type { Projectile, ProjectileSystem } from '../combat/ProjectileSystem';
+import { boulderGeometry } from './rockGeometry';
 
 /** ProjectileSystem durumunu her karede mesh'lerle eşler (interpolasyonlu). */
 export class ProjectileView {
   private readonly meshes = new Map<number, THREE.Mesh>();
-  private readonly rockGeo = new THREE.DodecahedronGeometry(1, 0);
-  private readonly rockMat = new THREE.MeshStandardMaterial({ color: 0x8a6a45, roughness: 0.95, flatShading: true });
+  private readonly rockGeos = [1, 2, 3, 4, 5].map((i) => boulderGeometry(i));
+  private readonly rockMat = new THREE.MeshStandardMaterial({ color: 0x8a8279, roughness: 0.95, flatShading: true });
   private readonly orbGeo = new THREE.SphereGeometry(1, 12, 10);
   private readonly shardGeo = new THREE.OctahedronGeometry(1, 0);
   private readonly shardMat = new THREE.MeshStandardMaterial({
@@ -37,8 +38,8 @@ export class ProjectileView {
   private create(p: Projectile): THREE.Mesh {
     let mesh: THREE.Mesh;
     if (p.kind === 'rock') {
-      mesh = new THREE.Mesh(this.rockGeo, this.rockMat);
-      mesh.scale.setScalar(p.spec.radius * 1.25);
+      mesh = new THREE.Mesh(this.rockGeos[p.id % this.rockGeos.length], this.rockMat);
+      mesh.scale.setScalar(p.spec.radius * 1.35);
     } else if (p.kind === 'shard') {
       // Uzun buz kıymığı: hız yönüne bakar (lookAt ile +Z ekseni)
       mesh = new THREE.Mesh(this.shardGeo, this.shardMat);
