@@ -29,7 +29,13 @@ export class PlayerStatus {
     this.fill.className = 'fill';
     this.text = document.createElement('span');
     this.text.className = 'txt';
-    this.bar.append(this.ghost, this.fill, this.text);
+    const track = document.createElement('div');
+    track.className = 'track';
+    track.append(this.ghost, this.fill);
+    const label = document.createElement('span');
+    label.className = 'lbl';
+    label.textContent = 'HP';
+    this.bar.append(label, track, this.text);
 
     this.vignette = document.createElement('div');
     this.vignette.className = 'vignette';
