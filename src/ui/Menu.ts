@@ -35,6 +35,11 @@ export class Menu {
     this.showMain();
   }
 
+  /** Menü katmanının köşesine kalıcı bir öğe ekler (örn. ses düğmesi). */
+  attach(el: HTMLElement): void {
+    this.root.appendChild(el);
+  }
+
   private render(html: string, bind: Record<string, () => void>): void {
     this.card.innerHTML = html;
     for (const [sel, fn] of Object.entries(bind)) {
@@ -57,7 +62,7 @@ export class Menu {
       : `<ul class="help">
           <li><b>WASD</b> hareket · <b>Fare</b> bakış · <b>Space</b> zıpla</li>
           <li><b>1-4 / Q / Tekerlek</b> element · <b>Sol / Sağ tık</b> yetenek</li>
-          <li><b>Shift</b> dash · <b>C</b> kayma · <b>Esc</b> duraklat</li>
+          <li><b>Shift</b> dash · <b>C</b> kayma · <b>Esc</b> duraklat · <b>M</b> ses</li>
         </ul>`;
   }
 

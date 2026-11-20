@@ -800,3 +800,17 @@ body {
     font-size: 10px;
   }
 }
+
+/* ---------------------------------------------------------------- Ses düğmesi (menüde) */
+.sound-toggle {
+  position: absolute;
+  right: calc(14px + var(--sar));
+  bottom: calc(14px + var(--sab));
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: var(--panel);
+  color: inherit;
+  font: 700 13px system-ui, sans-serif;
+  cursor: pointer;
+}
