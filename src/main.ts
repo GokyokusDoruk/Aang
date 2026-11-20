@@ -7,6 +7,8 @@ import { InputManager } from './input/InputManager';
 import type { Action } from './input/InputActions';
 import { GameRenderer } from './render/GameRenderer';
 import { buildArenaView } from './render/ArenaView';
+import { ArenaDecor } from './render/ArenaDecor';
+import { CrateView } from './render/CrateView';
 import { PlayerView, type FighterMotion } from './render/PlayerView';
 import { EffectsView } from './render/EffectsView';
 import { ProjectileView } from './render/ProjectileView';
@@ -43,6 +45,8 @@ camera.aimProbe = (o, d, max) => raycastCombatants(o, d, max, session.combatants
 // --- Render
 const gfx = new GameRenderer(app, isTouch);
 gfx.scene.add(buildArenaView(DefaultArena));
+const decor = new ArenaDecor(DefaultArena, isTouch);
+gfx.scene.add(decor.group);
 const playerView = new PlayerView(gfx.scene);
 const botView = new PlayerView(gfx.scene, 0x9b5cff);
 const dummyViews = session.dummies.map(() => new PlayerView(gfx.scene, 0xe0603a));
@@ -50,6 +54,7 @@ const effects = new EffectsView(gfx.scene, bus, isTouch ? GameConfig.render.mobi
 const projectileView = new ProjectileView(gfx.scene, session.projectiles);
 const wallView = new WallView(gfx.scene, session.walls, (pts) => effects.earthEruption(pts));
 const trailView = new TrailView(gfx.scene);
+const crateView = new CrateView(gfx.scene, session.crates);
 // Yetenek çıktığı an karakter vuruş hamlesi yapar
 bus.on('ability:cast', (e) => {
   if (e.casterId === 'player') playerView.triggerCast();
@@ -249,6 +254,8 @@ function frame(now: number): void {
   effects.update(dt);
   projectileView.update(dt, alpha);
   wallView.update();
+  crateView.update();
+  decor.update(dt);
   trailView.update(dt, session.combatants);
   overlay.update(dt, gfx.camera, session.combatants, alpha, window.innerWidth, window.innerHeight);
 

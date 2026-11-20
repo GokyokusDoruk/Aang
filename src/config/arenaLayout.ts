@@ -33,6 +33,14 @@ export interface RampDef {
   dir: RampDir;
 }
 
+/** Kırılabilen kasa: tabanı y'de, kenar uzunluğu size (varsayılan 1.2). */
+export interface CrateDef {
+  x: number;
+  z: number;
+  y?: number;
+  size?: number;
+}
+
 export interface SpawnPoint {
   x: number;
   y: number;
@@ -44,6 +52,7 @@ export interface ArenaLayout {
   size: number;
   boxes: BoxDef[];
   ramps: RampDef[];
+  crates: CrateDef[];
   spawnPoints: SpawnPoint[];
   /** Test kuklaları (Task 6'da botlarla değişecek) */
   dummySpawns: SpawnPoint[];
@@ -125,6 +134,21 @@ export const DefaultArena: ArenaLayout = {
     { x: 0, z: -7, w: 3, l: 6, h: 2, dir: '+z' },
     { x: 12.5, z: 0, w: 3, l: 5, h: 1.2, dir: '+x' },
     { x: -12.5, z: 0, w: 3, l: 5, h: 1.2, dir: '-x' },
+  ],
+  crates: [
+    { x: -6, z: 4 },
+    { x: -6, z: 4, y: 1.2 },
+    { x: -7.3, z: 4.3 },
+    { x: 6, z: -4 },
+    { x: 6, z: -4, y: 1.2 },
+    { x: 7.3, z: -4.3 },
+    { x: 9, z: 3.5 },
+    { x: -9, z: -3.5 },
+    { x: 3.5, z: 17 },
+    { x: -3.5, z: -17 },
+    { x: 18.5, z: 9 },
+    { x: -18.5, z: -9 },
+    { x: 18.5, z: 9, y: 1.2, size: 1 },
   ],
   spawnPoints: [
     // Çaprazlama doğuş: arkada sınır duvarı var (kenar boşluklarının önünde değil)

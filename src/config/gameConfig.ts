@@ -315,6 +315,13 @@ export const GameConfig = {
     maxMouseDelta: 250,
   },
 
+  /** Kırılabilen tahta kasalar (arena süsü + siper) */
+  crate: {
+    hp: 40,
+    /** Yapı hasarı (wallDamage) bu oranla uygulanır */
+    damageMult: 1,
+  },
+
   render: {
     maxPixelRatio: 2,
     mobileMaxPixelRatio: 1.5,
