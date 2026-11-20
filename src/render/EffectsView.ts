@@ -7,6 +7,7 @@ import { boulderGeometry } from './rockGeometry';
 const ROCK_COLOR = 0x857d74;
 const DUST_COLOR = 0xb89a74;
 const WOOD_COLOR = 0xb07a3e;
+const ICE_COLOR = 0xbfeaff;
 const WOOD_DARK = 0x7a4f24;
 const UP = new THREE.Vector3(0, 1, 0);
 
@@ -59,7 +60,8 @@ export class EffectsView {
       this.dust(e.point, color, 0.9);
     });
     bus.on('wall:destroyed', (e) => {
-      for (const c of e.columns) this.debris(c, null, ROCK_COLOR, 7, 0.2, 6);
+      const ice = e.element === 'water';
+      for (const c of e.columns) this.debris(c, null, ice ? ICE_COLOR : ROCK_COLOR, ice ? 9 : 7, ice ? 0.14 : 0.2, ice ? 8 : 6);
     });
     bus.on('crate:hit', (e) => this.debris(e.point, null, WOOD_COLOR, 3, 0.06, 4, true));
     bus.on('crate:broken', (e) => {

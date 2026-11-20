@@ -1,9 +1,9 @@
 import { ELEMENTS, ELEMENT_ORDER, type ElementId } from '../abilities/elements';
 import type { AbilitySystem } from '../abilities/AbilitySystem';
-import type { AbilitySlot } from '../abilities/types';
+import { ABILITY_SLOTS, type AbilitySlot } from '../abilities/types';
 import { abilityIcon, elementIcon } from './icons';
 
-const SLOT_KEYS: Record<AbilitySlot, string> = { primary: 'SOL', secondary: 'SAĞ' };
+const SLOT_KEYS: Record<AbilitySlot, string> = { primary: 'SOL', secondary: 'SAĞ', special: 'E' };
 
 /**
  * Element seçici + aktif yetenek slotları + hazırlık (cast) çubuğu.
@@ -27,10 +27,10 @@ export class AbilityBar {
     if (!opts.touch) {
       const slotRow = document.createElement('div');
       slotRow.className = 'slots';
-      for (const slot of ['primary', 'secondary'] as AbilitySlot[]) {
+      for (const slot of ABILITY_SLOTS) {
         const el = document.createElement('div');
         el.className = `slot ${slot}`;
-        el.innerHTML = `<div class="disc"><div class="ring"></div><div class="icon"></div><div class="sweep"></div><span class="cd"></span></div><span class="key"><i class="mouse ${slot}"></i>${SLOT_KEYS[slot]}</span><span class="name"></span>`;
+        el.innerHTML = `<div class="disc"><div class="ring"></div><div class="icon"></div><div class="sweep"></div><span class="cd"></span></div><span class="key">${slot === 'special' ? `<b class="kbd">${SLOT_KEYS[slot]}</b>` : `<i class="mouse ${slot}"></i>${SLOT_KEYS[slot]}`}</span><span class="name"></span>`;
         slotRow.appendChild(el);
         this.slots.set(slot, { el, name: el.querySelector('.name')!, cd: el.querySelector('.cd')!, icon: el.querySelector('.icon')! });
       }
@@ -74,6 +74,7 @@ export class AbilityBar {
         const def = sys.slot(slot);
         s.name.textContent = def?.name ?? '—';
         s.icon.innerHTML = abilityIcon(def?.id, sys.activeElement);
+        s.el.classList.toggle('empty', !def);
       }
     }
 

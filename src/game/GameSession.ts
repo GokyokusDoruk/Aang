@@ -60,6 +60,7 @@ export class GameSession {
     cycle: 0,
     primaryPressed: false,
     secondaryPressed: false,
+    specialPressed: false,
     primaryHeld: false,
     interrupt: false,
   };
@@ -200,6 +201,7 @@ export class GameSession {
     it.cycle = (s.pressed.elementNext ? 1 : 0) - (s.pressed.elementPrev ? 1 : 0);
     it.primaryPressed = s.pressed.primary;
     it.secondaryPressed = s.pressed.secondary;
+    it.specialPressed = s.pressed.special;
     it.primaryHeld = s.held.primary;
     it.interrupt = GameConfig.abilities.cancelCastOnDash && (s.pressed.dash || this.playerCtl.dashing);
     return it;

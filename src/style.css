@@ -96,7 +96,7 @@ body {
   left: 50%;
   bottom: calc(76px + var(--sab));
   /* yetenek dairelerinin sağında, dikey */
-  transform: translateX(118px);
+  transform: translateX(170px);
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -746,6 +746,25 @@ body {
   white-space: nowrap;
   text-shadow: 0 1px 3px #000;
 }
+/* 3. yetenek: klavye tuşu simgesi */
+.slot .kbd {
+  min-width: 14px;
+  padding: 0 3px;
+  border: 1.5px solid currentColor;
+  border-bottom-width: 3px;
+  border-radius: 4px;
+  font: 800 10px system-ui, sans-serif;
+  color: var(--c);
+  text-align: center;
+}
+/* Bu elementte o slotta yetenek yok */
+.slot.empty .disc {
+  opacity: 0.35;
+  filter: grayscale(1);
+}
+.slot.empty .name {
+  color: var(--ui-dim);
+}
 .slot.ready .disc {
   box-shadow: 0 0 14px color-mix(in srgb, var(--c) 65%, transparent);
 }
@@ -948,6 +967,27 @@ body {
   height: 66px;
   right: 8px;
   bottom: 102px;
+}
+.tbtn.special {
+  width: 58px;
+  height: 58px;
+  right: 162px;
+  bottom: 84px;
+  border-color: var(--accent-c, rgba(255, 255, 255, 0.5));
+  font-size: 9px;
+  text-align: center;
+  line-height: 1.1;
+  padding: 0 4px;
+}
+.tbtn.special .ic svg {
+  width: 24px;
+  height: 24px;
+}
+.tbtn.special.has-icon .lbl {
+  font-size: 8px;
+}
+.tbtn.empty {
+  opacity: 0.3;
 }
 .tbtn.jump {
   width: 72px;

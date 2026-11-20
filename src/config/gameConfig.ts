@@ -97,6 +97,7 @@ export const GameConfig = {
       // Su / Buz
       waterShard: { cooldown: 0.45, castTime: 0.1, castMoveMult: 0.85 },
       iceGlide: { cooldown: 6.0, castTime: 0.15, castMoveMult: 1.0 },
+      iceWall: { cooldown: 7.0, castTime: 0.1, castMoveMult: 0.5 },
       // Ateş / Yıldırım
       fireBall: { cooldown: 0.6, castTime: 0.15, castMoveMult: 0.8 },
       lightningLine: { cooldown: 3.5, castTime: 0.45, castMoveMult: 0.4 },
@@ -217,6 +218,27 @@ export const GameConfig = {
       duration: 2.2,
       /** Tam yığında donma süresi (s); sonra yığınlar sıfırlanır */
       freezeTime: 0.7,
+    },
+    /**
+     * Buz Duvarı (E): hemen önünde anında yükselen, toprak duvardan hızlı ama kırılgan siper.
+     * Kırılınca parçalanır ve yakındaki rakipleri üşütür.
+     */
+    iceWall: {
+      columns: 6,
+      columnWidth: 0.8,
+      spacing: 0.85,
+      height: 2.3,
+      riseTime: 0.12,
+      sinkTime: 0.3,
+      hp: 90,
+      lifetime: 5,
+      maxPerCaster: 1,
+      /** Nişandan bağımsız: karakterin bu kadar önüne konur */
+      minDistance: 2.2,
+      maxDistance: 2.2,
+      /** Kırılınca bu yarıçaptaki rakiplere eklenen üşüme */
+      shatterRadius: 3.2,
+      shatterChill: 1,
     },
     /** Buz Kayması: düşük sürtünmeli, momentumlu süzülme modu */
     glide: {

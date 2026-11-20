@@ -116,9 +116,9 @@ export class SoundSystem {
       else if (e.sourceId === me) this.hitConfirm(e.killed);
     });
     bus.on('combat:ringout', (e) => this.fallOut(e.targetId === me));
-    bus.on('wall:spawn', () => this.rumble(0.55, 0.5));
+    bus.on('wall:spawn', (e) => e.element === 'earth' && this.rumble(0.55, 0.5));
     bus.on('wall:hit', (e) => this.knock(e.point, 380, 0.35));
-    bus.on('wall:destroyed', (e) => this.crumble(e.columns[0] ?? null, 0.8));
+    bus.on('wall:destroyed', (e) => (e.element === 'water' ? this.shatter(e.columns[0] ?? null) : this.crumble(e.columns[0] ?? null, 0.8)));
     bus.on('crate:hit', (e) => this.knock(e.point, 900, 0.3));
     bus.on('crate:broken', (e) => this.crateBreak(e.center));
     bus.on('fx:explosion', (e) => this.boom(e.point, e.radius));
@@ -248,6 +248,11 @@ export class SoundSystem {
         this.tone(o, { type: 'triangle', f0: 2850, f1: 3600, dur: 0.3, gain: 0.12, delay: 0.05 });
         this.noiseHit(o, { type: 'highpass', f0: 5000, f1: 3000, dur: 0.4, gain: 0.25 });
         return;
+      case 'iceWall':
+        this.noiseHit(o, { type: 'highpass', f0: 4200, f1: 1800, dur: 0.3, gain: 0.55, attack: 0.02 });
+        this.tone(o, { type: 'triangle', f0: 900, f1: 1800, dur: 0.18, gain: 0.25 });
+        this.noiseHit(o, { type: 'bandpass', f0: 2400, f1: 1400, dur: 0.12, gain: 0.35, q: 4, delay: 0.06 });
+        return;
       case 'airShockwave':
         this.noiseHit(o, { type: 'bandpass', f0: 250, f1: 1600, dur: 0.45, gain: 0.9, q: 1.2, attack: 0.04 });
         this.tone(o, { type: 'sine', f0: 90, f1: 50, dur: 0.3, gain: 0.5 });
@@ -326,6 +331,15 @@ export class SoundSystem {
     if (!o) return;
     this.noiseHit(o, { type: 'lowpass', f0: 1500, f1: 100, dur: 0.7, gain: 0.9 });
     for (let i = 0; i < 4; i++) this.noiseHit(o, { type: 'bandpass', f0: 500 + Math.random() * 500, f1: 300, dur: 0.1, gain: 0.5, q: 3, delay: 0.05 + i * 0.07 });
+  }
+
+  /** Buz kırılması: cam gibi çınlayan parçalar */
+  private shatter(at: THREE.Vector3 | null): void {
+    const o = this.out(at, 0.9);
+    if (!o) return;
+    this.noiseHit(o, { type: 'highpass', f0: 6000, f1: 2500, dur: 0.45, gain: 0.7 });
+    for (let i = 0; i < 5; i++)
+      this.tone(o, { type: 'triangle', f0: 2000 + Math.random() * 2500, f1: 1800, dur: 0.15, gain: 0.15, delay: 0.02 + i * 0.045 });
   }
 
   private crateBreak(at: THREE.Vector3): void {
