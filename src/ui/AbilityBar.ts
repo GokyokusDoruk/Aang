@@ -1,8 +1,9 @@
 import { ELEMENTS, ELEMENT_ORDER, type ElementId } from '../abilities/elements';
 import type { AbilitySystem } from '../abilities/AbilitySystem';
 import type { AbilitySlot } from '../abilities/types';
+import { abilityIcon, elementIcon } from './icons';
 
-const SLOT_KEYS: Record<AbilitySlot, string> = { primary: 'Sol tık', secondary: 'Sağ tık' };
+const SLOT_KEYS: Record<AbilitySlot, string> = { primary: 'SOL', secondary: 'SAĞ' };
 
 /**
  * Element seçici + aktif yetenek slotları + hazırlık (cast) çubuğu.
@@ -12,7 +13,7 @@ const SLOT_KEYS: Record<AbilitySlot, string> = { primary: 'Sol tık', secondary:
 export class AbilityBar {
   private readonly root: HTMLDivElement;
   private readonly chips = new Map<ElementId, HTMLElement>();
-  private readonly slots = new Map<AbilitySlot, { el: HTMLElement; name: HTMLElement; cd: HTMLElement }>();
+  private readonly slots = new Map<AbilitySlot, { el: HTMLElement; name: HTMLElement; cd: HTMLElement; icon: HTMLElement }>();
   private readonly castBar: HTMLDivElement;
   private readonly castFill: HTMLDivElement;
   private readonly castName: HTMLSpanElement;
@@ -28,10 +29,10 @@ export class AbilityBar {
       slotRow.className = 'slots';
       for (const slot of ['primary', 'secondary'] as AbilitySlot[]) {
         const el = document.createElement('div');
-        el.className = 'slot';
-        el.innerHTML = `<div class="sweep"></div><span class="key">${SLOT_KEYS[slot]}</span><span class="name"></span><span class="cd"></span>`;
+        el.className = `slot ${slot}`;
+        el.innerHTML = `<div class="disc"><div class="ring"></div><div class="icon"></div><div class="sweep"></div><span class="cd"></span></div><span class="key"><i class="mouse ${slot}"></i>${SLOT_KEYS[slot]}</span><span class="name"></span>`;
         slotRow.appendChild(el);
-        this.slots.set(slot, { el, name: el.querySelector('.name')!, cd: el.querySelector('.cd')! });
+        this.slots.set(slot, { el, name: el.querySelector('.name')!, cd: el.querySelector('.cd')!, icon: el.querySelector('.icon')! });
       }
       this.root.appendChild(slotRow);
     }
@@ -43,7 +44,7 @@ export class AbilityBar {
       const chip = document.createElement('div');
       chip.className = 'chip';
       chip.style.setProperty('--c', meta.css);
-      chip.innerHTML = `<span class="num">${i + 1}</span><span class="nm">${meta.short}</span>`;
+      chip.innerHTML = `<span class="num">${i + 1}</span><span class="ic">${elementIcon(id)}</span><span class="nm">${meta.short}</span>`;
       chip.addEventListener('pointerdown', (e) => {
         e.stopPropagation();
         e.preventDefault();
@@ -69,7 +70,11 @@ export class AbilityBar {
       this.shownElement = sys.activeElement;
       for (const [id, chip] of this.chips) chip.classList.toggle('active', id === sys.activeElement);
       this.root.style.setProperty('--c', ELEMENTS[sys.activeElement].css);
-      for (const [slot, s] of this.slots) s.name.textContent = sys.slot(slot)?.name ?? '—';
+      for (const [slot, s] of this.slots) {
+        const def = sys.slot(slot);
+        s.name.textContent = def?.name ?? '—';
+        s.icon.innerHTML = abilityIcon(def?.id, sys.activeElement);
+      }
     }
 
     for (const [slot, s] of this.slots) {
