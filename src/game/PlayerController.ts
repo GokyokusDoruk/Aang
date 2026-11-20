@@ -5,7 +5,7 @@ import type { CollisionWorld } from '../physics/CollisionWorld';
 import type { StepInput } from '../input/InputActions';
 import { damp, wrapAngle } from '../core/math';
 
-export type MoveState = 'grounded' | 'airborne' | 'sliding' | 'dashing' | 'gliding' | 'floating';
+export type MoveState = 'grounded' | 'airborne' | 'sliding' | 'crouching' | 'dashing' | 'gliding' | 'floating';
 
 const tmpPush = new Vector3();
 
@@ -22,6 +22,8 @@ export class PlayerController {
 
   grounded = false;
   sliding = false;
+  /** Kayma tuşu (C) basılı tutulurken yerde eğik durma; eğikken yürünür ve yetenek kullanılır. */
+  crouching = false;
   dashing = false;
 
   facingYaw = 0;
@@ -73,6 +75,7 @@ export class PlayerController {
   get state(): MoveState {
     if (this.dashing) return 'dashing';
     if (this.sliding) return 'sliding';
+    if (this.crouching) return 'crouching';
     if (this.glideTimer > 0) return 'gliding';
     if (this.floatTimer > 0 && !this.grounded) return 'floating';
     return this.grounded ? 'grounded' : 'airborne';
@@ -85,6 +88,7 @@ export class PlayerController {
     this.velocity.set(0, 0, 0);
     this.grounded = false;
     this.sliding = false;
+    this.crouching = false;
     this.dashing = false;
     this.facingYaw = this.prevFacingYaw = spawn.yaw;
     this.heightRatio = this.prevHeightRatio = 1;
@@ -136,6 +140,9 @@ export class PlayerController {
     if (input.pressed.slide) this.trySlide(wx, wz, wishMag);
     this.handleJump(wx, wz, wishMag);
 
+    // Eğilme: kayma tuşu basılıyken yerde, kayma bitince de eğik kal
+    this.crouching = !this.sliding && input.held.slide && this.grounded && !this.dashing && this.glideTimer <= 0;
+
     // --- Yatay hız
     if (this.dashing) {
       this.dashTimer -= dt;
@@ -161,7 +168,7 @@ export class PlayerController {
     }
 
     // --- Boy (kayma çömelmesi)
-    const targetRatio = this.sliding ? P.slideHeight / P.height : 1;
+    const targetRatio = this.sliding || this.crouching ? P.slideHeight / P.height : 1;
     this.heightRatio += (targetRatio - this.heightRatio) * damp(P.heightSharpness, dt);
 
     // --- Entegrasyon + çarpışma
@@ -371,7 +378,7 @@ export class PlayerController {
     }
 
     if (this.grounded) {
-      const run = P.runSpeed * this.moveSpeedMultiplier * this.statusSpeedMultiplier;
+      const run = P.runSpeed * this.moveSpeedMultiplier * this.statusSpeedMultiplier * (this.crouching ? GameConfig.slide.crouchSpeedMult : 1);
       const tx = wx * run;
       const tz = wz * run;
       let accel = wishMag > 0.01 ? P.groundAccel : P.groundDecel;

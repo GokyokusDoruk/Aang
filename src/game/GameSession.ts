@@ -12,7 +12,7 @@ import { createDefaultRegistry, type AbilityRegistry } from '../abilities/Abilit
 import { ELEMENT_ORDER, type ElementId } from '../abilities/elements';
 import { emptyFlags, type Action, type StepInput } from '../input/InputActions';
 import { BotBrain } from '../ai/BotBrain';
-import { BotCaster } from '../ai/BotCaster';
+import { BotCaster, scaledDifficulty } from '../ai/BotCaster';
 import { buildCoverPoints } from '../ai/coverPoints';
 import { PlayerController } from './PlayerController';
 import { PlayerCaster } from './PlayerCaster';
@@ -85,7 +85,7 @@ export class GameSession {
     this.playerAbilities = new AbilitySystem(new PlayerCaster('player', this.playerCtl, camera), this.registry, this.services);
 
     this.bot = new Combatant('bot', new PlayerController(this.world, bSpawn), bus, { maxHp: GameConfig.combat.playerMaxHp, respawnDelay: null }, bSpawn);
-    const botCaster = new BotCaster('bot', this.bot, () => GameConfig.botDifficulty[this.difficulty]);
+    const botCaster = new BotCaster('bot', this.bot, () => this.botBrain.difficulty);
     this.botAbilities = new AbilitySystem(botCaster, this.registry, this.services, 'fire');
     this.botBrain = new BotBrain(
       this.bot,
@@ -96,7 +96,7 @@ export class GameSession {
       () => this.player,
       buildCoverPoints(layout, this.world),
       layout.size / 2,
-      GameConfig.botDifficulty.normal,
+      scaledDifficulty(GameConfig.botDifficulty.normal),
     );
 
     this.dummies = layout.dummySpawns.map(
@@ -117,7 +117,7 @@ export class GameSession {
   start(mode: GameMode, difficulty: Difficulty = this.difficulty): void {
     this.mode = mode;
     this.difficulty = difficulty;
-    this.botBrain.difficulty = GameConfig.botDifficulty[difficulty];
+    this.botBrain.difficulty = scaledDifficulty(GameConfig.botDifficulty[difficulty]);
     this.combatants.length = 0;
     this.combatants.push(this.player);
     if (mode === 'match') this.combatants.push(this.bot);

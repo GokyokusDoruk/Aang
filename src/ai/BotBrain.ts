@@ -39,6 +39,8 @@ export class BotBrain {
   private jumpHold = 0;
   private aggressive = true;
   private wantWall = false;
+  /** Ana saldırılar arası ek bekleme (zorluk gücüne göre seyrek ateş) */
+  private fireGate = 0;
   private preferred: ElementId = 'fire';
 
   private readonly input: StepInput = { moveX: 0, moveY: 0, held: emptyFlags(), pressed: emptyFlags() };
@@ -77,6 +79,7 @@ export class BotBrain {
     const me = this.self;
     const ctl = me.controller;
     this.clearInput();
+    this.fireGate = Math.max(0, this.fireGate - dt);
     if (!me.alive) return;
 
     const target = this.getTarget();
@@ -103,7 +106,7 @@ export class BotBrain {
     this.strafeTimer -= dt;
     this.elementTimer -= dt;
     if (this.thinkTimer <= 0) {
-      this.thinkTimer = GameConfig.bot.thinkInterval * rand(0.8, 1.2);
+      this.thinkTimer = GameConfig.bot.thinkInterval * this.difficulty.thinkMult * rand(0.8, 1.2);
       this.think(dist, los, target);
     }
 
@@ -128,7 +131,7 @@ export class BotBrain {
     this.decideAbilities(dist, los);
     if (me.frozenTimer > 0) this.clearInput(); // donmuşken ne hareket ne yetenek
     this.abilities.update(dt, this.intent);
-    ctl.moveSpeedMultiplier = this.abilities.moveMultiplier;
+    ctl.moveSpeedMultiplier = this.abilities.moveMultiplier * this.difficulty.speedMult;
     ctl.fixedUpdate(dt, this.input, yaw);
   }
 
@@ -239,12 +242,17 @@ export class BotBrain {
     const canSee = los && this.visibleTime >= this.difficulty.reactionTime;
     if (!canSee || !this.aggressive) return;
 
-    // Ana saldırı
+    // Ana saldırı (fireGate: güce göre ateşler arası ek bekleme)
+    const ready = A.canUse('primary') && this.fireGate <= 0;
     if (el === 'air') {
-      if (dist < 6.5) it.primaryPressed = A.canUse('primary');
+      if (dist < 6.5) it.primaryPressed = ready;
     } else if (dist < 30) {
-      it.primaryPressed = A.canUse('primary');
-      it.primaryHeld = el === 'water';
+      it.primaryPressed = ready;
+      it.primaryHeld = el === 'water' && ready;
+    }
+    if (it.primaryPressed) {
+      const def = A.slot('primary');
+      if (def) this.fireGate = (def.tuning.cooldown + def.tuning.castTime) * this.difficulty.fireIntervalMult;
     }
 
     // Buz Duvarı: canı azalmışken orta mesafede anlık siper

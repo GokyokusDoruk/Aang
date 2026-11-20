@@ -16,6 +16,7 @@ const STATE_LABEL: Record<MoveState, string> = {
   grounded: 'Yerde',
   airborne: 'Havada',
   sliding: 'Kayma',
+  crouching: 'Eğik',
   dashing: 'Dash',
   gliding: 'Buz Kayması',
   floating: 'Rüzgar Süzülmesi',
