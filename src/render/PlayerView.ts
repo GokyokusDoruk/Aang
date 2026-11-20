@@ -166,7 +166,7 @@ export class PlayerView {
   triggerCast(): void {
     this.castPulse = 1;
     this.castSide = -this.castSide;
-    this.model?.playOnce('cast');
+    if (this.model) this.model.playOnce(this.castSide > 0 && this.model.has('punch') ? 'punch' : 'cast');
   }
 
   /**
@@ -174,21 +174,29 @@ export class PlayerView {
    */
   attachModel(asset: CharacterAsset): void {
     if (this.model) return;
-    const inst = new CharacterInstance(asset);
+    const inst = new CharacterInstance(asset, this.clothMat.color.getHex(), this.accentMat);
     this.model = inst;
     this.root.add(inst.root);
     this.body.visible = false;
     for (const m of inst.materials) this.mats.push(m);
     if (inst.head) {
-      // Kemik uzayı modelin ölçeğiyle büyür; bandı dünya birimine göre küçült
-      const k = 1 / asset.scale;
-      const band = new THREE.Mesh(new THREE.CylinderGeometry(0.135 * k, 0.135 * k, 0.045 * k, 12, 1, true), this.accentMat);
-      band.position.y = 0.1 * k;
-      inst.head.add(band);
-      const knot = new THREE.Mesh(new THREE.BoxGeometry(0.06 * k, 0.05 * k, 0.14 * k), this.accentMat);
-      knot.position.set(0, 0.1 * k, -0.15 * k);
-      knot.rotation.x = -0.5;
-      inst.head.add(knot);
+      // Bandı modelin kök eksenlerine hizala (kemik eksenleri dönük olabilir), birimleri dünya metresine çevir
+      inst.root.updateMatrixWorld(true);
+      const hq = inst.head.getWorldQuaternion(new THREE.Quaternion());
+      const rq = inst.root.getWorldQuaternion(new THREE.Quaternion());
+      const hs = inst.head.getWorldScale(new THREE.Vector3()).x || 1;
+      const g = new THREE.Group();
+      g.quaternion.copy(hq.invert().multiply(rq));
+      g.scale.setScalar(1 / hs);
+      inst.head.add(g);
+      // g artık modelin kök eksenlerinde (model +Z'ye bakar, arka -Z), birim = metre
+      const band = new THREE.Mesh(new THREE.CylinderGeometry(0.108, 0.112, 0.045, 14, 1, true), this.accentMat);
+      band.position.set(0, 0.1, 0.012);
+      g.add(band);
+      const knot = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.045, 0.11), this.accentMat);
+      knot.position.set(0, 0.09, -0.15);
+      knot.rotation.x = 0.6;
+      g.add(knot);
     }
   }
 
