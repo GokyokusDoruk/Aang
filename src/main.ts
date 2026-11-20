@@ -21,6 +21,7 @@ import { AbilityBar } from './ui/AbilityBar';
 import { WorldOverlay } from './ui/WorldOverlay';
 import { PlayerStatus } from './ui/PlayerStatus';
 import { MatchHud } from './ui/MatchHud';
+import { SoundSystem } from './audio/SoundSystem';
 import { Menu } from './ui/Menu';
 import { lerpAngle } from './core/math';
 import { ELEMENTS, ELEMENT_ORDER } from './abilities/elements';
@@ -101,6 +102,7 @@ const abilityBar = new AbilityBar(app, {
 });
 const playerStatus = new PlayerStatus(app, bus, player, isTouch);
 const matchHud = new MatchHud(app, bus, session.round, bot, isTouch);
+const sound = new SoundSystem(bus, 'player');
 
 // --- Oturum akışı (menü / duraklat / yeniden başlat)
 let lastMode: GameMode = 'match';
@@ -142,6 +144,18 @@ const menu = new Menu(app, isTouch, {
     menu.showMain();
   },
 });
+
+// Menüde ses aç/kapa düğmesi (M tuşuyla da çalışır)
+const soundBtn = document.createElement('button');
+soundBtn.className = 'sound-toggle';
+soundBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  sound.setMuted(!sound.isMuted);
+});
+sound.onMuteChange((m) => {
+  soundBtn.textContent = m ? '🔇 Ses kapalı' : '🔊 Ses açık';
+});
+menu.attach(soundBtn);
 
 input = new InputManager(app, gfx.canvas, {
   touch: isTouch,
@@ -297,6 +311,7 @@ function frame(now: number): void {
   abilityBar.update(abilities);
   playerStatus.update(dt);
   if (inMatch) matchHud.update(dt);
+  sound.update(gfx.camera, menu.visible ? null : playerCtl, inMatch ? session.round : null);
   if (input.touch) {
     input.touch.setCooldown('dash', dashCd);
     input.touch.setCooldown('slide', slideCd);

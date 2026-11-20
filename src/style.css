@@ -812,3 +812,17 @@ body {
   -webkit-mask-image: radial-gradient(circle at 50% 50%, transparent 42%, #000 85%);
   mask-image: radial-gradient(circle at 50% 50%, transparent 42%, #000 85%);
 }
+
+/* ---------------------------------------------------------------- Ses düğmesi (menüde) */
+.sound-toggle {
+  position: absolute;
+  right: calc(14px + var(--sar));
+  bottom: calc(14px + var(--sab));
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: var(--panel);
+  color: inherit;
+  font: 700 13px system-ui, sans-serif;
+  cursor: pointer;
+}
