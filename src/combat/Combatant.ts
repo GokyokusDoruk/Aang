@@ -17,6 +17,8 @@ export interface CombatantOptions {
 export interface DamageOptions {
   /** Ek sersemletme süresi (s) — örn. yıldırım */
   stun?: number;
+  /** Eklenecek üşüme yığını (buz kıymığı) */
+  chill?: number;
   /** Dokunulmazlığı yok say (örn. aynı patlamanın doğrudan + alan hasarı ayrımı) */
   ignoreInvuln?: boolean;
 }
@@ -42,6 +44,11 @@ export class Combatant {
   /** Kukla için bakış yönü. */
   idleYaw = 0;
   lastDeathCause: 'hp' | 'ringout' | null = null;
+  /** Üşüme yığını (0..maxStacks); her yığın koşuyu yavaşlatır. */
+  chillStacks = 0;
+  /** >0 iken donmuş: hareket edemez. */
+  frozenTimer = 0;
+  private chillTimer = 0;
   private respawnTimer = 0;
   private lastAttacker: string | null = null;
   private lastAttackTime = -Infinity;
@@ -107,10 +114,45 @@ export class Combatant {
     const stun = C.hitStun + (opts.stun ?? 0);
     this.controller.knockbackTimer = Math.max(this.controller.knockbackTimer, stun);
 
+    if (opts.chill && !this.dead()) this.addChill(opts.chill);
+
     const killed = this.hp <= 0;
     this.bus.emit('combat:damage', { targetId: this.id, sourceId, amount, point: point.clone(), killed });
     if (killed) this.die('hp', sourceId);
     return true;
+  }
+
+  private dead(): boolean {
+    return this.hp <= 0;
+  }
+
+  /** Üşüme yığını ekler; tam yığında kısa süre dondurur (donmuşken yığın birikmez). */
+  addChill(stacks: number): void {
+    const K = GameConfig.water.chill;
+    if (this.frozenTimer > 0) return;
+    this.chillStacks = Math.min(K.maxStacks, this.chillStacks + stacks);
+    this.chillTimer = K.duration;
+    if (this.chillStacks >= K.maxStacks) {
+      this.frozenTimer = K.freezeTime;
+      this.controller.knockbackTimer = Math.max(this.controller.knockbackTimer, K.freezeTime);
+      this.controller.velocity.x = 0;
+      this.controller.velocity.z = 0;
+      this.bus.emit('combat:frozen', { targetId: this.id, duration: K.freezeTime, point: this.center(new Vector3()) });
+    }
+    this.syncStatusSpeed();
+  }
+
+  /** Durum etkilerini temizle (doğuş / raund başı). */
+  clearStatus(): void {
+    this.chillStacks = 0;
+    this.chillTimer = 0;
+    this.frozenTimer = 0;
+    this.syncStatusSpeed();
+  }
+
+  private syncStatusSpeed(): void {
+    const K = GameConfig.water.chill;
+    this.controller.statusSpeedMultiplier = this.frozenTimer > 0 ? 0 : 1 - this.chillStacks * K.slowPerStack;
   }
 
   /** Hasarsız itme (örn. kendi patlamanın seni savurması). */
@@ -132,6 +174,7 @@ export class Combatant {
     this.invulnTimer = GameConfig.combat.spawnInvuln;
     this.spawnProtected = true;
     this.lastAttacker = null;
+    this.clearStatus();
     this.bus.emit('combat:respawn', { targetId: this.id });
   }
 
@@ -141,6 +184,13 @@ export class Combatant {
     this.hitFlash = Math.max(0, this.hitFlash - dt);
     this.invulnTimer = Math.max(0, this.invulnTimer - dt);
     if (this.invulnTimer <= 0) this.spawnProtected = false;
+    if (this.frozenTimer > 0) {
+      this.frozenTimer -= dt;
+      if (this.frozenTimer <= 0) this.clearStatus();
+    } else if (this.chillStacks > 0) {
+      this.chillTimer -= dt;
+      if (this.chillTimer <= 0) this.clearStatus();
+    }
 
     if (!this.alive) {
       if (this.opts.respawnDelay !== null) {

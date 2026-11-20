@@ -174,7 +174,7 @@ export class GameSession {
     this.crates.update(dt);
 
     if (this.player.alive) {
-      const inp = fighting ? s : FROZEN;
+      const inp = fighting && this.player.frozenTimer <= 0 ? s : FROZEN;
       this.playerAbilities.update(dt, this.toIntent(inp));
       this.playerCtl.moveSpeedMultiplier = this.playerAbilities.moveMultiplier;
       this.playerCtl.fixedUpdate(dt, inp, cameraYaw);

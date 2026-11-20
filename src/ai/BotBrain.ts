@@ -125,6 +125,7 @@ export class BotBrain {
 
     // --- Yetenekler
     this.decideAbilities(dist, los);
+    if (me.frozenTimer > 0) this.clearInput(); // donmuşken ne hareket ne yetenek
     this.abilities.update(dt, this.intent);
     ctl.moveSpeedMultiplier = this.abilities.moveMultiplier;
     ctl.fixedUpdate(dt, this.input, yaw);

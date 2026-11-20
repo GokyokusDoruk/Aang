@@ -238,7 +238,10 @@ export class PlayerView {
     motion?: FighterMotion,
     dt = 1 / 60,
     hitFlash = false,
+    /** Üşüme 0..1 (1 = donmuş) */
+    chill = 0,
   ): void {
+    if (chill >= 1) dt = 0; // donmuşken animasyon durur
     this.root.position.copy(position);
     this.root.rotation.y = yaw;
 
@@ -389,6 +392,9 @@ export class PlayerView {
       if (hitFlash) {
         m.emissive.setHex(0xffffff);
         m.emissiveIntensity = 0.8;
+      } else if (chill > 0) {
+        m.emissive.setHex(chill >= 1 ? 0xbfefff : 0x4fb8ff);
+        m.emissiveIntensity = chill >= 1 ? 0.9 : 0.15 + chill * 0.35;
       } else if (dashing) {
         m.emissive.setHex(0x66ccff);
         m.emissiveIntensity = m === this.clothMat ? 0.5 : 0.2;

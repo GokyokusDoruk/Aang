@@ -34,6 +34,8 @@ export class PlayerController {
   airDashesLeft = 0;
   /** Dış sistemlerin (yetenek hazırlığı, ileride yavaşlatma etkileri) koşu hızına çarpanı. */
   moveSpeedMultiplier = 1;
+  /** Durum etkilerinden gelen hız çarpanı (üşüme); Combatant yönetir. */
+  statusSpeedMultiplier = 1;
   /** >0 iken itilmiş durumda: koşu kontrolü yok, karakter savrulur. */
   knockbackTimer = 0;
   /** Arena dışına düşüp yeniden doğduğunda true olur (Combatant tüketir). */
@@ -340,7 +342,7 @@ export class PlayerController {
       const delta = wrapAngle(Math.atan2(wx, wz) - ang);
       const maxTurn = G.turnRate * dt;
       ang += Math.max(-maxTurn, Math.min(maxTurn, delta));
-      speed = Math.min(G.maxSpeed * this.moveSpeedMultiplier, speed + G.accel * wishMag * dt);
+      speed = Math.min(G.maxSpeed * this.moveSpeedMultiplier * this.statusSpeedMultiplier, speed + G.accel * wishMag * dt);
     } else {
       speed = Math.max(0, speed - G.friction * dt);
     }
@@ -369,7 +371,7 @@ export class PlayerController {
     }
 
     if (this.grounded) {
-      const run = P.runSpeed * this.moveSpeedMultiplier;
+      const run = P.runSpeed * this.moveSpeedMultiplier * this.statusSpeedMultiplier;
       const tx = wx * run;
       const tz = wz * run;
       let accel = wishMag > 0.01 ? P.groundAccel : P.groundDecel;

@@ -71,6 +71,8 @@ export class WorldOverlay {
         bar.el.style.transform = `translate(${this.v.x}px, ${this.v.y}px) translate(-50%, -50%)`;
         bar.fill.style.width = `${(c.hp / c.opts.maxHp) * 100}%`;
         bar.el.classList.toggle('low', c.hp / c.opts.maxHp < 0.35);
+        bar.el.classList.toggle('chilled', c.chillStacks > 0 || c.frozenTimer > 0);
+        bar.el.classList.toggle('frozen', c.frozenTimer > 0);
       }
     }
 

@@ -215,7 +215,12 @@ function drawFighter(view: PlayerView, c: Combatant, alpha: number, now: number,
   tmpPos.lerpVectors(ctl.prevPosition, ctl.position, alpha);
   const ratio = ctl.prevHeightRatio + (ctl.heightRatio - ctl.prevHeightRatio) * alpha;
   const flash = c.hitFlash > 0;
-  view.update(tmpPos, lerpAngle(ctl.prevFacingYaw, ctl.facingYaw, alpha), ratio, ctl.dashing, 10, elementColor, castProgress, motionOf(ctl), frameDt, flash);
+  view.update(tmpPos, lerpAngle(ctl.prevFacingYaw, ctl.facingYaw, alpha), ratio, ctl.dashing, 10, elementColor, castProgress, motionOf(ctl), frameDt, flash, chillOf(c));
+}
+
+/** Üşüme görseli: 0..1, donmuşken 1 */
+function chillOf(c: Combatant): number {
+  return c.frozenTimer > 0 ? 1 : (c.chillStacks / GameConfig.water.chill.maxStacks) * 0.99;
 }
 
 function motionOf(ctl: Combatant['controller']): FighterMotion {
@@ -273,6 +278,7 @@ function frame(now: number): void {
     motionOf(playerCtl),
     dt,
     player.hitFlash > 0,
+    chillOf(player),
   );
 
   const inMatch = session.running && session.mode === 'match';

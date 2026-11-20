@@ -494,6 +494,30 @@ body {
 .player-hp.shield {
   box-shadow: 0 0 0 2px #8fd6ff, 0 0 12px #8fd6ff;
 }
+/* Üşüme göstergesi (buz kıymığı isabetleri) */
+.player-hp .chill {
+  display: none;
+  position: absolute;
+  left: 8px;
+  bottom: calc(100% + 6px);
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(20, 60, 100, 0.75);
+  border: 1px solid #8fd6ff;
+  white-space: nowrap;
+  font: 800 12px system-ui, sans-serif;
+  color: #9fe0ff;
+  letter-spacing: 0.06em;
+  text-shadow: 0 0 6px #2f9bff;
+}
+.player-hp .chill.on,
+.player-hp .chill.frozen {
+  display: inline;
+}
+.player-hp .chill.frozen {
+  color: #e8f8ff;
+  animation: pulse 0.25s ease-in-out infinite alternate;
+}
 .player-hp .txt {
   min-width: 64px;
   font: 800 13px ui-monospace, Menlo, Consolas, monospace;
@@ -589,6 +613,17 @@ body {
 }
 .hpbar.low .fill {
   background: #ff6b4a;
+}
+.hpbar.chilled {
+  border-color: #8fd6ff;
+  box-shadow: 0 0 6px #4fb8ff;
+}
+.hpbar.chilled .fill {
+  background: #6cc8ff;
+}
+.hpbar.frozen {
+  border-color: #fff;
+  box-shadow: 0 0 10px #bfefff;
 }
 .dmg {
   position: absolute;
