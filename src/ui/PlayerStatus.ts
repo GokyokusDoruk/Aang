@@ -1,4 +1,5 @@
 import type { Combatant } from '../combat/Combatant';
+import { GameConfig } from '../config/gameConfig';
 import type { EventBus } from '../core/EventBus';
 import type { GameEvents } from '../core/GameEvents';
 
@@ -12,6 +13,8 @@ export class PlayerStatus {
   private readonly defeat: HTMLDivElement;
   private readonly defeatTitle: HTMLDivElement;
   private readonly defeatSub: HTMLDivElement;
+  private readonly chill: HTMLSpanElement;
+  private shownChill = '';
   private ghostRatio = 1;
   private shownHp = -1;
 
@@ -35,7 +38,9 @@ export class PlayerStatus {
     const label = document.createElement('span');
     label.className = 'lbl';
     label.textContent = 'HP';
-    this.bar.append(label, track, this.text);
+    this.chill = document.createElement('span');
+    this.chill.className = 'chill';
+    this.bar.append(label, track, this.text, this.chill);
 
     this.vignette = document.createElement('div');
     this.vignette.className = 'vignette';
@@ -76,6 +81,13 @@ export class PlayerStatus {
     this.ghost.style.width = `${this.ghostRatio * 100}%`;
     this.bar.classList.toggle('low', ratio < 0.35);
     this.bar.classList.toggle('shield', c.spawnProtected);
+    const max = GameConfig.water.chill.maxStacks;
+    const chillKey = c.frozenTimer > 0 ? 'frozen' : String(c.chillStacks);
+    if (chillKey !== this.shownChill) {
+      this.shownChill = chillKey;
+      this.chill.className = `chill${c.frozenTimer > 0 ? ' frozen' : c.chillStacks > 0 ? ' on' : ''}`;
+      this.chill.textContent = c.frozenTimer > 0 ? '❄ DONDUN' : c.chillStacks > 0 ? `❄ ${'●'.repeat(c.chillStacks)}${'○'.repeat(max - c.chillStacks)}` : '';
+    }
     const hp = Math.ceil(c.hp);
     if (hp !== this.shownHp) {
       this.shownHp = hp;

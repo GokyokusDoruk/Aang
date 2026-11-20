@@ -12,6 +12,8 @@ export interface ProjectileSpec {
   speed: number;
   gravity: number;
   damage: number;
+  /** İsabette eklenen üşüme yığını (buz) */
+  chill?: number;
   knockback: number;
   knockbackUp: number;
   wallDamage: number;
@@ -188,7 +190,7 @@ export class ProjectileSystem {
         p.position.addScaledVector(dir, Math.min(targetDist, maxS));
         impulse.set(dir.x, 0, dir.z).normalize().multiplyScalar(p.spec.knockback);
         impulse.y = p.spec.knockbackUp;
-        target.takeDamage(p.spec.damage, impulse, p.ownerId, p.position);
+        target.takeDamage(p.spec.damage, impulse, p.ownerId, p.position, { chill: p.spec.chill });
         this.bus.emit('projectile:impact', { kind: p.kind, element: p.element, point: p.position.clone(), normal: null, hitCombatant: true });
         this.explode(p, p.position, target.id);
         this.list.splice(i, 1);

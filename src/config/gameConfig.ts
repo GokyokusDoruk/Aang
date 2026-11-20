@@ -205,6 +205,18 @@ export const GameConfig = {
       knockbackUp: 1,
       wallDamage: 8,
       lifetime: 1.2,
+      /** İsabette eklenen üşüme yığını */
+      chill: 1,
+    },
+    /** Üşüme: her yığın koşu hızını düşürür; tam yığında kısa süre donar. */
+    chill: {
+      maxStacks: 3,
+      /** Yığın başına hız kaybı (0.15 = %15) */
+      slowPerStack: 0.15,
+      /** Son isabetten bu kadar sonra yığınlar sıfırlanır (s) */
+      duration: 2.2,
+      /** Tam yığında donma süresi (s); sonra yığınlar sıfırlanır */
+      freezeTime: 0.7,
     },
     /** Buz Kayması: düşük sürtünmeli, momentumlu süzülme modu */
     glide: {

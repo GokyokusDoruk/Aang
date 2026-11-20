@@ -49,11 +49,11 @@ npm run build      # typecheck + production build
 
 ## Su / Buz ve Hava (Task 4)
 
-- **Buz Kıymığı** (Su, sol tık): hızlı, hafif mermi; basılı tut = seri atış
+- **Buz Kıymığı** (Su, sol tık): hızlı, hafif mermi; basılı tut = seri atış. Her isabet 1 **üşüme** yığını ekler (yığın başına %15 yavaşlama, 2.2 sn sonra söner); 3 yığında hedef 0.7 sn **donar** (hareket ve yetenek yok). Üşüyen karakter maviye döner; oyuncunun HP barının yanında ❄ ●●○ göstergesi çıkar.
 - **Buz Kayması** (Su, sağ tık): düşük sürtünmeli momentumlu süzülme, geniş dönüşler, havada yavaş düşüş, buz izi
 - **Şok Dalgası** (Hava, sol tık): koni içindeki rakipleri iter, rakip mermilerini sahibine geri savurur; duvar arkası korunur
 - **Rüzgar Sıçrayışı** (Hava, sağ tık): yukarı + ileri fırlatma; ardından zıplamayı basılı tut = yavaş süzül
-- Ayarlar: `gameConfig.water` / `gameConfig.air`; hareket modları `PlayerController` (`startGlide`, `launch`)
+- Ayarlar: `gameConfig.water` (üşüme: `gameConfig.water.chill`) / `gameConfig.air`; hareket modları `PlayerController` (`startGlide`, `launch`)
 
 ## Ateş / Yıldırım ve savaş döngüsü (Task 5)
 

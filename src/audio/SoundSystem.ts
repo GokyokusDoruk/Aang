@@ -124,6 +124,7 @@ export class SoundSystem {
     bus.on('fx:explosion', (e) => this.boom(e.point, e.radius));
     bus.on('fx:lightning', (e) => this.thunder(e.from));
     bus.on('projectile:deflect', () => this.ping());
+    bus.on('combat:frozen', (e) => this.freeze(e.point));
     bus.on('round:phase', (e) => {
       if (e.phase === 'fight') {
         this.beep(990, 0.1, 0.3);
@@ -347,6 +348,16 @@ export class SoundSystem {
     if (!o) return;
     this.noiseHit(o, { type: 'highpass', f0: 4000, f1: 1500, dur: 0.12, gain: 0.8 });
     this.noiseHit(o, { type: 'lowpass', f0: 800, f1: 60, dur: 0.9, gain: 0.7, delay: 0.05, attack: 0.02 });
+  }
+
+  /** Donma: buz çatırtısı + parlak çınlama */
+  private freeze(at: THREE.Vector3): void {
+    const o = this.out(at, 1);
+    if (!o) return;
+    this.noiseHit(o, { type: 'highpass', f0: 5000, f1: 2500, dur: 0.35, gain: 0.6 });
+    this.noiseHit(o, { type: 'bandpass', f0: 2600, f1: 1200, dur: 0.18, gain: 0.5, q: 4, delay: 0.04 });
+    this.tone(o, { type: 'triangle', f0: 1760, f1: 1700, dur: 0.5, gain: 0.25, delay: 0.02 });
+    this.tone(o, { type: 'sine', f0: 2640, f1: 2600, dur: 0.4, gain: 0.15, delay: 0.06 });
   }
 
   private ping(): void {

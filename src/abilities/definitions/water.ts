@@ -12,7 +12,7 @@ export const waterAbilities: AbilityDef[] = [
     element: 'water',
     slot: 'primary',
     name: 'Buz Kıymığı',
-    description: 'Hızlı, hafif buz mermisi. Basılı tutunca seri atış.',
+    description: 'Hızlı, hafif buz mermisi. Basılı tutunca seri atış. İsabet üşütür: 3 isabette rakip kısa süre donar.',
     tuning: T.waterShard,
     execute: (ctx) => fireProjectile(ctx, 'shard', 'water', GameConfig.water.shard),
   },

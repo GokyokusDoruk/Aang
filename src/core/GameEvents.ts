@@ -11,6 +11,8 @@ export type GameEvents = {
   'ability:denied': { casterId: string; slot: AbilitySlot; reason: 'cooldown' | 'switching' | 'empty' | 'invalid' };
 
   'combat:damage': { targetId: string; sourceId: string; amount: number; point: Vector3; killed: boolean };
+  /** Üşüme tam yığına ulaştı: hedef kısa süre donar. */
+  'combat:frozen': { targetId: string; duration: number; point: Vector3 };
   'combat:death': { targetId: string; cause: 'hp' | 'ringout'; killerId: string | null };
   'combat:respawn': { targetId: string };
   'combat:ringout': { targetId: string };
