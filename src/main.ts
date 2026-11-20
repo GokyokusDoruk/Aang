@@ -10,6 +10,7 @@ import { buildArenaView } from './render/ArenaView';
 import { ArenaDecor } from './render/ArenaDecor';
 import { CrateView } from './render/CrateView';
 import { PlayerView, type FighterMotion } from './render/PlayerView';
+import { loadCharacterAsset } from './render/CharacterAsset';
 import { EffectsView } from './render/EffectsView';
 import { ProjectileView } from './render/ProjectileView';
 import { WallView } from './render/WallView';
@@ -50,6 +51,10 @@ gfx.scene.add(decor.group);
 const playerView = new PlayerView(gfx.scene);
 const botView = new PlayerView(gfx.scene, 0x9b5cff);
 const dummyViews = session.dummies.map(() => new PlayerView(gfx.scene, 0xe0603a));
+// Hazır karakter modeli (public/models/character.glb) varsa prosedürel karakterin yerine geçer
+void loadCharacterAsset(GameConfig.player.height).then((asset) => {
+  if (asset) for (const v of [playerView, botView, ...dummyViews]) v.attachModel(asset);
+});
 const effects = new EffectsView(gfx.scene, bus, isTouch ? GameConfig.render.mobileEffectScale : 1);
 const projectileView = new ProjectileView(gfx.scene, session.projectiles);
 const wallView = new WallView(gfx.scene, session.walls, (pts) => effects.earthEruption(pts));
