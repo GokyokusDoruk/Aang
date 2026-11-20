@@ -51,6 +51,8 @@ export class BotBrain {
     secondaryPressed: false,
     specialPressed: false,
     primaryHeld: false,
+    secondaryHeld: false,
+    specialHeld: false,
     interrupt: false,
   };
 

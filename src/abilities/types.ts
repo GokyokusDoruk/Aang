@@ -43,6 +43,32 @@ export interface AbilityContext {
   services: GameServices;
 }
 
+/**
+ * Uzun basış (basılı tutma) versiyonu. Kısa basış normal yeteneği kullanır;
+ * tuş `GameConfig.abilities.holdThreshold` kadar basılı kalırsa bu çalışır ve kendi
+ * (uzun) bekleme süresine girer. Normal yeteneğin bekleme süresi bundan etkilenmez.
+ * - channel: basılı tutuldukça (en fazla maxDuration) her tickInterval'de `tick`; nişan her adımda güncel (yönlendirilebilir)
+ * - charge: basılı tutuldukça 0..1 dolar (maxDuration'da tam); bırakınca `release(ctx, şarj)`
+ * - instant: eşik aşılınca bir kez `release(ctx, 1)`
+ */
+export interface ChargedAbility {
+  id: string;
+  name: string;
+  kind: 'channel' | 'charge' | 'instant';
+  /** Uzun basış kullanıldıktan sonraki bekleme (s) */
+  cooldown: number;
+  /** Kanal / şarj sırasında koşu hızı çarpanı */
+  moveMult: number;
+  /** channel: en uzun süre; charge: tam dolma süresi */
+  maxDuration: number;
+  /** channel: kaç saniyede bir tick */
+  tickInterval?: number;
+  start?(ctx: AbilityContext): void;
+  tick?(ctx: AbilityContext, elapsed: number): void;
+  end?(ctx: AbilityContext): void;
+  release?(ctx: AbilityContext, charge: number): boolean | void;
+}
+
 export interface AbilityDef {
   id: string;
   element: ElementId;
@@ -57,4 +83,6 @@ export interface AbilityDef {
    * Tanımlı değilse yer tutucu efekt gösterilir.
    */
   execute?(ctx: AbilityContext): boolean | void;
+  /** Uzun basış versiyonu (isteğe bağlı) */
+  charged?: ChargedAbility;
 }

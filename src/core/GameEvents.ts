@@ -1,6 +1,6 @@
 import type { Vector3 } from 'three';
 import type { ElementId } from '../abilities/elements';
-import type { AbilityDef, AbilitySlot } from '../abilities/types';
+import type { AbilityDef, AbilitySlot, ChargedAbility } from '../abilities/types';
 
 /** Oyun genelindeki olaylar. Mantık yayar; render, UI, ses (ve ileride ağ) dinler. */
 export type GameEvents = {
@@ -8,6 +8,10 @@ export type GameEvents = {
   'ability:castStart': { casterId: string; ability: AbilityDef };
   'ability:cast': { casterId: string; ability: AbilityDef; origin: Vector3; direction: Vector3; target: Vector3 };
   'ability:cancel': { casterId: string; ability: AbilityDef };
+  /** Uzun basış başladı (kanal / şarj) */
+  'ability:chargedStart': { casterId: string; ability: AbilityDef; charged: ChargedAbility };
+  /** Uzun basış bitti: charge = şarj oranı (kanal için 1), cancelled = dash/element değişimiyle kesildi */
+  'ability:chargedEnd': { casterId: string; ability: AbilityDef; charged: ChargedAbility; charge: number; cancelled: boolean; origin: Vector3 };
   'ability:denied': { casterId: string; slot: AbilitySlot; reason: 'cooldown' | 'switching' | 'empty' | 'invalid' };
 
   'combat:damage': { targetId: string; sourceId: string; amount: number; point: Vector3; killed: boolean };

@@ -5,6 +5,7 @@ import type { AbilityContext, AbilityDef } from '../types';
 import { fireProjectile } from './shared';
 
 const T = GameConfig.abilities.tuning;
+const C = GameConfig.abilities.charged;
 const dir = new Vector3();
 const probe = new Vector3();
 const end = new Vector3();
@@ -14,8 +15,18 @@ const impulse = new Vector3();
  * Yıldırım Hattı: nişan doğrultusunda anlık (hitscan) delici hat.
  * Yoldaki tüm rakiplere hasar + itme + sersemletme; ilk duvar/blokta durur ve ona hasar verir.
  */
-function lightningLine(ctx: AbilityContext): void {
-  const L = GameConfig.fire.lightning;
+function lightningLine(ctx: AbilityContext, charge = 0): void {
+  const L0 = GameConfig.fire.lightning;
+  const c01 = Math.max(0, Math.min(1, charge));
+  const L = {
+    ...L0,
+    damage: L0.damage * (1 + (L0.chargedDamageMult - 1) * c01),
+    knockback: L0.knockback * (1 + (L0.chargedKnockbackMult - 1) * c01),
+    knockbackUp: L0.knockbackUp * (1 + (L0.chargedKnockbackMult - 1) * c01),
+    stun: L0.stun + L0.chargedStunBonus * c01,
+    width: L0.width * (1 + (L0.chargedWidthMult - 1) * c01),
+    wallDamage: L0.wallDamage * (1 + (L0.chargedDamageMult - 1) * c01),
+  };
   const c = ctx.caster;
   dir.copy(ctx.direction).normalize();
   const wall = ctx.world.raycast(ctx.origin, dir, L.range);
@@ -41,7 +52,9 @@ function lightningLine(ctx: AbilityContext): void {
     }
   }
   if (wall) ctx.services.walls.damageByBox(wall.box, L.wallDamage, wall.point);
-  ctx.bus.emit('fx:lightning', { from: ctx.origin.clone(), to: end.clone(), element: 'fire' });
+  // Şarj arttıkça daha çok, kalın görünen şimşek kolu
+  const bolts = 1 + Math.floor(c01 * 2.5);
+  for (let i = 0; i < bolts; i++) ctx.bus.emit('fx:lightning', { from: ctx.origin.clone(), to: end.clone(), element: 'fire' });
 }
 
 export const fireAbilities: AbilityDef[] = [
@@ -61,6 +74,13 @@ export const fireAbilities: AbilityDef[] = [
     name: 'Yıldırım Hattı',
     description: 'Nişan doğrultusunda ani, delici yıldırım: hasar, itme ve kısa sersemletme.',
     tuning: T.lightningLine,
-    execute: lightningLine,
+    execute: (ctx) => lightningLine(ctx),
+    charged: {
+      id: 'lightningCharged',
+      name: 'Yıldırım Şarjı',
+      kind: 'charge',
+      ...C.lightningCharged,
+      release: (ctx, charge) => lightningLine(ctx, charge),
+    },
   },
 ];

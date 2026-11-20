@@ -125,6 +125,7 @@ export class SoundSystem {
     bus.on('fx:lightning', (e) => this.thunder(e.from));
     bus.on('projectile:deflect', () => this.ping());
     bus.on('combat:frozen', (e) => this.freeze(e.point));
+    bus.on('ability:chargedStart', (e) => this.chargeUp(e.ability.element, e.casterId === me));
     bus.on('round:phase', (e) => {
       if (e.phase === 'fight') {
         this.beep(990, 0.1, 0.3);
@@ -362,6 +363,15 @@ export class SoundSystem {
     if (!o) return;
     this.noiseHit(o, { type: 'highpass', f0: 4000, f1: 1500, dur: 0.12, gain: 0.8 });
     this.noiseHit(o, { type: 'lowpass', f0: 800, f1: 60, dur: 0.9, gain: 0.7, delay: 0.05, attack: 0.02 });
+  }
+
+  /** Uzun basış başladı: elemente göre yükselen güç sesi */
+  private chargeUp(el: ElementId, mine: boolean): void {
+    const o = this.out(null, mine ? 0.7 : 0.35);
+    if (!o) return;
+    const f0 = el === 'fire' ? 180 : el === 'water' ? 600 : el === 'air' ? 400 : 120;
+    this.tone(o, { type: 'sawtooth', f0, f1: f0 * 3, dur: 0.45, gain: 0.12, attack: 0.05 });
+    this.noiseHit(o, { type: 'bandpass', f0: f0 * 4, f1: f0 * 10, dur: 0.4, gain: 0.25, q: 2, attack: 0.08 });
   }
 
   /** Donma: buz çatırtısı + parlak çınlama */

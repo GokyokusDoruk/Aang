@@ -62,6 +62,8 @@ export class GameSession {
     secondaryPressed: false,
     specialPressed: false,
     primaryHeld: false,
+    secondaryHeld: false,
+    specialHeld: false,
     interrupt: false,
   };
 
@@ -203,7 +205,10 @@ export class GameSession {
     it.secondaryPressed = s.pressed.secondary;
     it.specialPressed = s.pressed.special;
     it.primaryHeld = s.held.primary;
-    it.interrupt = GameConfig.abilities.cancelCastOnDash && (s.pressed.dash || this.playerCtl.dashing);
+    it.secondaryHeld = s.held.secondary;
+    it.specialHeld = s.held.special;
+    // Dash, donma ve raund dışı (girdi kilitli) hazırlanan/şarj edilen yeteneği iptal eder
+    it.interrupt = (GameConfig.abilities.cancelCastOnDash && (s.pressed.dash || this.playerCtl.dashing)) || s === FROZEN;
     return it;
   }
 }

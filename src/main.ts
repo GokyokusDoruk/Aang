@@ -220,6 +220,13 @@ function drawFighter(view: PlayerView, c: Combatant, alpha: number, now: number,
   view.update(tmpPos, lerpAngle(ctl.prevFacingYaw, ctl.facingYaw, alpha), ratio, ctl.dashing, 10, elementColor, castProgress, motionOf(ctl), frameDt, flash, chillOf(c));
 }
 
+/** El parlaması / hazırlık pozu: normal hazırlık ya da süren uzun basış (şarj dolarken artar). */
+function castVisual(a: typeof abilities): number {
+  const ch = a.chargedActive;
+  if (ch) return ch.charged.kind === 'charge' ? Math.max(0.15, ch.progress) : 1;
+  return a.castingAbility ? Math.max(0.01, a.castProgress) : 0;
+}
+
 /** Üşüme görseli: 0..1, donmuşken 1 */
 function chillOf(c: Combatant): number {
   return c.frozenTimer > 0 ? 1 : (c.chillStacks / GameConfig.water.chill.maxStacks) * 0.99;
@@ -276,7 +283,7 @@ function frame(now: number): void {
     playerCtl.dashing,
     camera.currentDistance,
     ELEMENTS[abilities.activeElement].color,
-    abilities.castingAbility ? Math.max(0.01, abilities.castProgress) : 0,
+    castVisual(abilities),
     motionOf(playerCtl),
     dt,
     player.hitFlash > 0,
@@ -287,7 +294,7 @@ function frame(now: number): void {
   const inTraining = session.running && session.mode === 'training';
   if (inMatch) {
     const ba = session.botAbilities;
-    drawFighter(botView, bot, alpha, now, ELEMENTS[ba.activeElement].color, ba.castingAbility ? Math.max(0.01, ba.castProgress) : 0);
+    drawFighter(botView, bot, alpha, now, ELEMENTS[ba.activeElement].color, castVisual(ba));
   } else botView.root.visible = false;
   session.dummies.forEach((d, i) => {
     if (inTraining) drawFighter(dummyViews[i], d, alpha, now, 0x331a10, 0);
@@ -329,6 +336,7 @@ function frame(now: number): void {
     for (const slot of ABILITY_SLOTS) {
       const def = abilities.slot(slot);
       input.touch.setCooldown(slot, def ? abilities.cooldownRatio(def) : 0);
+      input.touch.setHoldCooldown(slot, def?.charged ? abilities.chargedCooldownRatio(def) : null);
     }
   }
 
