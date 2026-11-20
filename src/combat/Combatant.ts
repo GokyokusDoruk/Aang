@@ -21,6 +21,12 @@ export interface DamageOptions {
   chill?: number;
   /** Dokunulmazlığı yok say (örn. aynı patlamanın doğrudan + alan hasarı ayrımı) */
   ignoreInvuln?: boolean;
+  /** true: hedefi tutuştur (ateş) */
+  burn?: boolean;
+  /** Sürekli hasar (yanma): dokunulmazlık vermez, sersemletmez */
+  dot?: boolean;
+  /** Olayda hasar türü */
+  kind?: 'burn' | 'self';
 }
 
 const IDLE_INPUT: StepInput = { moveX: 0, moveY: 0, held: emptyFlags(), pressed: emptyFlags() };
@@ -48,6 +54,10 @@ export class Combatant {
   chillStacks = 0;
   /** >0 iken donmuş: hareket edemez. */
   frozenTimer = 0;
+  /** Kalan yanma hasarı sayısı (0 = yanmıyor) */
+  burnTicks = 0;
+  private burnTimer = 0;
+  private burnSource = '';
   private chillTimer = 0;
   private respawnTimer = 0;
   private lastAttacker: string | null = null;
@@ -94,14 +104,17 @@ export class Combatant {
    */
   takeDamage(amount: number, impulse: Vector3 | null, sourceId: string, point: Vector3, opts: DamageOptions = {}): boolean {
     if (!this.alive) return false;
-    if (this.invulnTimer > 0 && !opts.ignoreInvuln) return false;
+    if (this.invulnTimer > 0 && !opts.ignoreInvuln && !opts.dot) return false;
+    if (opts.dot && this.spawnProtected) return false;
     const C = GameConfig.combat;
 
     const missing = 1 - this.hp / this.opts.maxHp;
     this.hp = Math.max(0, this.hp - amount);
-    this.hitFlash = 0.15;
-    this.invulnTimer = Math.max(this.invulnTimer, C.invulnTime);
-    this.spawnProtected = false;
+    this.hitFlash = opts.dot ? 0.06 : 0.15;
+    if (!opts.dot) {
+      this.invulnTimer = Math.max(this.invulnTimer, C.invulnTime);
+      this.spawnProtected = false;
+    }
     if (sourceId !== this.id) {
       this.lastAttacker = sourceId;
       this.lastAttackTime = this.clock;
@@ -111,15 +124,37 @@ export class Combatant {
       this.scaled.copy(impulse).multiplyScalar(1 + missing * C.lowHpKnockbackBonus);
       this.controller.applyKnockback(this.scaled);
     }
-    const stun = C.hitStun + (opts.stun ?? 0);
-    this.controller.knockbackTimer = Math.max(this.controller.knockbackTimer, stun);
+    if (!opts.dot && sourceId !== this.id) {
+      const stun = C.hitStun + (opts.stun ?? 0);
+      this.controller.knockbackTimer = Math.max(this.controller.knockbackTimer, stun);
+    }
 
     if (opts.chill && !this.dead()) this.addChill(opts.chill);
+    if (opts.burn && !this.dead()) this.ignite(sourceId);
 
     const killed = this.hp <= 0;
-    this.bus.emit('combat:damage', { targetId: this.id, sourceId, amount, point: point.clone(), killed });
-    if (killed) this.die('hp', sourceId);
+    this.bus.emit('combat:damage', { targetId: this.id, sourceId, amount, point: point.clone(), killed, kind: opts.kind });
+    if (killed) {
+      // Kendi patlamanla ölürsen eleme son vurana yazılır
+      const self = sourceId === this.id;
+      const credited = self ? (this.clock - this.lastAttackTime <= RINGOUT_CREDIT_TIME ? this.lastAttacker : null) : sourceId;
+      this.die('hp', credited);
+    }
     return true;
+  }
+
+  /** Tutuştur: yanma sayacını yeniler (donmuşken tutuşmaz). Buz yanmayı söndürür. */
+  ignite(sourceId: string): void {
+    if (!this.alive || this.frozenTimer > 0) return;
+    const B = GameConfig.fire.burn;
+    if (this.burnTicks <= 0) this.burnTimer = B.interval;
+    this.burnTicks = B.ticks;
+    this.burnSource = sourceId;
+    this.bus.emit('combat:burn', { targetId: this.id, sourceId, point: this.center(new Vector3()) });
+  }
+
+  get burning(): boolean {
+    return this.burnTicks > 0;
   }
 
   private dead(): boolean {
@@ -132,6 +167,7 @@ export class Combatant {
     if (this.frozenTimer > 0) return;
     this.chillStacks = Math.min(K.maxStacks, this.chillStacks + stacks);
     this.chillTimer = K.duration;
+    this.burnTicks = 0; // buz yanmayı söndürür
     if (this.chillStacks >= K.maxStacks) {
       this.frozenTimer = K.freezeTime;
       this.controller.knockbackTimer = Math.max(this.controller.knockbackTimer, K.freezeTime);
@@ -144,6 +180,12 @@ export class Combatant {
 
   /** Durum etkilerini temizle (doğuş / raund başı). */
   clearStatus(): void {
+    this.burnTicks = 0;
+    this.burnTimer = 0;
+    this.clearChill();
+  }
+
+  private clearChill(): void {
     this.chillStacks = 0;
     this.chillTimer = 0;
     this.frozenTimer = 0;
@@ -186,10 +228,19 @@ export class Combatant {
     if (this.invulnTimer <= 0) this.spawnProtected = false;
     if (this.frozenTimer > 0) {
       this.frozenTimer -= dt;
-      if (this.frozenTimer <= 0) this.clearStatus();
+      if (this.frozenTimer <= 0) this.clearChill();
     } else if (this.chillStacks > 0) {
       this.chillTimer -= dt;
-      if (this.chillTimer <= 0) this.clearStatus();
+      if (this.chillTimer <= 0) this.clearChill();
+    }
+    if (this.burnTicks > 0 && this.alive) {
+      this.burnTimer -= dt;
+      if (this.burnTimer <= 0) {
+        const B = GameConfig.fire.burn;
+        this.burnTicks--;
+        this.burnTimer += B.interval;
+        this.takeDamage(B.damagePerTick, null, this.burnSource, this.center(this.tmp), { dot: true, kind: 'burn' });
+      }
     }
 
     if (!this.alive) {

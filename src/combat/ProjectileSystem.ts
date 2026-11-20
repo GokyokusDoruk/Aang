@@ -27,6 +27,14 @@ export interface ProjectileSpec {
   selfKnockbackMult?: number;
   /** Sahibini yukarı fırlatma hızı (roket zıplaması) */
   selfLaunchUp?: number;
+  /** Sahibine verilen alan hasarı oranı (0 = hasarsız) */
+  selfDamageMult?: number;
+  /** İsabet / patlamada tutuşturma ihtimali (ateş) */
+  burnChance?: number;
+}
+
+function rollBurn(s: ProjectileSpec): boolean {
+  return !!s.burnChance && Math.random() < s.burnChance;
 }
 
 export interface Projectile {
@@ -87,7 +95,7 @@ export class ProjectileSystem {
   /**
    * Alan patlaması: yarıçap içindeki karakterlere uzaklıkla azalan hasar + itme.
    * Doğrudan vurulan hedef alan hasarı almaz (itmesi zaten uygulandı).
-   * Sahibi hasar almaz, yalnızca itilir (roket zıplaması). Siper arkası korunur.
+   * Sahibi itilir (roket zıplaması) ve alan hasarının küçük bir kısmını alır. Siper arkası korunur.
    */
   private explode(p: Projectile, at: Vector3, directHitId: string | null): void {
     const s = p.spec;
@@ -116,8 +124,10 @@ export class ProjectileSystem {
           impulse.y = s.selfLaunchUp ?? 0; // yarıçap içindeyse tam güç: güvenilir roket zıplaması
           c.push(impulse);
         }
+        const self = (s.splashDamage ?? 0) * falloff * (s.selfDamageMult ?? 0);
+        if (self > 0) c.takeDamage(self, null, c.id, probe, { ignoreInvuln: true, kind: 'self' });
       } else {
-        c.takeDamage((s.splashDamage ?? 0) * falloff, impulse, p.ownerId, probe);
+        c.takeDamage((s.splashDamage ?? 0) * falloff, impulse, p.ownerId, probe, { burn: rollBurn(s) });
       }
     }
     this.bus.emit('fx:explosion', { point: at.clone(), radius, element: p.element });
@@ -190,7 +200,7 @@ export class ProjectileSystem {
         p.position.addScaledVector(dir, Math.min(targetDist, maxS));
         impulse.set(dir.x, 0, dir.z).normalize().multiplyScalar(p.spec.knockback);
         impulse.y = p.spec.knockbackUp;
-        target.takeDamage(p.spec.damage, impulse, p.ownerId, p.position, { chill: p.spec.chill });
+        target.takeDamage(p.spec.damage, impulse, p.ownerId, p.position, { chill: p.spec.chill, burn: rollBurn(p.spec) });
         this.bus.emit('projectile:impact', { kind: p.kind, element: p.element, point: p.position.clone(), normal: null, hitCombatant: true });
         this.explode(p, p.position, target.id);
         this.list.splice(i, 1);

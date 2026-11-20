@@ -48,7 +48,7 @@ npm run build      # typecheck + production build
 - Türler (`ChargedAbility.kind`): `channel` (basılı tuttukça sürer, nişan her an güncel: yönlendirilebilir), `charge` (basılı tuttukça dolar, bırakınca çıkar), `instant` (eşikte bir kez).
 - Dash, donma ve raund sonu uzun basışı keser; şarj kesilirse bekleme süresi harcanmaz.
 - Arayüz: yetenek dairesinin dışındaki altın halka uzun basışın hazır olduğunu, sağ üstteki sayı kalan saniyeyi gösterir; şarj sırasında ortada "%" çubuğu çıkar. Mobilde aynı halka butonun kenarında.
-- Şu an olanlar: **Buz Sarkacı Akımı** (Su sol tık, 3 sn seri buz, 20 sn) ve **Yıldırım Şarjı** (Ateş sağ tık, 5 sn'ye kadar şarj, tam şarjda 3× hasar, 30 sn).
+- Şu an olanlar: **Buz Sarkacı Akımı** (Su sol tık, 3 sn seri buz, 20 sn) **Yıldırım Şarjı** (Ateş sağ tık, 5 sn'ye kadar şarj, tam şarjda 3× hasar, 30 sn) ve **Alev Akımı** (Ateş sol tık, 3 sn yönlendirilebilir alev püskürtme, ~9 m, tutuşturur, 20 sn).
 - Ayarlar: `gameConfig.abilities.holdThreshold`, `gameConfig.abilities.charged`, `gameConfig.water.icicle`, `gameConfig.fire.lightning.charged*`
 
 ## Savaş altyapısı (Task 3)
@@ -69,7 +69,7 @@ npm run build      # typecheck + production build
 
 ## Ateş / Yıldırım ve savaş döngüsü (Task 5)
 
-- **Ateş Topu** (Ateş, sol tık): çarpınca patlar — doğrudan hasar + alan hasarı/itme; kendi patlaman seni hasarsız fırlatır (roket zıplaması)
+- **Ateş Topu** (Ateş, sol tık): çarpınca patlar — doğrudan hasar + alan hasarı/itme; %50 ihtimalle tutuşturur (3 sn × 1 hasar); kendi patlaman seni fırlatır (roket zıplaması) ve alan hasarının %25'ini sana verir. Buz/üşüme yanmayı söndürür
 - **Yıldırım Hattı** (Ateş, sağ tık): anlık, delici hat; yoldaki herkese hasar + itme + sersemletme, ilk duvarda durur
 - **Can / hasar:** kısa dokunulmazlık, sersemleme, düşük canda artan itme, doğuş koruması (yanıp sönme)
 - **Yenilgi:** can 0 → "YENİLDİN", arena dışına düşme → "ARENA DIŞI"; geri sayımla yeniden doğuş; arena dışı eleme son vurana yazılır

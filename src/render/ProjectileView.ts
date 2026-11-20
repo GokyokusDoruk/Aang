@@ -54,12 +54,21 @@ export class ProjectileView {
       shell.name = 'shell';
       mesh.add(shell);
       mesh.userData.flicker = true;
+    } else if (p.kind === 'flame') {
+      // Yaşlandıkça büyüyen, sarıdan kırmızıya dönen, sönen alev topağı (toplamalı)
+      mesh = new THREE.Mesh(
+        this.orbGeo,
+        new THREE.MeshBasicMaterial({ color: 0xffd36b, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false }),
+      );
+      mesh.scale.setScalar(p.spec.radius * 0.5);
+      mesh.userData.flame = true;
+      mesh.castShadow = false;
     } else {
       const color = ELEMENTS[p.element].color;
       mesh = new THREE.Mesh(this.orbGeo, new THREE.MeshBasicMaterial({ color }));
       mesh.scale.setScalar(p.spec.radius);
     }
-    mesh.castShadow = true;
+    if (!mesh.userData.flame) mesh.castShadow = true;
     mesh.rotation.set(Math.random() * 6, Math.random() * 6, 0);
     this.scene.add(mesh);
     this.meshes.set(p.id, mesh);
@@ -72,7 +81,13 @@ export class ProjectileView {
       seen.add(p.id);
       const m = this.meshes.get(p.id) ?? this.create(p);
       m.position.lerpVectors(p.prevPosition, p.position, alpha);
-      if (m.userData.flicker) {
+      if (m.userData.flame) {
+        const t = Math.min(1, p.age / p.spec.lifetime);
+        m.scale.setScalar(p.spec.radius * (0.5 + t * 1.6) * (0.9 + Math.random() * 0.2));
+        const mat = m.material as THREE.MeshBasicMaterial;
+        mat.color.setRGB(1, 0.85 - t * 0.6, 0.45 - t * 0.4);
+        mat.opacity = 0.85 * (1 - t * t);
+      } else if (m.userData.flicker) {
         const shell = m.getObjectByName('shell');
         if (shell) shell.scale.setScalar(1.55 + Math.random() * 0.4);
       } else if (m.userData.aligned) {

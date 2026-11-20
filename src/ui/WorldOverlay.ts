@@ -27,7 +27,7 @@ export class WorldOverlay {
 
     bus.on('combat:damage', (e) => {
       const el = document.createElement('div');
-      el.className = `dmg${e.sourceId === localId ? ' mine' : ''}${e.killed ? ' kill' : ''}`;
+      el.className = `dmg${e.sourceId === localId ? ' mine' : ''}${e.kind === 'burn' ? ' burn' : ''}${e.killed ? ' kill' : ''}`;
       el.textContent = e.killed ? `${Math.round(e.amount)} ✖` : `${Math.round(e.amount)}`;
       this.root.appendChild(el);
       this.texts.push({ el, pos: e.point.clone().add(new THREE.Vector3((Math.random() - 0.5) * 0.4, 0.3, 0)), age: 0 });
@@ -73,6 +73,7 @@ export class WorldOverlay {
         bar.el.classList.toggle('low', c.hp / c.opts.maxHp < 0.35);
         bar.el.classList.toggle('chilled', c.chillStacks > 0 || c.frozenTimer > 0);
         bar.el.classList.toggle('frozen', c.frozenTimer > 0);
+        bar.el.classList.toggle('burning', c.burning);
       }
     }
 

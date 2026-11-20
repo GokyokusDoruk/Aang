@@ -101,6 +101,8 @@ export const GameConfig = {
       icicleStream: { cooldown: 20, moveMult: 0.6, maxDuration: 3, tickInterval: 0.09 },
       /** Ateş sağ tık uzun: 5 sn'ye kadar şarj, bırakınca güçlü yıldırım */
       lightningCharged: { cooldown: 30, moveMult: 0.4, maxDuration: 5 },
+      /** Ateş sol tık uzun: yönlendirilebilir alev püskürtme */
+      flameStream: { cooldown: 20, moveMult: 0.55, maxDuration: 3, tickInterval: 0.06 },
     },
 
     tuning: {
@@ -160,6 +162,32 @@ export const GameConfig = {
       selfKnockbackMult: 0.8,
       /** Kendi patlamanın seni yukarı fırlatma hızı (m/s) */
       selfLaunchUp: 10,
+      /** Kendi patlamanın sana verdiği hasar oranı (alan hasarına göre) */
+      selfDamageMult: 0.25,
+      /** İsabet / patlamada yanma ihtimali */
+      burnChance: 0.5,
+    },
+    /** Yanma: süre boyunca her saniye küçük hasar (yeniden yanınca süre yenilenir) */
+    burn: {
+      ticks: 3,
+      interval: 1,
+      damagePerTick: 1,
+    },
+    /** Alev akımı (Ateş sol tık uzun basış): kısa menzilli, geniş, yükselen alev dilleri */
+    flame: {
+      radius: 0.38,
+      speed: 21,
+      /** Negatif: alev hafifçe yükselir */
+      gravity: -2,
+      damage: 2,
+      knockback: 1.4,
+      knockbackUp: 0.4,
+      wallDamage: 2,
+      /** ~9 m menzil */
+      lifetime: 0.45,
+      burnChance: 0.3,
+      /** Nişandan rastgele sapma (derece) */
+      spreadDeg: 5,
     },
     lightning: {
       range: 24,
