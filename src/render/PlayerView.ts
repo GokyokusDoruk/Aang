@@ -179,17 +179,10 @@ export class PlayerView {
     this.root.add(inst.root);
     this.body.visible = false;
     for (const m of inst.materials) this.mats.push(m);
+    inst.root.updateMatrixWorld(true);
     if (inst.head) {
-      // Bandı modelin kök eksenlerine hizala (kemik eksenleri dönük olabilir), birimleri dünya metresine çevir
-      inst.root.updateMatrixWorld(true);
-      const hq = inst.head.getWorldQuaternion(new THREE.Quaternion());
-      const rq = inst.root.getWorldQuaternion(new THREE.Quaternion());
-      const hs = inst.head.getWorldScale(new THREE.Vector3()).x || 1;
-      const g = new THREE.Group();
-      g.quaternion.copy(hq.invert().multiply(rq));
-      g.scale.setScalar(1 / hs);
-      inst.head.add(g);
-      // g artık modelin kök eksenlerinde (model +Z'ye bakar, arka -Z), birim = metre
+      const g = this.boneSpace(inst, inst.head);
+      // g modelin kök eksenlerinde (model +Z'ye bakar, arka -Z), birim = metre
       const band = new THREE.Mesh(new THREE.CylinderGeometry(0.108, 0.112, 0.045, 14, 1, true), this.accentMat);
       band.position.set(0, 0.1, 0.012);
       g.add(band);
@@ -198,6 +191,34 @@ export class PlayerView {
       knot.rotation.x = 0.6;
       g.add(knot);
     }
+    // Bel kuşağı: kıyafet bölgelerinin tırtıklı sınırını örten düzgün kumaş bant (element rengi)
+    const pelvis = inst.root.getObjectByName('pelvis') ?? inst.root.getObjectByName('spine_01');
+    if (pelvis) {
+      const g = this.boneSpace(inst, pelvis);
+      const rootY = inst.root.getWorldPosition(new THREE.Vector3()).y;
+      const boneY = pelvis.getWorldPosition(new THREE.Vector3()).y - rootY;
+      const waistY = 1.015 * (GameConfig.player.height / 1.8);
+      const belt = new THREE.Mesh(new THREE.CylinderGeometry(0.168, 0.18, 0.13, 16, 1, true), this.accentMat);
+      belt.scale.z = 0.78;
+      belt.position.set(0, waistY - boneY, 0.005);
+      g.add(belt);
+      const tail = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.22, 0.02), this.accentMat);
+      tail.position.set(0.09, waistY - boneY - 0.13, -0.135);
+      tail.rotation.z = 0.12;
+      g.add(tail);
+    }
+  }
+
+  /** Kemiğe, modelin kök eksenleriyle hizalı ve metre ölçekli bir bağlama grubu ekler. */
+  private boneSpace(inst: CharacterInstance, bone: THREE.Object3D): THREE.Group {
+    const bq = bone.getWorldQuaternion(new THREE.Quaternion());
+    const rq = inst.root.getWorldQuaternion(new THREE.Quaternion());
+    const bs = bone.getWorldScale(new THREE.Vector3()).x || 1;
+    const g = new THREE.Group();
+    g.quaternion.copy(bq.invert().multiply(rq));
+    g.scale.setScalar(1 / bs);
+    bone.add(g);
+    return g;
   }
 
   private animateModel(dt: number, key: AnimKey, timeScale: number): void {

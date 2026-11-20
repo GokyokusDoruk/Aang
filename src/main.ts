@@ -9,6 +9,7 @@ import { GameRenderer } from './render/GameRenderer';
 import { buildArenaView } from './render/ArenaView';
 import { ArenaDecor } from './render/ArenaDecor';
 import { CrateView } from './render/CrateView';
+import { GameFeel } from './render/GameFeel';
 import { PlayerView, type FighterMotion } from './render/PlayerView';
 import { loadCharacterAsset } from './render/CharacterAsset';
 import { EffectsView } from './render/EffectsView';
@@ -61,6 +62,19 @@ const projectileView = new ProjectileView(gfx.scene, session.projectiles);
 const wallView = new WallView(gfx.scene, session.walls, (pts) => effects.earthEruption(pts));
 const trailView = new TrailView(gfx.scene);
 const crateView = new CrateView(gfx.scene, session.crates);
+const feel = new GameFeel(
+  app,
+  bus,
+  effects,
+  () =>
+    session.running
+      ? [
+          { c: player, element: () => abilities.activeElement },
+          ...(session.mode === 'match' ? [{ c: bot, element: () => session.botAbilities.activeElement }] : []),
+        ]
+      : [],
+  () => playerCtl.position,
+);
 // Yetenek çıktığı an karakter vuruş hamlesi yapar
 bus.on('ability:cast', (e) => {
   if (e.casterId === 'player') playerView.triggerCast();
@@ -219,7 +233,7 @@ function frame(now: number): void {
   if (active) camera.applyLook(look.dx, look.dy);
 
   if (active) {
-    accumulator += dt;
+    accumulator += dt * feel.simScale(dt);
     let steps = 0;
     while (accumulator >= STEP && steps < GameConfig.physics.maxStepsPerFrame) {
       const s = input.sampleStep();
@@ -240,6 +254,7 @@ function frame(now: number): void {
   const ratio = playerCtl.prevHeightRatio + (playerCtl.heightRatio - playerCtl.prevHeightRatio) * alpha;
   camera.update(dt, renderPos, ratio);
   gfx.setCameraPose(camera.position, camera.yaw, camera.pitch);
+  feel.update(dt, gfx.camera, playerCtl.dashing, playerCtl.horizontalSpeed);
 
   // Oyuncu (kendi görünümü kamera mesafesine göre saydamlaşır)
   const blink = player.spawnProtected && Math.floor(now / 90) % 2 === 0;
@@ -314,5 +329,5 @@ requestAnimationFrame(frame);
 
 // Tarayıcı konsolundan hata ayıklama / test için
 Object.assign(window as unknown as Record<string, unknown>, {
-  __game: { session, camera, input, menu, matchHud, config: GameConfig, startGame, playerView },
+  __game: { session, camera, input, menu, matchHud, config: GameConfig, startGame, playerView, effects },
 });

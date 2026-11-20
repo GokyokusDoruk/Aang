@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { ELEMENTS } from '../abilities/elements';
+import { ELEMENTS, type ElementId } from '../abilities/elements';
 import type { GameEvents } from '../abilities/types';
 import type { EventBus } from '../core/EventBus';
 import { boulderGeometry } from './rockGeometry';
@@ -28,6 +28,8 @@ export class EffectsView {
   private readonly sphere = new THREE.SphereGeometry(1, 16, 12);
   private readonly ring = new THREE.RingGeometry(0.75, 1, 32);
   private readonly chunks = [1, 2, 3, 4].map((i) => boulderGeometry(i + 40));
+  /** Hava kalkanı sarmalı (seyrek, düşük poligon) */
+  private readonly shieldGeo = new THREE.IcosahedronGeometry(1, 1);
   /** Tahta kıymığı / kalas parçası */
   private readonly plank = new THREE.BoxGeometry(0.35, 0.12, 1.6);
   private readonly crater = (() => {
@@ -65,7 +67,10 @@ export class EffectsView {
       this.debris(e.center, UP, WOOD_DARK, 5, 0.18 * e.size, 5, true);
       this.dust(e.center, DUST_COLOR, 1.6 * e.size);
     });
-    bus.on('fx:shockwave', (e) => this.shockwave(e));
+    bus.on('fx:shockwave', (e) => {
+      this.shockwave(e);
+      this.airShield(e.origin.clone().setY(e.origin.y - 1), false);
+    });
     bus.on('fx:explosion', (e) => this.explosion(e));
     bus.on('fx:lightning', (e) => this.lightning(e));
     bus.on('fx:burst', (e) => {
@@ -202,10 +207,12 @@ export class EffectsView {
       for (let i = 0; i < pts.length - 1; i++) path.add(new THREE.LineCurve3(pts[i], pts[i + 1]));
       return path;
     };
+    // Mor-beyaz şimşek: beyaz çekirdek, mor hale, dağınık ince kollar
     for (const [radius, color, jag, opacity] of [
       [0.05, 0xffffff, 0.7, 1],
-      [0.16, 0xffc94d, 0.7, 0.45],
-      [0.04, 0xfff0a0, 1.6, 0.8],
+      [0.18, 0x9b5cff, 0.7, 0.5],
+      [0.035, 0xd9c2ff, 1.6, 0.85],
+      [0.03, 0xb88cff, 2.4, 0.6],
     ] as const) {
       const geo = new THREE.TubeGeometry(build(jag), 48, radius, 5, false);
       const mat = new THREE.MeshBasicMaterial({ color, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
@@ -221,7 +228,93 @@ export class EffectsView {
         },
       });
     }
-    this.dust(e.to, 0xffd36b, 1.2);
+    this.dust(e.to, 0xb88cff, 1.2);
+    this.sparks(e.to, 0xd9c2ff, 10);
+    this.sparks(e.from, 0xb88cff, 5);
+  }
+
+  /** Hızlı, kısa ömürlü parlak kıvılcımlar (toplamalı) */
+  private sparks(at: THREE.Vector3, color: number, count: number): void {
+    count = Math.max(2, Math.round(count * this.effectScale));
+    const mat = new THREE.MeshBasicMaterial({ color, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+    for (let i = 0; i < count; i++) {
+      const m = new THREE.Mesh(this.sphere, mat);
+      m.position.copy(at);
+      const v = new THREE.Vector3(Math.random() - 0.5, Math.random() * 0.9, Math.random() - 0.5).normalize().multiplyScalar(6 + Math.random() * 8);
+      this.add({
+        obj: m,
+        mats: i === 0 ? [mat] : [],
+        life: 0,
+        max: 0.25 + Math.random() * 0.15,
+        tick: (t, dt) => {
+          v.y -= 18 * dt;
+          m.position.addScaledVector(v, dt);
+          m.scale.set(0.03, 0.03, 0.03).multiplyScalar(1.5 - t);
+          mat.opacity = 1 - t;
+        },
+      });
+    }
+  }
+
+  /**
+   * Ayaklardan itiş jeti (çift zıplama / dash): ateşte alev topları, diğer elementlerde renkli puf.
+   * dir: jetin püskürdüğü yön (hareketin tersi).
+   */
+  jet(at: THREE.Vector3, dir: THREE.Vector3, element: ElementId): void {
+    const fire = element === 'fire';
+    const n = Math.max(3, Math.round((fire ? 12 : 7) * this.effectScale));
+    for (let i = 0; i < n; i++) {
+      const hot = fire && i % 3 === 0;
+      const mat = new THREE.MeshBasicMaterial({
+        color: fire ? (hot ? 0xfff1a8 : i % 2 ? 0xff7a1a : 0xffb03a) : element === 'air' ? 0xffffff : ELEMENTS[element].color,
+        transparent: true,
+        depthWrite: false,
+        blending: fire ? THREE.AdditiveBlending : THREE.NormalBlending,
+      });
+      const m = new THREE.Mesh(this.sphere, mat);
+      m.position.copy(at).add(new THREE.Vector3((Math.random() - 0.5) * 0.3, Math.random() * 0.2, (Math.random() - 0.5) * 0.3));
+      const v = dir.clone().multiplyScalar(5 + Math.random() * 5).add(new THREE.Vector3((Math.random() - 0.5) * 2.5, 0, (Math.random() - 0.5) * 2.5));
+      const s0 = (fire ? 0.3 : 0.2) * (0.7 + Math.random() * 0.6);
+      this.add({
+        obj: m,
+        mats: [mat],
+        life: 0,
+        max: 0.3 + Math.random() * 0.25,
+        tick: (t, dt) => {
+          v.multiplyScalar(1 - 4 * dt);
+          if (fire) v.y += 6 * dt; // sıcak hava yükselir
+          m.position.addScaledVector(v, dt);
+          m.scale.setScalar(s0 * (0.6 + 1.6 * t));
+          mat.opacity = (fire ? 0.95 : 0.5) * (1 - t);
+        },
+      });
+    }
+  }
+
+  /** Hava kalkanı: dönen yarı saydam küre + parlayan kabuk (şok dalgası / mermi savuşturma anı). */
+  airShield(at: THREE.Vector3, strong: boolean): void {
+    const mat = new THREE.MeshBasicMaterial({ color: 0xdff6ff, transparent: true, depthWrite: false, side: THREE.DoubleSide, wireframe: true });
+    const shell = new THREE.MeshBasicMaterial({ color: 0xbfeaff, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.BackSide });
+    const g = new THREE.Group();
+    const swirl = new THREE.Mesh(this.shieldGeo, mat);
+    const glow = new THREE.Mesh(this.sphere, shell);
+    g.add(swirl, glow);
+    g.position.copy(at).add(new THREE.Vector3(0, 1, 0));
+    const r = strong ? 1.5 : 1.25;
+    this.add({
+      obj: g,
+      mats: [mat, shell],
+      life: 0,
+      max: strong ? 0.5 : 0.38,
+      tick: (t, dt) => {
+        const k = t < 0.25 ? t / 0.25 : 1;
+        g.scale.setScalar(r * (0.6 + 0.4 * k) * (1 + 0.1 * t));
+        swirl.rotation.y += dt * 14;
+        swirl.rotation.x += dt * 3;
+        mat.opacity = 0.55 * (1 - t);
+        shell.opacity = (strong ? 0.35 : 0.2) * (1 - t);
+      },
+    });
   }
 
   /** Koni biçimli rüzgar dalgası + ileri giden halkalar */
