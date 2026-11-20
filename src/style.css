@@ -800,3 +800,15 @@ body {
     font-size: 10px;
   }
 }
+
+/* Dash hız çizgileri (GameFeel) */
+.speed-lines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 2;
+  background: repeating-conic-gradient(from 0deg at 50% 50%, rgba(255, 255, 255, 0) 0deg 4deg, rgba(255, 255, 255, 0.55) 4deg 4.5deg);
+  -webkit-mask-image: radial-gradient(circle at 50% 50%, transparent 42%, #000 85%);
+  mask-image: radial-gradient(circle at 50% 50%, transparent 42%, #000 85%);
+}
