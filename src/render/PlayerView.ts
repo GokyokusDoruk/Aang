@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { GameConfig } from '../config/gameConfig';
 import type { MoveState } from '../game/PlayerController';
+import { CharacterInstance, type AnimKey, type CharacterAsset } from './CharacterAsset';
 
 /** Animasyonu süren hareket bilgisi (mantıktan salt okunur). */
 export interface FighterMotion {
@@ -55,6 +56,8 @@ export class PlayerView {
   private castPulse = 0; // 1 → 0: yeteneğin çıktığı anki hamle
   private castSide = 1;
   private idleTime = Math.random() * 10;
+  /** Hazır 3D model yüklendiyse onun örneği (yoksa prosedürel iskelet çizilir). */
+  private model: CharacterInstance | null = null;
   private readonly fwd = new THREE.Vector3();
 
   constructor(scene: THREE.Scene, color = 0x3fa7ff) {
@@ -163,6 +166,44 @@ export class PlayerView {
   triggerCast(): void {
     this.castPulse = 1;
     this.castSide = -this.castSide;
+    if (this.model) this.model.playOnce(this.castSide > 0 && this.model.has('punch') ? 'punch' : 'cast');
+  }
+
+  /**
+   * Prosedürel iskeletin yerine hazır modeli koyar. Alın bandı (element rengi) baş kemiğine takılır.
+   */
+  attachModel(asset: CharacterAsset): void {
+    if (this.model) return;
+    const inst = new CharacterInstance(asset, this.clothMat.color.getHex(), this.accentMat);
+    this.model = inst;
+    this.root.add(inst.root);
+    this.body.visible = false;
+    for (const m of inst.materials) this.mats.push(m);
+    if (inst.head) {
+      // Bandı modelin kök eksenlerine hizala (kemik eksenleri dönük olabilir), birimleri dünya metresine çevir
+      inst.root.updateMatrixWorld(true);
+      const hq = inst.head.getWorldQuaternion(new THREE.Quaternion());
+      const rq = inst.root.getWorldQuaternion(new THREE.Quaternion());
+      const hs = inst.head.getWorldScale(new THREE.Vector3()).x || 1;
+      const g = new THREE.Group();
+      g.quaternion.copy(hq.invert().multiply(rq));
+      g.scale.setScalar(1 / hs);
+      inst.head.add(g);
+      // g artık modelin kök eksenlerinde (model +Z'ye bakar, arka -Z), birim = metre
+      const band = new THREE.Mesh(new THREE.CylinderGeometry(0.108, 0.112, 0.045, 14, 1, true), this.accentMat);
+      band.position.set(0, 0.1, 0.012);
+      g.add(band);
+      const knot = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.045, 0.11), this.accentMat);
+      knot.position.set(0, 0.09, -0.15);
+      knot.rotation.x = 0.6;
+      g.add(knot);
+    }
+  }
+
+  private animateModel(dt: number, key: AnimKey, timeScale: number): void {
+    const m = this.model!;
+    m.play(m.has(key) ? key : key === 'runBack' || key === 'dash' ? 'run' : 'idle', timeScale);
+    m.update(dt);
   }
 
   update(
@@ -204,6 +245,20 @@ export class PlayerView {
     const targetLean = dashing ? 0.55 : sliding ? -0.15 : Math.max(-0.25, Math.min(0.35, (fwdSpeed / run) * 0.22));
     this.lean += (targetLean - this.lean) * damp(10, dt);
     this.sideLean += (Math.max(-0.25, Math.min(0.25, -(sideSpeed / run) * 0.15)) - this.sideLean) * damp(8, dt);
+
+    if (this.model) {
+      let key: AnimKey = 'idle';
+      let ts = 1;
+      if (dashing) key = 'dash';
+      else if (sliding) key = 'slide';
+      else if (gliding) key = 'glide';
+      else if (!grounded) key = (v?.y ?? 0) > 0 ? 'jump' : 'fall';
+      else if (speed > 0.8) {
+        key = fwdSpeed < -0.5 && this.model.has('runBack') ? 'runBack' : 'run';
+        ts = Math.max(0.6, Math.min(1.6, speed / run));
+      } else if (castProgress > 0 && this.model.has('charge')) key = 'charge';
+      this.animateModel(dt, key, ts);
+    }
 
     const sw = Math.sin(this.phase);
     const r = this.runBlend;

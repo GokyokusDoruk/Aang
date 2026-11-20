@@ -77,6 +77,13 @@ npm run build      # typecheck + production build
 - `src/render/ArenaDecor.ts`: düşme çukuru, stadyum duvarı, kademeli tribünler + seyirciler, duvar/sütun bayrakları (element sembolleri), zemindeki renkli bölgeler. Yalnızca görsel, çarpışma yok.
 - **Kırılabilen kasalar:** `src/combat/CrateSystem.ts` (gerçek çarpışma kutusu, mermi/yıldırımla kırılır, üst üste kasalar birlikte düşer, raund başında yenilenir). Yerleşim: `arenaLayout.ts` → `crates`, ayar: `gameConfig.crate`.
 
+## Karakter modeli
+
+- `public/models/character.glb` + `animations.glb`: Quaternius **Universal Base Characters** ve **Universal Animation Library** (CC0, `public/models/LICENSE-quaternius.txt`). Dokular 512px WebP, meshopt sıkıştırmalı; parmak kemiği animasyonları atıldı.
+- `src/render/CharacterAsset.ts`: yükleme, kıyafet bölgeleri (tunik = takım rengi, kuşak/alın bandı = element rengi), durum → klip eşlemesi (Idle, Jog, Jump, Roll, Crouch, Spell/Punch).
+- Dosyalar yoksa ya da yüklenemezse oyun prosedürel karakterle (`PlayerView`) çalışmaya devam eder.
+- Yeniden üretmek için: `tools/build-models.mjs` (başındaki açıklamaya bak).
+
 **Yeni yetenek/element eklemek:** elements.ts'e element ekle → definitions/ altına dosya ekle → registry'ye kaydet → config'e tuning ekle.
 
 ## Mimari
