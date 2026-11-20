@@ -8,7 +8,9 @@ import type { ElementId } from './elements';
 
 export type { GameEvents } from '../core/GameEvents';
 
-export type AbilitySlot = 'primary' | 'secondary';
+export type AbilitySlot = 'primary' | 'secondary' | 'special';
+
+export const ABILITY_SLOTS: readonly AbilitySlot[] = ['primary', 'secondary', 'special'];
 
 export interface AbilityTuning {
   cooldown: number;

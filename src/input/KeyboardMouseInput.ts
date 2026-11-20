@@ -11,6 +11,7 @@ const KEY_ACTIONS: Record<string, Action> = {
   Digit3: 'element3',
   Digit4: 'element4',
   KeyQ: 'elementNext',
+  KeyE: 'special',
   KeyR: 'reset',
 };
 

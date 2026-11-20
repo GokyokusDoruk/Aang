@@ -22,6 +22,7 @@ import { WorldOverlay } from './ui/WorldOverlay';
 import { PlayerStatus } from './ui/PlayerStatus';
 import { MatchHud } from './ui/MatchHud';
 import { abilityIcon } from './ui/icons';
+import { ABILITY_SLOTS } from './abilities/types';
 import { SoundSystem } from './audio/SoundSystem';
 import { Menu } from './ui/Menu';
 import { lerpAngle } from './core/math';
@@ -60,7 +61,7 @@ void loadCharacterAsset(GameConfig.player.height).then((asset) => {
 });
 const effects = new EffectsView(gfx.scene, bus, isTouch ? GameConfig.render.mobileEffectScale : 1);
 const projectileView = new ProjectileView(gfx.scene, session.projectiles);
-const wallView = new WallView(gfx.scene, session.walls, (pts) => effects.earthEruption(pts));
+const wallView = new WallView(gfx.scene, session.walls, (pts, el) => el === 'earth' && effects.earthEruption(pts));
 const trailView = new TrailView(gfx.scene);
 const crateView = new CrateView(gfx.scene, session.crates);
 const feel = new GameFeel(
@@ -172,9 +173,10 @@ gfx.canvas.addEventListener('click', () => {
 
 function refreshTouchLabels(): void {
   const color = ELEMENTS[abilities.activeElement].css;
-  for (const slot of ['primary', 'secondary'] as const) {
+  for (const slot of ABILITY_SLOTS) {
     const def = abilities.slot(slot);
-    input.touch?.setButton(slot, def?.name ?? '—', color, abilityIcon(def?.id, abilities.activeElement));
+    input.touch?.setButton(slot, def?.name ?? '—', color, def ? abilityIcon(def.id, abilities.activeElement) : '');
+    input.touch?.setEmpty(slot, !def);
   }
 }
 refreshTouchLabels();
@@ -324,10 +326,10 @@ function frame(now: number): void {
   if (input.touch) {
     input.touch.setCooldown('dash', dashCd);
     input.touch.setCooldown('slide', slideCd);
-    const p = abilities.slot('primary');
-    const sec = abilities.slot('secondary');
-    input.touch.setCooldown('primary', p ? abilities.cooldownRatio(p) : 0);
-    input.touch.setCooldown('secondary', sec ? abilities.cooldownRatio(sec) : 0);
+    for (const slot of ABILITY_SLOTS) {
+      const def = abilities.slot(slot);
+      input.touch.setCooldown(slot, def ? abilities.cooldownRatio(def) : 0);
+    }
   }
 
   gfx.render();

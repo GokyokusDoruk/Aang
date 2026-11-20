@@ -9,6 +9,7 @@ export const ACTIONS = [
   'slide',
   'primary', // Task 2+: ana saldırı / yetenek kullan
   'secondary', // Task 2+: ikincil yetenek
+  'special', // 3. yetenek (E)
   'element1', // Task 2: Toprak
   'element2', // Task 2: Su/Buz
   'element3', // Task 2: Ateş/Yıldırım

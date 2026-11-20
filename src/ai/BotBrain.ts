@@ -47,6 +47,7 @@ export class BotBrain {
     cycle: 0,
     primaryPressed: false,
     secondaryPressed: false,
+    specialPressed: false,
     primaryHeld: false,
     interrupt: false,
   };
@@ -246,6 +247,14 @@ export class BotBrain {
       it.primaryHeld = el === 'water';
     }
 
+    // Buz Duvarı: canı azalmışken orta mesafede anlık siper
+    if (el === 'water' && A.canUse('special') && dist > 5 && dist < 22 && me.hp / me.opts.maxHp < 0.6 && Math.random() < 0.015) {
+      this.caster.aimOverride = tC.clone();
+      it.specialPressed = true;
+      it.primaryPressed = it.primaryHeld = false;
+      return;
+    }
+
     // İkincil
     if (A.canUse('secondary')) {
       if (el === 'fire' && dist < 20 && Math.random() < 0.03) it.secondaryPressed = true;
@@ -363,6 +372,6 @@ export class BotBrain {
     const it = this.intent;
     it.selectElement = null;
     it.cycle = 0;
-    it.primaryPressed = it.secondaryPressed = it.primaryHeld = it.interrupt = false;
+    it.primaryPressed = it.secondaryPressed = it.specialPressed = it.primaryHeld = it.interrupt = false;
   }
 }

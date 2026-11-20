@@ -19,7 +19,7 @@ export type GameEvents = {
 
   'projectile:impact': { kind: string; element: ElementId; point: Vector3; normal: Vector3 | null; hitCombatant: boolean };
 
-  'wall:spawn': { wallId: number; ownerId: string };
+  'wall:spawn': { wallId: number; ownerId: string; element: ElementId };
   'wall:hit': { wallId: number; point: Vector3; amount: number };
   'wall:destroyed': { wallId: number; columns: Vector3[]; element: ElementId };
 

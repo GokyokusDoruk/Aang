@@ -30,4 +30,13 @@ export const waterAbilities: AbilityDef[] = [
       ctx.bus.emit('fx:burst', { point: new Vector3(p.x, p.y + 0.1, p.z), element: 'water', size: 0.6 });
     },
   },
+  {
+    id: 'iceWall',
+    element: 'water',
+    slot: 'special',
+    name: 'Buz Duvarı',
+    description: 'Hemen önünde anında buz siperi yükselt. Kırılgandır; kırılınca parçaları yakındaki rakipleri üşütür.',
+    tuning: T.iceWall,
+    execute: (ctx) => ctx.services.walls.placeIceWall(ctx.caster.id, ctx.caster.position, ctx.target, ctx.direction) !== null,
+  },
 ];

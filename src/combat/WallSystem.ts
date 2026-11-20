@@ -16,10 +16,26 @@ export interface WallColumn {
 
 export type WallState = 'rising' | 'standing' | 'sinking';
 
+/** Duvar türü ayarları (gameConfig.earth.wall, gameConfig.water.iceWall). */
+export interface WallSpec {
+  columns: number;
+  columnWidth: number;
+  spacing: number;
+  height: number;
+  riseTime: number;
+  sinkTime: number;
+  hp: number;
+  lifetime: number;
+  maxPerCaster: number;
+  minDistance: number;
+  maxDistance: number;
+}
+
 export interface Wall {
   id: number;
   ownerId: string;
   element: ElementId;
+  spec: WallSpec;
   columns: WallColumn[];
   hp: number;
   maxHp: number;
@@ -74,7 +90,15 @@ export class WallSystem {
    * Hiç sütun konamazsa (boşluk) null döner.
    */
   placeEarthWall(ownerId: string, casterPos: Vector3, target: Vector3, aimDir: Vector3): Wall | null {
-    const W = GameConfig.earth.wall;
+    return this.placeWall('earth', GameConfig.earth.wall, ownerId, casterPos, target, aimDir);
+  }
+
+  /** Buz duvarı: nişan yönünde, karakterin hemen önüne (mesafe sabit). */
+  placeIceWall(ownerId: string, casterPos: Vector3, target: Vector3, aimDir: Vector3): Wall | null {
+    return this.placeWall('water', GameConfig.water.iceWall, ownerId, casterPos, target, aimDir);
+  }
+
+  private placeWall(element: ElementId, W: WallSpec, ownerId: string, casterPos: Vector3, target: Vector3, aimDir: Vector3): Wall | null {
     let hx = target.x - casterPos.x;
     let hz = target.z - casterPos.z;
     let dist = Math.hypot(hx, hz);
@@ -112,13 +136,14 @@ export class WallSystem {
     if (columns.length === 0) return null;
 
     // Sahip başına sınır: en eskiyi batır
-    const mine = this.walls.filter((w) => w.ownerId === ownerId && w.state !== 'sinking');
+    const mine = this.walls.filter((w) => w.ownerId === ownerId && w.element === element && w.state !== 'sinking');
     if (mine.length >= W.maxPerCaster) this.startSinking(mine[0]);
 
     const wall: Wall = {
       id: this.nextId++,
       ownerId,
-      element: 'earth',
+      element,
+      spec: W,
       columns,
       hp: W.hp,
       maxHp: W.hp,
@@ -133,8 +158,8 @@ export class WallSystem {
       this.byBox.set(c.box, wall);
     }
     this.walls.push(wall);
-    this.bus.emit('wall:spawn', { wallId: wall.id, ownerId });
-    for (const c of columns) this.bus.emit('fx:burst', { point: new Vector3(c.x, c.baseY, c.z), element: 'earth', size: 0.5 });
+    this.bus.emit('wall:spawn', { wallId: wall.id, ownerId, element });
+    for (const c of columns) this.bus.emit('fx:burst', { point: new Vector3(c.x, c.baseY, c.z), element, size: 0.5 });
     return wall;
   }
 
@@ -159,9 +184,9 @@ export class WallSystem {
   }
 
   update(dt: number): void {
-    const W = GameConfig.earth.wall;
     for (let i = this.walls.length - 1; i >= 0; i--) {
       const w = this.walls[i];
+      const W = w.spec;
       w.age += dt;
       w.stateTime += dt;
       w.hitFlash = Math.max(0, w.hitFlash - dt);
@@ -201,7 +226,19 @@ export class WallSystem {
   private destroy(w: Wall): void {
     const centers = w.columns.map((c) => new Vector3(c.x, c.baseY + (c.box.maxY - c.baseY) / 2, c.z));
     this.bus.emit('wall:destroyed', { wallId: w.id, columns: centers, element: w.element });
+    if (w.element === 'water') this.shatterIce(w, centers);
     this.remove(w);
+  }
+
+  /** Kırılan buz duvarı parçaları yakındaki rakipleri üşütür (sahibi etkilenmez). */
+  private shatterIce(w: Wall, centers: Vector3[]): void {
+    const I = GameConfig.water.iceWall;
+    const r2 = I.shatterRadius * I.shatterRadius;
+    for (const k of this.combatants) {
+      if (!k.alive || k.id === w.ownerId) continue;
+      const p = k.position;
+      if (centers.some((c) => (c.x - p.x) ** 2 + (c.z - p.z) ** 2 <= r2 && Math.abs(c.y - p.y) < 3)) k.addChill(I.shatterChill);
+    }
   }
 
   private remove(w: Wall): void {

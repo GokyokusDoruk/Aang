@@ -11,6 +11,7 @@ interface ButtonDef {
 export const TOUCH_BUTTONS: ButtonDef[] = [
   { action: 'primary', label: 'SALDIR', cls: 'primary' },
   { action: 'secondary', label: 'YETENEK', cls: 'secondary' },
+  { action: 'special', label: '—', cls: 'special' },
   { action: 'jump', label: 'ZIPLA', cls: 'jump' },
   { action: 'dash', label: 'DASH', cls: 'dash' },
   { action: 'slide', label: 'KAY', cls: 'slide' },
@@ -99,6 +100,11 @@ export class TouchInput implements InputSource {
       if (ic.innerHTML !== iconSvg) ic.innerHTML = iconSvg;
       el.classList.toggle('has-icon', iconSvg !== '');
     }
+  }
+
+  /** Bu elementte o slotta yetenek yoksa butonu soluklaştır. */
+  setEmpty(action: Action, empty: boolean): void {
+    this.buttons.get(action)?.classList.toggle('empty', empty);
   }
 
   /** Kullanılamayan yetenek için kısa uyarı animasyonu. */

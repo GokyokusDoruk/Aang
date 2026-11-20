@@ -16,10 +16,13 @@ interface WallMeshes {
   group: THREE.Group;
   spikes: Spike[];
   mat: THREE.MeshStandardMaterial;
+  ice: boolean;
 }
 
 const STONE = new THREE.Color(0x8e8983);
 const STONE_DAMAGED = new THREE.Color(0x4d4945);
+const ICE = new THREE.Color(0xc4ecff);
+const ICE_DAMAGED = new THREE.Color(0x6f9fc0);
 
 /**
  * Toprak duvarlarını yerden fırlamış sivri, kırık kaya kümeleri olarak çizer.
@@ -34,7 +37,7 @@ export class WallView {
     private readonly scene: THREE.Scene,
     private readonly system: WallSystem,
     /** Yeni duvar yükselmeye başladığında (toz/enkaz efekti için) */
-    private readonly onSpawn?: (points: THREE.Vector3[]) => void,
+    private readonly onSpawn?: (points: THREE.Vector3[], element: Wall['element']) => void,
   ) {}
 
   private rand(): number {
@@ -44,7 +47,19 @@ export class WallView {
 
   private create(w: Wall): WallMeshes {
     const group = new THREE.Group();
-    const mat = new THREE.MeshStandardMaterial({ color: STONE, roughness: 0.95, flatShading: true, emissive: 0xffffff, emissiveIntensity: 0 });
+    const ice = w.element === 'water';
+    const mat = ice
+      ? new THREE.MeshStandardMaterial({
+          color: ICE,
+          roughness: 0.12,
+          metalness: 0.1,
+          flatShading: true,
+          transparent: true,
+          opacity: 0.82,
+          emissive: 0x5cc8ff,
+          emissiveIntensity: 0.18,
+        })
+      : new THREE.MeshStandardMaterial({ color: STONE, roughness: 0.95, flatShading: true, emissive: 0xffffff, emissiveIntensity: 0 });
     const spikes: Spike[] = [];
     const add = (col: number, hMul: number, wMul: number, ox: number, oz: number) => {
       const mesh = new THREE.Mesh(this.geos[Math.floor(this.rand() * this.geos.length)], mat);
@@ -65,9 +80,9 @@ export class WallView {
       }
     });
     this.scene.add(group);
-    const v = { group, spikes, mat };
+    const v = { group, spikes, mat, ice };
     this.views.set(w.id, v);
-    this.onSpawn?.(w.columns.map((c) => new THREE.Vector3(c.x, c.baseY, c.z)));
+    this.onSpawn?.(w.columns.map((c) => new THREE.Vector3(c.x, c.baseY, c.z)), w.element);
     return v;
   }
 
@@ -77,8 +92,14 @@ export class WallView {
       seen.add(w.id);
       const v = this.views.get(w.id) ?? this.create(w);
       const dmg = 1 - Math.max(0, w.hp) / w.maxHp;
-      v.mat.color.copy(STONE).lerp(STONE_DAMAGED, dmg);
-      v.mat.emissiveIntensity = w.hitFlash > 0 ? 0.3 : 0;
+      if (v.ice) {
+        v.mat.color.copy(ICE).lerp(ICE_DAMAGED, dmg);
+        v.mat.emissive.setHex(w.hitFlash > 0 ? 0xffffff : 0x5cc8ff);
+        v.mat.emissiveIntensity = w.hitFlash > 0 ? 0.45 : 0.18;
+      } else {
+        v.mat.color.copy(STONE).lerp(STONE_DAMAGED, dmg);
+        v.mat.emissiveIntensity = w.hitFlash > 0 ? 0.3 : 0;
+      }
       const shake = w.hitFlash > 0 ? 0.06 : w.state === 'rising' ? 0.03 : 0;
       for (const s of v.spikes) {
         const c = w.columns[s.col];

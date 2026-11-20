@@ -16,6 +16,8 @@ export interface AbilityIntent {
   cycle: number;
   primaryPressed: boolean;
   secondaryPressed: boolean;
+  /** 3. yetenek (E / mobilde 3. buton) */
+  specialPressed: boolean;
   primaryHeld: boolean;
   /** true ise hazırlanan yetenek iptal edilir (örn. dash). */
   interrupt: boolean;
@@ -144,7 +146,13 @@ export class AbilitySystem {
     if (next) this.setElement(next);
 
     // Input buffer
-    const pressedSlot: AbilitySlot | null = intent.primaryPressed ? 'primary' : intent.secondaryPressed ? 'secondary' : null;
+    const pressedSlot: AbilitySlot | null = intent.primaryPressed
+      ? 'primary'
+      : intent.secondaryPressed
+        ? 'secondary'
+        : intent.specialPressed
+          ? 'special'
+          : null;
     if (pressedSlot) {
       this.buffered = { slot: pressedSlot, timer: A.inputBuffer };
       this.reportIfBlocked(pressedSlot);
