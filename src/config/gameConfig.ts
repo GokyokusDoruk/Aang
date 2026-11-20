@@ -92,6 +92,16 @@ export const GameConfig = {
     primaryRepeatOnHold: true,
     /** Dash hazırlanan yeteneği iptal eder (cooldown harcanmaz). */
     cancelCastOnDash: true,
+    /** Tuş bu süreden uzun basılı kalırsa yeteneğin uzun basış versiyonu çalışır (s) */
+    holdThreshold: 0.3,
+
+    /** Uzun basış versiyonları: bekleme (s), hareket çarpanı, süre */
+    charged: {
+      /** Su sol tık uzun: yönlendirilebilir seri buz sarkacı akımı */
+      icicleStream: { cooldown: 20, moveMult: 0.6, maxDuration: 3, tickInterval: 0.09 },
+      /** Ateş sağ tık uzun: 5 sn'ye kadar şarj, bırakınca güçlü yıldırım */
+      lightningCharged: { cooldown: 30, moveMult: 0.4, maxDuration: 5 },
+    },
 
     tuning: {
       // Toprak
@@ -161,6 +171,11 @@ export const GameConfig = {
       wallDamage: 40,
       /** Ek sersemletme süresi (s) */
       stun: 0.35,
+      /** Tam şarjda çarpanlar (şarj oranıyla doğrusal artar) */
+      chargedDamageMult: 3,
+      chargedKnockbackMult: 2.5,
+      chargedStunBonus: 0.8,
+      chargedWidthMult: 1.7,
     },
   },
 
@@ -211,6 +226,21 @@ export const GameConfig = {
       lifetime: 1.2,
       /** İsabette eklenen üşüme yığını */
       chill: 1,
+    },
+    /** Buz sarkacı (Su sol tık uzun basış): küçük, hızlı, az hasarlı, üşütür */
+    icicle: {
+      radius: 0.12,
+      speed: 62,
+      gravity: 1,
+      damage: 3,
+      knockback: 0.6,
+      knockbackUp: 0.2,
+      wallDamage: 3,
+      lifetime: 1,
+      /** Kısmi üşüme: birkaç isabette bir yığın */
+      chill: 0.35,
+      /** Nişandan rastgele sapma (derece) */
+      spreadDeg: 2.2,
     },
     /** Üşüme: her yığın koşu hızını düşürür; tam yığında kısa süre donar. */
     chill: {

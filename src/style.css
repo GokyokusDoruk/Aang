@@ -746,6 +746,52 @@ body {
   white-space: nowrap;
   text-shadow: 0 1px 3px #000;
 }
+/* Uzun basış (basılı tut) halkası: diskin dışında, dolunca altın rengi parlar */
+.slot .hold {
+  display: none;
+  position: absolute;
+  top: -5px;
+  left: 50%;
+  width: 72px;
+  height: 72px;
+  margin-left: -36px;
+  border-radius: 50%;
+  background: conic-gradient(rgba(255, 255, 255, 0.14) calc(var(--hcd, 0) * 360deg), #ffd166 0);
+  -webkit-mask: radial-gradient(circle, transparent 32px, #000 33px);
+  mask: radial-gradient(circle, transparent 32px, #000 33px);
+  pointer-events: none;
+}
+.slot.has-hold .hold {
+  display: block;
+}
+.slot.has-hold.hold-ready .hold {
+  filter: drop-shadow(0 0 4px #ffd166);
+}
+.slot .hold-cd {
+  position: absolute;
+  top: -8px;
+  right: 6px;
+  min-width: 18px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: rgba(10, 12, 18, 0.85);
+  border: 1px solid rgba(255, 209, 102, 0.6);
+  color: #ffd166;
+  font: 800 10px ui-monospace, Menlo, Consolas, monospace;
+  text-align: center;
+  z-index: 1;
+}
+.slot .hold-cd:empty {
+  display: none;
+}
+/* Şarj / kanal çubuğu: altın kenar, tam güçte nabız */
+.cast-bar.charged {
+  box-shadow: 0 0 0 2px #ffd166;
+}
+.cast-bar.charged.full {
+  animation: pulse 0.3s ease-in-out infinite alternate;
+}
+
 /* 3. yetenek: klavye tuşu simgesi */
 .slot .kbd {
   min-width: 14px;
@@ -907,6 +953,19 @@ body {
 }
 .tbtn .lbl {
   position: relative;
+}
+/* Uzun basış halkası (dokunmatik) */
+.tbtn .hold {
+  display: none;
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(rgba(255, 255, 255, 0.1) calc(var(--hcd, 0) * 360deg), #ffd166 0);
+  -webkit-mask: radial-gradient(circle, transparent calc(50% - 4px), #000 calc(50% - 3px));
+  mask: radial-gradient(circle, transparent calc(50% - 4px), #000 calc(50% - 3px));
+}
+.tbtn.has-hold .hold {
+  display: block;
 }
 /* Yetenek butonlarında ikon + küçük ad (masaüstündeki yuvarlak ikonlarla aynı set) */
 .tbtn.has-icon {

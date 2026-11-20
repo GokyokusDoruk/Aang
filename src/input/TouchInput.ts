@@ -102,6 +102,16 @@ export class TouchInput implements InputSource {
     }
   }
 
+  /** Uzun basış bekleme göstergesi: null = bu yetenekte uzun basış yok; 0 = hazır, 1 = yeni kullanıldı. */
+  setHoldCooldown(action: Action, ratio: number | null): void {
+    const el = this.buttons.get(action);
+    if (!el) return;
+    el.classList.toggle('has-hold', ratio !== null);
+    if (ratio === null) return;
+    el.style.setProperty('--hcd', ratio.toFixed(3));
+    el.classList.toggle('hold-ready', ratio <= 0);
+  }
+
   /** Bu elementte o slotta yetenek yoksa butonu soluklaştır. */
   setEmpty(action: Action, empty: boolean): void {
     this.buttons.get(action)?.classList.toggle('empty', empty);
@@ -119,7 +129,7 @@ export class TouchInput implements InputSource {
   private makeButton(def: ButtonDef, signal: AbortSignal): HTMLElement {
     const el = document.createElement('div');
     el.className = `tbtn ${def.cls}`;
-    el.innerHTML = `<span class="cd"></span><span class="lbl">${def.label}</span>`;
+    el.innerHTML = `<span class="hold"></span><span class="cd"></span><span class="lbl">${def.label}</span>`;
     let activeId: number | null = null;
     const up = (e: PointerEvent) => {
       if (e.pointerId !== activeId) return;

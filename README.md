@@ -41,6 +41,16 @@ npm run build      # typecheck + production build
 - Ayarlar: `gameConfig.abilities.tuning.<yetenekId>` → `cooldown`, `castTime`, `castMoveMult`
 - Mantık → görsel: `EventBus` olayları (`ability:castStart`, `ability:cast`, `ability:cancel`, `ability:denied`, `element:changed`)
 
+## Kısa / uzun basış
+
+- Her yetenek tuşunun iki kullanımı olabilir: **kısa basış** normal yetenek (bekleme süresi aynı), **basılı tutma** (0.3 sn'den uzun) güçlü versiyon ve kendi uzun bekleme süresi (20 / 30 sn). Uzun basış beklemedeyken tuş kısa basış gibi çalışır.
+- Sol tık basınca hemen ateşler, basılı kalırsa uzun basışa geçer. Sağ tık kısa basışta bırakınca çalışır.
+- Türler (`ChargedAbility.kind`): `channel` (basılı tuttukça sürer, nişan her an güncel: yönlendirilebilir), `charge` (basılı tuttukça dolar, bırakınca çıkar), `instant` (eşikte bir kez).
+- Dash, donma ve raund sonu uzun basışı keser; şarj kesilirse bekleme süresi harcanmaz.
+- Arayüz: yetenek dairesinin dışındaki altın halka uzun basışın hazır olduğunu, sağ üstteki sayı kalan saniyeyi gösterir; şarj sırasında ortada "%" çubuğu çıkar. Mobilde aynı halka butonun kenarında.
+- Şu an olanlar: **Buz Sarkacı Akımı** (Su sol tık, 3 sn seri buz, 20 sn) ve **Yıldırım Şarjı** (Ateş sağ tık, 5 sn'ye kadar şarj, tam şarjda 3× hasar, 30 sn).
+- Ayarlar: `gameConfig.abilities.holdThreshold`, `gameConfig.abilities.charged`, `gameConfig.water.icicle`, `gameConfig.fire.lightning.charged*`
+
 ## Savaş altyapısı (Task 3)
 
 - `src/combat/Combatant.ts`: HP, hasar, itme (knockback), ölüm/yeniden doğma; oyuncu + test kuklaları

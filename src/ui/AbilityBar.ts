@@ -13,7 +13,8 @@ const SLOT_KEYS: Record<AbilitySlot, string> = { primary: 'SOL', secondary: 'SA�
 export class AbilityBar {
   private readonly root: HTMLDivElement;
   private readonly chips = new Map<ElementId, HTMLElement>();
-  private readonly slots = new Map<AbilitySlot, { el: HTMLElement; name: HTMLElement; cd: HTMLElement; icon: HTMLElement }>();
+  private readonly slots = new Map<AbilitySlot, { el: HTMLElement; name: HTMLElement; cd: HTMLElement; icon: HTMLElement; holdCd: HTMLElement }>();
+  private readonly holdText = new Map<AbilitySlot, string>();
   private readonly castBar: HTMLDivElement;
   private readonly castFill: HTMLDivElement;
   private readonly castName: HTMLSpanElement;
@@ -30,9 +31,9 @@ export class AbilityBar {
       for (const slot of ABILITY_SLOTS) {
         const el = document.createElement('div');
         el.className = `slot ${slot}`;
-        el.innerHTML = `<div class="disc"><div class="ring"></div><div class="icon"></div><div class="sweep"></div><span class="cd"></span></div><span class="key">${slot === 'special' ? `<b class="kbd">${SLOT_KEYS[slot]}</b>` : `<i class="mouse ${slot}"></i>${SLOT_KEYS[slot]}`}</span><span class="name"></span>`;
+        el.innerHTML = `<div class="hold"></div><span class="hold-cd"></span><div class="disc"><div class="ring"></div><div class="icon"></div><div class="sweep"></div><span class="cd"></span></div><span class="key">${slot === 'special' ? `<b class="kbd">${SLOT_KEYS[slot]}</b>` : `<i class="mouse ${slot}"></i>${SLOT_KEYS[slot]}`}</span><span class="name"></span>`;
         slotRow.appendChild(el);
-        this.slots.set(slot, { el, name: el.querySelector('.name')!, cd: el.querySelector('.cd')!, icon: el.querySelector('.icon')! });
+        this.slots.set(slot, { el, name: el.querySelector('.name')!, cd: el.querySelector('.cd')!, icon: el.querySelector('.icon')!, holdCd: el.querySelector('.hold-cd')! });
       }
       this.root.appendChild(slotRow);
     }
@@ -75,6 +76,8 @@ export class AbilityBar {
         s.name.textContent = def?.name ?? '—';
         s.icon.innerHTML = abilityIcon(def?.id, sys.activeElement);
         s.el.classList.toggle('empty', !def);
+        s.el.classList.toggle('has-hold', !!def?.charged);
+        s.el.title = def?.charged ? `Basılı tut: ${def.charged.name}` : '';
       }
     }
 
@@ -89,11 +92,35 @@ export class AbilityBar {
         this.cdText.set(slot, text);
         s.cd.textContent = text;
       }
+      // Uzun basış: dış halka dolunca hazır
+      if (def?.charged) {
+        const hr = sys.chargedCooldownRatio(def);
+        s.el.style.setProperty('--hcd', hr.toFixed(3));
+        s.el.classList.toggle('hold-ready', hr <= 0);
+        const left = sys.chargedCooldownRemaining(def.charged);
+        const ht = left > 0 ? Math.ceil(left).toString() : '';
+        if (this.holdText.get(slot) !== ht) {
+          this.holdText.set(slot, ht);
+          s.holdCd.textContent = ht;
+        }
+      }
     }
 
-    const casting = sys.castingAbility;
-    this.castBar.classList.toggle('hidden', !casting);
-    if (casting) {
+    const charged = sys.chargedActive;
+    const casting = charged ? null : sys.castingAbility;
+    this.castBar.classList.toggle('hidden', !casting && !charged);
+    this.castBar.classList.toggle('charged', !!charged);
+    if (charged) {
+      const ch = charged.charged;
+      // Şarj: dolan çubuk + yüzde; kanal: kalan süre olarak azalan çubuk
+      const full = ch.kind === 'charge' && charged.progress >= 1;
+      const w = ch.kind === 'channel' ? 1 - charged.progress : charged.progress;
+      this.castFill.style.width = `${(w * 100).toFixed(1)}%`;
+      const label = ch.kind === 'charge' ? `${ch.name} · ${full ? 'TAM GÜÇ' : `%${Math.round(charged.progress * 100)}`}` : ch.name;
+      if (this.castName.textContent !== label) this.castName.textContent = label;
+      this.castBar.classList.toggle('full', full);
+      this.castBar.style.setProperty('--c', ELEMENTS[charged.def.element].css);
+    } else if (casting) {
       this.castFill.style.width = `${(sys.castProgress * 100).toFixed(1)}%`;
       if (this.castName.textContent !== casting.name) this.castName.textContent = casting.name;
       this.castBar.style.setProperty('--c', ELEMENTS[casting.element].css);
