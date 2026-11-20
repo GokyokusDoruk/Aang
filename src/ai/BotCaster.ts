@@ -4,11 +4,37 @@ import type { AbilityCaster } from '../abilities/types';
 import type { Combatant } from '../combat/Combatant';
 import type { PlayerController } from '../game/PlayerController';
 
-export interface BotDifficulty {
+export interface BotDifficultyBase {
   reactionTime: number;
   aimErrorDeg: number;
   attackChance: number;
   dodgeChance: number;
+}
+
+export interface BotDifficulty extends BotDifficultyBase {
+  /** Koşu hızı çarpanı */
+  speedMult: number;
+  /** Saldırılar arası süre çarpanı (>1 = daha seyrek) */
+  fireIntervalMult: number;
+  /** Karar verme aralığı çarpanı (>1 = daha durağan) */
+  thinkMult: number;
+  /** Hareketli hedefe önleme çarpanı */
+  leadMult: number;
+}
+
+/** Zorluk tablosunu `GameConfig.bot.power` ile ölçekler (0.8 = %20 zayıf). */
+export function scaledDifficulty(base: BotDifficultyBase, power = GameConfig.bot.power): BotDifficulty {
+  const p = Math.max(0.05, power);
+  return {
+    reactionTime: base.reactionTime / p,
+    aimErrorDeg: base.aimErrorDeg / p,
+    attackChance: Math.min(1, base.attackChance * p),
+    dodgeChance: base.dodgeChance * p,
+    speedMult: p,
+    fireIntervalMult: 1 / p,
+    thinkMult: 1 / p,
+    leadMult: p,
+  };
 }
 
 const right = new Vector3();
@@ -55,7 +81,7 @@ export class BotCaster implements AbilityCaster {
       this.target.center(outTarget);
       const dist = outTarget.distanceTo(outOrigin);
       // Önleme: ortalama mermi hızına göre
-      const t = (dist / 40) * GameConfig.bot.leadFactor;
+      const t = (dist / 40) * GameConfig.bot.leadFactor * this.difficulty().leadMult;
       outTarget.addScaledVector(this.target.controller.velocity, t);
       // Sapma: nişan doğrultusuna dik rastgele ofset
       const spread = dist * Math.tan((this.difficulty().aimErrorDeg * Math.PI) / 180);

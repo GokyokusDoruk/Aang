@@ -274,7 +274,11 @@ export class PlayerView {
       let key: AnimKey = 'idle';
       let ts = 1;
       if (dashing) key = 'dash';
-      else if (sliding) key = 'slide';
+      else if (state === 'crouching') {
+        // Eğik dururken çömelme pozu sabit kalır, yürürken hızla oynar
+        key = 'slide';
+        ts = speed > 0.3 ? Math.max(0.5, Math.min(1.4, speed / (run * GameConfig.slide.crouchSpeedMult))) : 0;
+      } else if (sliding) key = 'slide';
       else if (gliding) key = 'glide';
       else if (!grounded) key = (v?.y ?? 0) > 0 ? 'jump' : 'fall';
       else if (speed > 0.8) {

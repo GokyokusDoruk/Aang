@@ -33,8 +33,9 @@ export const GameConfig = {
     /** runSpeed üstündeki hız havada bu oranla söner. */
     airDrag: 1.5,
 
-    jumpVelocity: 11,
-    airJumpVelocity: 10,
+    // Zıplama yüksekliği hızın karesiyle büyür: ×√1.1 ≈ %10 daha yüksek
+    jumpVelocity: 11.54,
+    airJumpVelocity: 10.49,
     maxAirJumps: 1,
     /** Zıplama tuşu erken bırakılırsa yükselirken uygulanan ekstra yerçekimi çarpanı. */
     jumpCutGravityMult: 2.2,
@@ -72,6 +73,8 @@ export const GameConfig = {
     maxDuration: 1.0,
     endSpeed: 4,
     cooldown: 0.35,
+    /** C basılı tutulurken eğik yürüme hızı çarpanı */
+    crouchSpeedMult: 0.45,
   },
 
   /**
@@ -308,6 +311,11 @@ export const GameConfig = {
     elementSwitchMaxTime: 7,
     /** Mermi hedef önleme oranı (hedefin hızına göre ileri nişan) */
     leadFactor: 0.85,
+    /**
+     * Botun genel gücü (1 = zorluk tablosundaki değerler). 0.8 = her seviyede %20 zayıf:
+     * hareket hızı, saldırı sıklığı, isabet (sapma + önleme), tepki ve karar hızı, kaçınma.
+     */
+    power: 0.8,
   },
 
   botDifficulty: {

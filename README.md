@@ -26,7 +26,7 @@ npm run build      # typecheck + production build
 | Bakış / nişan | Fare (tıkla → pointer lock) | Sağ yarıda sürükle |
 | Zıpla (havada 2. zıplama) | Space | ZIPLA |
 | Dash (havada 1 kez) | Shift | DASH |
-| Kayma | C | KAY |
+| Kayma / eğilme | C (basılı tut = eğik kal, eğikken yürü ve ateş et) | KAY (basılı tut) |
 | Yeniden doğ | R | ↺ |
 | Element seç | 1-4 · Q · fare tekerleği | Üstteki element çipleri |
 | Ana / ikincil yetenek | Sol tık (basılı tut = tekrar) / Sağ tık | Büyük / küçük yetenek butonu (aktif yeteneğin ikonu ve adı) |
@@ -74,6 +74,7 @@ npm run build      # typecheck + production build
 - **Mimari:** tüm oyun mantığı `src/game/GameSession.ts` içinde (DOM/sahne yok); `main.ts` yalnızca input → oturum → render/UI
 - **Mobil:** uyarlamalı çözünürlük (FPS düşerse), mobilde azaltılmış efekt parçası, hasar alınca titreşim (Android)
 - Ayarlar: `gameConfig.match`, `gameConfig.bot`, `gameConfig.botDifficulty`
+- **Bot gücü:** `gameConfig.bot.power` (şu an 0.8 = her seviyede %20 zayıf). Hareket hızı, ateş sıklığı, isabet (sapma + önleme), tepki/karar hızı ve kaçınma bu tek sayıyla ölçeklenir.
 
 ## Arena süsleri
 
