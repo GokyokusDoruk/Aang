@@ -104,10 +104,12 @@ export class MatchHud {
     }
     const t = Math.ceil(r.timeLeft);
     const clock = `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
-    if (clock !== this.shownClock) {
-      this.shownClock = clock;
+    const urgent = r.phase === 'fight' && t <= 10;
+    const key = `${clock}|${urgent}|${r.round}`;
+    if (key !== this.shownClock) {
+      this.shownClock = key;
       this.clock.textContent = clock;
-      this.clock.classList.toggle('urgent', r.phase === 'fight' && t <= 10);
+      this.clock.classList.toggle('urgent', urgent);
       this.info.textContent = `Raund ${r.round}`;
     }
     this.botFill.style.width = `${Math.max(0, this.bot.hp / this.bot.opts.maxHp) * 100}%`;

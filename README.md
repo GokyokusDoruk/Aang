@@ -29,7 +29,8 @@ npm run build      # typecheck + production build
 | Kayma | C | KAY |
 | Yeniden doğ | R | ↺ |
 | Element seç | 1-4 · Q · fare tekerleği | Üstteki element çipleri |
-| Ana / ikincil yetenek | Sol tık (basılı tut = tekrar) / Sağ tık | SALDIR / YETENEK (etiket aktif yeteneği gösterir) |
+| Ana / ikincil yetenek | Sol tık (basılı tut = tekrar) / Sağ tık | Büyük / küçük yetenek butonu (aktif yeteneğin ikonu ve adı) |
+| Ses aç/kapa | M | Menüdeki ses düğmesi |
 
 ## Yetenek sistemi
 
@@ -83,6 +84,25 @@ npm run build      # typecheck + production build
 - `src/render/CharacterAsset.ts`: yükleme, kıyafet bölgeleri (tunik = takım rengi, kuşak/alın bandı = element rengi), durum → klip eşlemesi (Idle, Jog, Jump, Roll, Crouch, Spell/Punch).
 - Dosyalar yoksa ya da yüklenemezse oyun prosedürel karakterle (`PlayerView`) çalışmaya devam eder.
 - Yeniden üretmek için: `tools/build-models.mjs` (başındaki açıklamaya bak).
+
+## Vuruş hissi ve efektler
+
+- `src/render/GameFeel.ts`: kamera sarsıntısı (trauma² modeli), isabette kısa vuruş duraksaması (hit-stop), dash sırasında FOV artışı + hız çizgileri. Yalnızca görsel/zamanlama; oyun kurallarına dokunmaz.
+- `src/render/EffectsView.ts`: çift zıplama/dash'te element jetleri, mor katmanlı şimşek, hava kalkanı küresi, kıvılcımlar.
+
+## Ses
+
+- `src/audio/SoundSystem.ts`: tamamen Web Audio ile sentezlenir, ses dosyası yok. 8 yeteneğe özel büküm sesleri, çarpma/hasar, kasa/duvar kırılması, patlama, gök gürültüsü, hareket sesleri, geri sayım ve raund sonu.
+- Dünya sesleri kameraya göre sağ/sol pan ve uzaklıkla kısılır. Tarayıcı kuralı gereği ses ilk tıklamada açılır.
+- `M` tuşu veya menüdeki düğme ile aç/kapa; tercih saklanır.
+
+## Arayüz (HUD)
+
+- `src/ui/MatchHud.ts`: üst ortada kazanılan raund noktaları (●●○ | ○●●), ortada süre (son 10 sn kırmızı), rakip can barı, geri sayım/kazanan duyuruları.
+- `src/ui/PlayerStatus.ts`: sol altta dilimli HP barı, hasar vinyeti.
+- `src/ui/AbilityBar.ts`: element çipleri + yuvarlak ikonlu yetenek slotları, dairesel bekleme süresi.
+- `src/ui/icons.ts`: 8 yetenek + 4 element için satır içi SVG ikonlar; masaüstü slotları ve mobil yetenek butonları aynı seti kullanır.
+- Mobilde Dash/Kayma beklemesi doğrudan DASH / KAY butonlarında gösterilir.
 
 **Yeni yetenek/element eklemek:** elements.ts'e element ekle → definitions/ altına dosya ekle → registry'ye kaydet → config'e tuning ekle.
 

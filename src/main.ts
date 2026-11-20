@@ -21,6 +21,7 @@ import { AbilityBar } from './ui/AbilityBar';
 import { WorldOverlay } from './ui/WorldOverlay';
 import { PlayerStatus } from './ui/PlayerStatus';
 import { MatchHud } from './ui/MatchHud';
+import { abilityIcon } from './ui/icons';
 import { SoundSystem } from './audio/SoundSystem';
 import { Menu } from './ui/Menu';
 import { lerpAngle } from './core/math';
@@ -171,8 +172,10 @@ gfx.canvas.addEventListener('click', () => {
 
 function refreshTouchLabels(): void {
   const color = ELEMENTS[abilities.activeElement].css;
-  input.touch?.setButton('primary', abilities.slot('primary')?.name ?? '—', color);
-  input.touch?.setButton('secondary', abilities.slot('secondary')?.name ?? '—', color);
+  for (const slot of ['primary', 'secondary'] as const) {
+    const def = abilities.slot(slot);
+    input.touch?.setButton(slot, def?.name ?? '—', color, abilityIcon(def?.id, abilities.activeElement));
+  }
 }
 refreshTouchLabels();
 bus.on('element:changed', (e) => e.casterId === 'player' && refreshTouchLabels());

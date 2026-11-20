@@ -82,13 +82,23 @@ export class TouchInput implements InputSource {
     if (el) el.style.setProperty('--cd', ratio.toFixed(3));
   }
 
-  /** Buton etiketini ve vurgu rengini değiştir (aktif elemente göre yetenek adı). */
-  setButton(action: Action, label: string, color?: string): void {
+  /** Buton etiketini, ikonunu ve vurgu rengini değiştir (aktif elemente göre yetenek). */
+  setButton(action: Action, label: string, color?: string, iconSvg?: string): void {
     const el = this.buttons.get(action);
     if (!el) return;
     const lbl = el.querySelector('.lbl');
     if (lbl && lbl.textContent !== label) lbl.textContent = label;
     if (color) el.style.setProperty('--accent-c', color);
+    if (iconSvg !== undefined) {
+      let ic = el.querySelector<HTMLElement>('.ic');
+      if (!ic) {
+        ic = document.createElement('span');
+        ic.className = 'ic';
+        el.insertBefore(ic, lbl);
+      }
+      if (ic.innerHTML !== iconSvg) ic.innerHTML = iconSvg;
+      el.classList.toggle('has-icon', iconSvg !== '');
+    }
   }
 
   /** Kullanılamayan yetenek için kısa uyarı animasyonu. */

@@ -101,16 +101,9 @@ body {
   flex-direction: column;
   gap: 6px;
 }
+/* Dokunmatikte DASH / KAY butonları kendi bekleme göstergesini taşır; tekrar eden haplar gizli */
 .hud.touch .cooldowns {
-  bottom: auto;
-  top: calc(10px + var(--sat));
-  left: auto;
-  right: calc(62px + var(--sar));
-  transform: none;
-}
-.hud.touch .pill {
-  width: 64px;
-  font-size: 11px;
+  display: none;
 }
 
 .pill {
@@ -428,6 +421,20 @@ body {
 @media (max-width: 500px) {
   .match-hud .banner .big {
     font-size: 38px;
+  }
+}
+/* Yatay telefonlar: duyuruyu üst göstergelerin (skor + BOT canı) altına indir */
+@media (max-height: 500px) {
+  .match-hud .banner {
+    top: auto;
+    bottom: 50%;
+    transform: translateY(60%);
+  }
+  .match-hud .banner .big {
+    font-size: 40px;
+  }
+  .match-hud .banner .small {
+    font-size: 13px;
   }
 }
 
@@ -846,6 +853,32 @@ body {
 }
 .tbtn .lbl {
   position: relative;
+}
+/* Yetenek butonlarında ikon + küçük ad (masaüstündeki yuvarlak ikonlarla aynı set) */
+.tbtn.has-icon {
+  flex-direction: column;
+  gap: 2px;
+}
+.tbtn .ic {
+  position: relative;
+  display: flex;
+  color: var(--accent-c, #fff);
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6));
+}
+.tbtn .ic svg {
+  width: 34px;
+  height: 34px;
+}
+.tbtn.secondary .ic svg {
+  width: 26px;
+  height: 26px;
+}
+.tbtn.has-icon .lbl {
+  font-size: 9px;
+  max-width: 100%;
+}
+.tbtn.secondary.has-icon .lbl {
+  font-size: 8px;
 }
 .tbtn .cd {
   position: absolute;
