@@ -101,6 +101,10 @@ export const GameConfig = {
       icicleStream: { cooldown: 20, moveMult: 0.6, maxDuration: 3, tickInterval: 0.09 },
       /** Ateş sağ tık uzun: 5 sn'ye kadar şarj, bırakınca güçlü yıldırım */
       lightningCharged: { cooldown: 30, moveMult: 0.4, maxDuration: 5 },
+      /** Ateş sol tık uzun: yönlendirilebilir alev püskürtme */
+      flameStream: { cooldown: 20, moveMult: 0.55, maxDuration: 3, tickInterval: 0.06 },
+      /** Su sağ tık uzun: kar izi bırakan buz yolu */
+      snowRide: { cooldown: 30, moveMult: 1, maxDuration: 0 },
     },
 
     tuning: {
@@ -160,6 +164,32 @@ export const GameConfig = {
       selfKnockbackMult: 0.8,
       /** Kendi patlamanın seni yukarı fırlatma hızı (m/s) */
       selfLaunchUp: 10,
+      /** Kendi patlamanın sana verdiği hasar oranı (alan hasarına göre) */
+      selfDamageMult: 0.25,
+      /** İsabet / patlamada yanma ihtimali */
+      burnChance: 0.5,
+    },
+    /** Yanma: süre boyunca her saniye küçük hasar (yeniden yanınca süre yenilenir) */
+    burn: {
+      ticks: 3,
+      interval: 1,
+      damagePerTick: 1,
+    },
+    /** Alev akımı (Ateş sol tık uzun basış): kısa menzilli, geniş, yükselen alev dilleri */
+    flame: {
+      radius: 0.38,
+      speed: 21,
+      /** Negatif: alev hafifçe yükselir */
+      gravity: -2,
+      damage: 2,
+      knockback: 1.4,
+      knockbackUp: 0.4,
+      wallDamage: 2,
+      /** ~9 m menzil */
+      lifetime: 0.45,
+      burnChance: 0.3,
+      /** Nişandan rastgele sapma (derece) */
+      spreadDeg: 5,
     },
     lightning: {
       range: 24,
@@ -287,6 +317,41 @@ export const GameConfig = {
       turnRate: 3.0,
       /** Havada düşüş yerçekimi çarpanı (süzülme) */
       airGravityMult: 0.35,
+      /**
+       * Buz yolu: kayarken yükseklik nişanı izler (yukarı bak = rampa gibi tırman).
+       * Bu açının altındaki nişan düz sayılır (yükseklik korunur).
+       */
+      pitchDeadzoneDeg: 6,
+      maxPitchDeg: 40,
+      minPitchDeg: -35,
+      /** Dikey hız sınırları (m/s) */
+      maxClimb: 7.5,
+      maxDescend: 10,
+      /** Zıplama basılıyken en az bu hızla yüksel (m/s) */
+      jumpRiseSpeed: 6,
+      /** Bu güçte (m/s) bir itme yersen buz yolundan düşersin */
+      knockOffImpulse: 4,
+    },
+    /** Kayarken ayağın altında oluşan, sonra eriyen buz yolu */
+    icePath: {
+      /** İki plaka arası mesafe (m) */
+      spacing: 0.6,
+      width: 1.5,
+      thickness: 0.28,
+      /** Plakanın ömrü (s); son meltTime saniyesinde erir */
+      lifetime: 5,
+      meltTime: 1,
+      /** Kuran oyuncu geçip gitsin diye çarpışma bu kadar sonra devreye girer (s) */
+      armDelay: 0.3,
+      /** Kayma havada biterse altında oluşan platformun kenarı (m) */
+      endPlatform: 2.4,
+      maxSegments: 220,
+      /** Kar izi (uzun basış) */
+      snowRadius: 1.4,
+      snowHeight: 1.8,
+      snowTick: 0.5,
+      snowDamage: 2,
+      snowChill: 0.5,
     },
   },
 

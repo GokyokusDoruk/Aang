@@ -44,6 +44,7 @@ export class GameFeel {
     app.appendChild(this.lines);
 
     bus.on('combat:damage', (e) => {
+      if (e.kind === 'burn') return;
       if (e.targetId === 'player') {
         this.addTrauma(0.3 + Math.min(0.4, e.amount / 60));
         this.hitStop = Math.max(this.hitStop, e.killed ? 0.12 : 0.07);

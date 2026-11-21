@@ -21,6 +21,14 @@ function icicle(ctx: AbilityContext): void {
 }
 const h = { x: 0, z: 0 };
 
+/** Buz yolu başlat; snow = arkasında rakipleri yavaşlatıp yakan kar izi bırakır (uzun basış). */
+function startIceRide(ctx: AbilityContext, snow: boolean): void {
+  horizontalAim(ctx, h);
+  ctx.caster.controller.startGlide(h.x, h.z, snow);
+  const p = ctx.caster.position;
+  ctx.bus.emit('fx:burst', { point: new Vector3(p.x, p.y + 0.1, p.z), element: 'water', size: snow ? 1 : 0.6 });
+}
+
 export const waterAbilities: AbilityDef[] = [
   {
     id: 'waterShard',
@@ -42,14 +50,16 @@ export const waterAbilities: AbilityDef[] = [
     id: 'iceGlide',
     element: 'water',
     slot: 'secondary',
-    name: 'Buz Kayması',
-    description: 'Düşük sürtünmeli akıcı süzülme. Geniş dönüşler, havada yavaş düşüş, buz izi.',
+    name: 'Buz Yolu',
+    description: 'Ayağının altında buzdan yol yaratıp üstünde kay. Yukarı bakınca yol yükselir, Space ile tırman. Yol 5 sn sonra erir.',
     tuning: T.iceGlide,
-    execute: (ctx) => {
-      horizontalAim(ctx, h);
-      ctx.caster.controller.startGlide(h.x, h.z);
-      const p = ctx.caster.position;
-      ctx.bus.emit('fx:burst', { point: new Vector3(p.x, p.y + 0.1, p.z), element: 'water', size: 0.6 });
+    execute: (ctx) => startIceRide(ctx, false),
+    charged: {
+      id: 'snowRide',
+      name: 'Kar Yolu',
+      kind: 'instant',
+      ...C.snowRide,
+      start: (ctx) => startIceRide(ctx, true),
     },
   },
   {

@@ -48,7 +48,7 @@ npm run build      # typecheck + production build
 - Türler (`ChargedAbility.kind`): `channel` (basılı tuttukça sürer, nişan her an güncel: yönlendirilebilir), `charge` (basılı tuttukça dolar, bırakınca çıkar), `instant` (eşikte bir kez).
 - Dash, donma ve raund sonu uzun basışı keser; şarj kesilirse bekleme süresi harcanmaz.
 - Arayüz: yetenek dairesinin dışındaki altın halka uzun basışın hazır olduğunu, sağ üstteki sayı kalan saniyeyi gösterir; şarj sırasında ortada "%" çubuğu çıkar. Mobilde aynı halka butonun kenarında.
-- Şu an olanlar: **Buz Sarkacı Akımı** (Su sol tık, 3 sn seri buz, 20 sn) ve **Yıldırım Şarjı** (Ateş sağ tık, 5 sn'ye kadar şarj, tam şarjda 3× hasar, 30 sn).
+- Şu an olanlar: **Buz Sarkacı Akımı** (Su sol tık, 3 sn seri buz, 20 sn) **Yıldırım Şarjı** (Ateş sağ tık, 5 sn'ye kadar şarj, tam şarjda 3× hasar, 30 sn) ve **Alev Akımı** (Ateş sol tık, 3 sn yönlendirilebilir alev püskürtme, ~9 m, tutuşturur, 20 sn).
 - Ayarlar: `gameConfig.abilities.holdThreshold`, `gameConfig.abilities.charged`, `gameConfig.water.icicle`, `gameConfig.fire.lightning.charged*`
 
 ## Savaş altyapısı (Task 3)
@@ -62,14 +62,15 @@ npm run build      # typecheck + production build
 
 - **Buz Kıymığı** (Su, sol tık): hızlı, hafif mermi; basılı tut = seri atış. Her isabet 1 **üşüme** yığını ekler (yığın başına %15 yavaşlama, 2.2 sn sonra söner); 3 yığında hedef 0.7 sn **donar** (hareket ve yetenek yok). Üşüyen karakter maviye döner; oyuncunun HP barının yanında ❄ ●●○ göstergesi çıkar.
 - **Buz Duvarı** (Su, E): hemen önünde anında (0.1 sn) yükselen buz siperi. Toprak duvardan hızlı ama kırılgan (90 HP, 5 sn); aynı anda 1 tane. Kırılınca parçaları 3.2 m içindeki rakiplere 1 üşüme yığını ekler. Ayar: `gameConfig.water.iceWall`.
-- **Buz Kayması** (Su, sağ tık): düşük sürtünmeli momentumlu süzülme, geniş dönüşler, havada yavaş düşüş, buz izi
+- **Buz Yolu** (Su, sağ tık): ayağının altında buzdan yol yaratıp üstünde kayarsın. Yukarı bakınca yol rampa gibi yükselir, aşağı bakınca alçalır, düz bakınca yükseklik korunur; Space basılıyken tırmanır. Plakalar 5 sn üstünde durulabilir (rakipler de), sonra erir. Kayma havada biterse altında bir platform oluşur; eriyince düşersin. Güçlü bir itme seni yoldan düşürür.
+- **Kar Yolu** (Su, sağ tık basılı tut, 30 sn): aynı yol, ama kar izi bırakır; üstüne/yanına gelen rakipler yarım saniyede bir 2 hasar alır ve üşür.
 - **Şok Dalgası** (Hava, sol tık): koni içindeki rakipleri iter, rakip mermilerini sahibine geri savurur; duvar arkası korunur
 - **Rüzgar Sıçrayışı** (Hava, sağ tık): yukarı + ileri fırlatma; ardından zıplamayı basılı tut = yavaş süzül
 - Ayarlar: `gameConfig.water` (üşüme: `gameConfig.water.chill`) / `gameConfig.air`; hareket modları `PlayerController` (`startGlide`, `launch`)
 
 ## Ateş / Yıldırım ve savaş döngüsü (Task 5)
 
-- **Ateş Topu** (Ateş, sol tık): çarpınca patlar — doğrudan hasar + alan hasarı/itme; kendi patlaman seni hasarsız fırlatır (roket zıplaması)
+- **Ateş Topu** (Ateş, sol tık): çarpınca patlar — doğrudan hasar + alan hasarı/itme; %50 ihtimalle tutuşturur (3 sn × 1 hasar); kendi patlaman seni fırlatır (roket zıplaması) ve alan hasarının %25'ini sana verir. Buz/üşüme yanmayı söndürür
 - **Yıldırım Hattı** (Ateş, sağ tık): anlık, delici hat; yoldaki herkese hasar + itme + sersemletme, ilk duvarda durur
 - **Can / hasar:** kısa dokunulmazlık, sersemleme, düşük canda artan itme, doğuş koruması (yanıp sönme)
 - **Yenilgi:** can 0 → "YENİLDİN", arena dışına düşme → "ARENA DIŞI"; geri sayımla yeniden doğuş; arena dışı eleme son vurana yazılır

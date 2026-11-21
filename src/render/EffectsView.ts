@@ -8,6 +8,7 @@ const ROCK_COLOR = 0x857d74;
 const DUST_COLOR = 0xb89a74;
 const WOOD_COLOR = 0xb07a3e;
 const ICE_COLOR = 0xbfeaff;
+const FIRE_COLOR = 0xff7a2a;
 const WOOD_DARK = 0x7a4f24;
 const UP = new THREE.Vector3(0, 1, 0);
 
@@ -55,6 +56,10 @@ export class EffectsView {
     // Yer tutucu efekt yalnızca gerçek etkisi (execute) olmayan yetenekler için
     bus.on('ability:cast', (e) => !e.ability.execute && this.spawnCast(e));
     bus.on('projectile:impact', (e) => {
+      if (e.kind === 'flame') {
+        this.dust(e.point, FIRE_COLOR, 0.5);
+        return;
+      }
       const color = e.kind === 'rock' ? ROCK_COLOR : ELEMENTS[e.element].color;
       this.debris(e.point, e.normal, color, e.hitCombatant ? 6 : 9, 0.12, 5);
       this.dust(e.point, color, 0.9);
@@ -74,6 +79,9 @@ export class EffectsView {
       this.airShield(e.origin.clone().setY(e.origin.y - 1), false);
     });
     bus.on('fx:explosion', (e) => this.explosion(e));
+    // Yanma: her hasar anında gövdeden yükselen kıvılcım
+    bus.on('combat:damage', (e) => e.kind === 'burn' && this.debris(e.point, UP, FIRE_COLOR, 4, 0.06, 3));
+    bus.on('combat:burn', (e) => this.dust(e.point, FIRE_COLOR, 0.7));
     bus.on('fx:lightning', (e) => this.lightning(e));
     bus.on('fx:burst', (e) => {
       const color = e.element === 'earth' ? DUST_COLOR : ELEMENTS[e.element].color;

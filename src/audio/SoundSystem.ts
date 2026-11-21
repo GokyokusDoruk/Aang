@@ -112,6 +112,7 @@ export class SoundSystem {
     });
     bus.on('projectile:impact', (e) => this.impact(e.element, e.point, e.hitCombatant));
     bus.on('combat:damage', (e) => {
+      if (e.kind === 'burn') return this.sizzle(e.point, e.targetId === me);
       if (e.targetId === me) this.hurt(e.killed);
       else if (e.sourceId === me) this.hitConfirm(e.killed);
     });
@@ -363,6 +364,13 @@ export class SoundSystem {
     if (!o) return;
     this.noiseHit(o, { type: 'highpass', f0: 4000, f1: 1500, dur: 0.12, gain: 0.8 });
     this.noiseHit(o, { type: 'lowpass', f0: 800, f1: 60, dur: 0.9, gain: 0.7, delay: 0.05, attack: 0.02 });
+  }
+
+  /** Yanma tiki: kısa cızırtı */
+  private sizzle(at: THREE.Vector3, mine: boolean): void {
+    const o = this.out(mine ? null : at, mine ? 0.5 : 0.4);
+    if (!o) return;
+    this.noiseHit(o, { type: 'highpass', f0: 3000, f1: 1500, dur: 0.22, gain: 0.35 });
   }
 
   /** Uzun basış başladı: elemente göre yükselen güç sesi */

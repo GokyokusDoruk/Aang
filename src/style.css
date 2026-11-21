@@ -514,6 +514,12 @@ body {
 .player-hp .chill.frozen {
   display: inline;
 }
+.player-hp .chill.burn {
+  background: rgba(100, 30, 10, 0.75);
+  border-color: #ff8a3d;
+  color: #ffb36b;
+  text-shadow: 0 0 6px #ff5a1a;
+}
 .player-hp .chill.frozen {
   color: #e8f8ff;
   animation: pulse 0.25s ease-in-out infinite alternate;
@@ -621,6 +627,10 @@ body {
 .hpbar.chilled .fill {
   background: #6cc8ff;
 }
+.hpbar.burning {
+  border-color: #ff8a3d;
+  box-shadow: 0 0 8px #ff5a1a;
+}
 .hpbar.frozen {
   border-color: #fff;
   box-shadow: 0 0 10px #bfefff;
@@ -637,6 +647,10 @@ body {
 }
 .dmg.mine {
   color: #ffd166;
+}
+.dmg.burn {
+  color: #ff9a4a;
+  font-size: 13px;
 }
 .dmg.kill {
   color: #ff5a5a;

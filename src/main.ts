@@ -15,6 +15,7 @@ import { loadCharacterAsset } from './render/CharacterAsset';
 import { EffectsView } from './render/EffectsView';
 import { ProjectileView } from './render/ProjectileView';
 import { WallView } from './render/WallView';
+import { IcePathView } from './render/IcePathView';
 import { TrailView } from './render/TrailView';
 import { Hud } from './ui/Hud';
 import { AbilityBar } from './ui/AbilityBar';
@@ -61,6 +62,7 @@ void loadCharacterAsset(GameConfig.player.height).then((asset) => {
 });
 const effects = new EffectsView(gfx.scene, bus, isTouch ? GameConfig.render.mobileEffectScale : 1);
 const projectileView = new ProjectileView(gfx.scene, session.projectiles);
+const icePathView = new IcePathView(gfx.scene, session.icePaths);
 const wallView = new WallView(gfx.scene, session.walls, (pts, el) => el === 'earth' && effects.earthEruption(pts));
 const trailView = new TrailView(gfx.scene);
 const crateView = new CrateView(gfx.scene, session.crates);
@@ -182,8 +184,8 @@ function refreshTouchLabels(): void {
 refreshTouchLabels();
 bus.on('element:changed', (e) => e.casterId === 'player' && refreshTouchLabels());
 bus.on('combat:damage', (e) => {
-  if (e.sourceId === 'player') hud.hitMarker(e.killed);
-  if (e.targetId === 'player' && isTouch) navigator.vibrate?.(35);
+  if (e.sourceId === 'player' && e.targetId !== 'player' && e.kind !== 'burn') hud.hitMarker(e.killed);
+  if (e.targetId === 'player' && isTouch && e.kind !== 'burn') navigator.vibrate?.(35);
 });
 bus.on('combat:respawn', (e) => {
   if (e.targetId === 'player') camera.snap();
@@ -217,7 +219,7 @@ function drawFighter(view: PlayerView, c: Combatant, alpha: number, now: number,
   tmpPos.lerpVectors(ctl.prevPosition, ctl.position, alpha);
   const ratio = ctl.prevHeightRatio + (ctl.heightRatio - ctl.prevHeightRatio) * alpha;
   const flash = c.hitFlash > 0;
-  view.update(tmpPos, lerpAngle(ctl.prevFacingYaw, ctl.facingYaw, alpha), ratio, ctl.dashing, 10, elementColor, castProgress, motionOf(ctl), frameDt, flash, chillOf(c));
+  view.update(tmpPos, lerpAngle(ctl.prevFacingYaw, ctl.facingYaw, alpha), ratio, ctl.dashing, 10, elementColor, castProgress, motionOf(ctl), frameDt, flash, chillOf(c), c.burning);
 }
 
 /** El parlaması / hazırlık pozu: normal hazırlık ya da süren uzun basış (şarj dolarken artar). */
@@ -288,6 +290,7 @@ function frame(now: number): void {
     dt,
     player.hitFlash > 0,
     chillOf(player),
+    player.burning,
   );
 
   const inMatch = session.running && session.mode === 'match';
@@ -306,6 +309,7 @@ function frame(now: number): void {
   effects.update(dt);
   projectileView.update(dt, alpha);
   wallView.update();
+  icePathView.update();
   crateView.update();
   decor.update(dt);
   trailView.update(dt, session.combatants);

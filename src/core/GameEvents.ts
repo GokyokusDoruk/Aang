@@ -14,7 +14,10 @@ export type GameEvents = {
   'ability:chargedEnd': { casterId: string; ability: AbilityDef; charged: ChargedAbility; charge: number; cancelled: boolean; origin: Vector3 };
   'ability:denied': { casterId: string; slot: AbilitySlot; reason: 'cooldown' | 'switching' | 'empty' | 'invalid' };
 
-  'combat:damage': { targetId: string; sourceId: string; amount: number; point: Vector3; killed: boolean };
+  /** kind: 'burn' = yanma hasarı (sürekli, küçük), 'self' = kendi patlaman */
+  'combat:damage': { targetId: string; sourceId: string; amount: number; point: Vector3; killed: boolean; kind?: 'burn' | 'self' };
+  /** Hedef tutuştu (ya da yanması yenilendi) */
+  'combat:burn': { targetId: string; sourceId: string; point: Vector3 };
   /** Üşüme tam yığına ulaştı: hedef kısa süre donar. */
   'combat:frozen': { targetId: string; duration: number; point: Vector3 };
   'combat:death': { targetId: string; cause: 'hp' | 'ringout'; killerId: string | null };

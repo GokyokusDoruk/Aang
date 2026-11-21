@@ -42,8 +42,12 @@ export class PlayerController {
   knockbackTimer = 0;
   /** Arena dışına düşüp yeniden doğduğunda true olur (Combatant tüketir). */
   fellOut = false;
-  /** >0 iken Buz Kayması modu (Su). */
+  /** >0 iken Buz Yolu modu (Su). */
   glideTimer = 0;
+  /** Buz yolunun kar izi bırakıp bırakmadığı (uzun basış) */
+  glideSnow = false;
+  /** Nişanın dikey açısı (rad, + yukarı). Buz yolunda yükselişi belirler. */
+  aimPitch = 0;
   /** >0 iken Rüzgar süzülmesi (Hava): zıplama basılıyken yavaş düşüş. */
   floatTimer = 0;
   dashCooldown = 0;
@@ -153,8 +157,10 @@ export class PlayerController {
       this.updateRun(dt, wx, wz, wishMag);
     }
 
-    // --- Dikey hız (dash sırasında yerçekimi askıda)
-    if (!this.dashing) {
+    // --- Dikey hız (dash sırasında yerçekimi askıda; buz yolunda nişanı izler)
+    if (this.glideTimer > 0 && !this.dashing) {
+      this.rideVertical();
+    } else if (!this.dashing) {
       let g = GameConfig.physics.gravity;
       if (this.velocity.y <= 0) this.jumpRising = false;
       // Değişken zıplama yalnızca gerçek zıplamalarda (fırlatma/itme yüksekliğini kesmez)
@@ -202,10 +208,29 @@ export class PlayerController {
       this.coyoteTimer = 0;
     }
     this.knockbackTimer = GameConfig.combat.knockbackControlLoss;
+    // Güçlü itme buz yolundan düşürür
+    if (this.glideTimer > 0 && Math.hypot(impulse.x, impulse.y, impulse.z) >= GameConfig.water.glide.knockOffImpulse) this.glideTimer = 0;
   }
 
-  /** Buz Kayması: verilen yönde (yatay) momentumlu süzülmeyi başlat. */
-  startGlide(dirX: number, dirZ: number): void {
+  /** Buz yolu: yükseklik nişana göre (rampa gibi), zıplama basılıyken yükselir. Yerçekimi yok. */
+  private rideVertical(): void {
+    const G = GameConfig.water.glide;
+    const D = Math.PI / 180;
+    let pitch = Math.max(G.minPitchDeg * D, Math.min(G.maxPitchDeg * D, this.aimPitch));
+    if (Math.abs(pitch) < G.pitchDeadzoneDeg * D) pitch = 0;
+    let vy = Math.max(this.horizontalSpeed, G.startSpeed * 0.6) * Math.tan(pitch);
+    if (this.jumpHeld) vy = Math.max(vy, G.jumpRiseSpeed);
+    vy = Math.max(-G.maxDescend, Math.min(G.maxClimb, vy));
+    this.velocity.y = vy;
+    if (vy > 0) {
+      this.grounded = false;
+      this.coyoteTimer = 0;
+    }
+  }
+
+  /** Buz Yolu: verilen yönde momentumlu kaymayı başlat (yükseklik nişanı izler). */
+  startGlide(dirX: number, dirZ: number, snow = false): void {
+    this.glideSnow = snow;
     const G = GameConfig.water.glide;
     const l = Math.hypot(dirX, dirZ) || 1;
     if (this.sliding) this.endSlide();

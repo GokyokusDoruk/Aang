@@ -10,6 +10,20 @@ const dir = new Vector3();
 const probe = new Vector3();
 const end = new Vector3();
 const impulse = new Vector3();
+const spreadAim = new Vector3();
+
+/** Alev dili: nişana rastgele sapmayla (her tick güncel nişan: yönlendirilebilir). */
+function flame(ctx: AbilityContext): void {
+  const F = GameConfig.fire.flame;
+  const dist = Math.min(ctx.origin.distanceTo(ctx.target), F.speed * F.lifetime);
+  const spread = Math.tan((F.spreadDeg * Math.PI) / 180) * Math.max(3, dist);
+  spreadAim.subVectors(ctx.target, ctx.origin).normalize().multiplyScalar(Math.max(3, dist)).add(ctx.origin);
+  spreadAim.x += (Math.random() - 0.5) * 2 * spread;
+  spreadAim.y += (Math.random() - 0.5) * 2 * spread;
+  spreadAim.z += (Math.random() - 0.5) * 2 * spread;
+  ctx.target.copy(spreadAim);
+  fireProjectile(ctx, 'flame', 'fire', F);
+}
 
 /**
  * Yıldırım Hattı: nişan doğrultusunda anlık (hitscan) delici hat.
@@ -63,9 +77,16 @@ export const fireAbilities: AbilityDef[] = [
     element: 'fire',
     slot: 'primary',
     name: 'Ateş Topu',
-    description: 'Çarpınca patlayan ateş topu: doğrudan hasar + alan hasarı ve itme.',
+    description: 'Çarpınca patlayan ateş topu: hasar, itme, %50 tutuşturma. Yakında patlarsa seni de fırlatır (az hasar).',
     tuning: T.fireBall,
     execute: (ctx) => fireProjectile(ctx, 'fireball', 'fire', GameConfig.fire.ball),
+    charged: {
+      id: 'flameStream',
+      name: 'Alev Akımı',
+      kind: 'channel',
+      ...C.flameStream,
+      tick: flame,
+    },
   },
   {
     id: 'lightningLine',
