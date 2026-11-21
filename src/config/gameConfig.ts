@@ -516,8 +516,10 @@ export const GameConfig = {
     /** Rüzgar küresi (sağ tık): her yöne hızlı, kısa uçuş; hep hareket eder */
     sphere: {
       duration: 1.5,
-      /** Koşu hızına göre çarpan (+%50) */
-      speedMult: 1.5,
+      /** Dev küre (uzun basış) uçuş süresi (s) */
+      bigDuration: 3,
+      /** Koşu hızına göre çarpan (1.5 × 1.25) */
+      speedMult: 1.875,
       /** Nişanın yukarı / aşağı açısı sınırı (derece) */
       maxPitchDeg: 60,
       /** Kürenin yarıçapı (görsel ve çarpma) */

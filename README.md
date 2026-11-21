@@ -69,8 +69,8 @@ npm run build      # typecheck + production build
 - **Duvar Dizisi** (Toprak, sağ tık basılı tut, 30 sn): senden nişana doğru saniyede bir yükselen duvarlar. Değdiği rakibi 12 hasarla havaya atar; rakip süzülerek düşer ve yere düşünce 1 sn yerde kalır (hareket ve yetenek yok). Ayar: `earth.wave`.
 - **Hava Topu** (Hava, sol tık): çarptığı yerde küçük fırtına; az hasar (4), çarpma noktasından güçlü savurma. Yakında patlarsa seni de hasarsız fırlatır. Ayar: `gameConfig.air.ball`
 - **Hortum** (Hava, sol tık basılı tut, 20 sn): 4 sn'ye kadar nişanını izleyen hortum; içindekileri dışa ve yukarı savurur, girdapla döndürür, az hasar verir. Bırakınca söner. Ayar: `air.tornado`
-- **Rüzgar Küresi** (Hava, sağ tık): küre içinde baktığın yöne (yukarı / aşağı dahil, A/D ile yana) 1.5 sn hızlı uçuş (koşu hızının 1.5 katı); hep hareket eder. Bitince zıplamayı basılı tut = süzül. Ayar: `air.sphere`
-- **Dev Küre** (Hava, sağ tık basılı tut, 30 sn): iki kat büyük küre; değdiği rakibe 10 hasar ve güçlü itme
+- **Rüzgar Küresi** (Hava, sağ tık): küre içinde baktığın yöne (yukarı / aşağı dahil, A/D ile yana) 1.5 sn hızlı uçuş (koşu hızının ~1.9 katı); hep hareket eder. Bitince zıplamayı basılı tut = süzül. Ayar: `air.sphere`
+- **Dev Küre** (Hava, sağ tık basılı tut, 30 sn): iki kat büyük, 3 sn süren küre; değdiği rakibe 10 hasar ve güçlü itme
 - **Şok Dalgası** (Hava, E): koni içindeki rakipleri iter, rakip mermilerini sahibine geri savurur; duvar arkası korunur
 - Ayarlar: `gameConfig.water` (üşüme: `gameConfig.water.chill`) / `gameConfig.air`; hareket modları `PlayerController` (`startGlide`, `launch`)
 

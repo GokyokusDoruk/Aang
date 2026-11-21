@@ -277,7 +277,7 @@ export class PlayerController {
     this.sphereDir.copy(dir);
     if (this.sphereDir.lengthSq() < 1e-6) this.sphereDir.set(0, 0, -1);
     this.sphereDir.normalize();
-    this.sphereTimer = S.duration;
+    this.sphereTimer = big ? S.bigDuration : S.duration;
     this.sphereBig = big;
     this.grounded = false;
     this.coyoteTimer = 0;
