@@ -171,7 +171,9 @@ export class IcePathSystem {
         const dz = c.position.z - s.z;
         if (dx * dx + dz * dz > P.snowRadius * P.snowRadius) continue;
         const dy = c.position.y - s.y;
-        if (dy < -0.8 || dy > P.snowHeight) continue;
+        // Üstünde / yanında ya da altındaki kar fırtınasının içinde (yere kadar)
+        if (dy > P.snowHeight) continue;
+        if (dy < -0.8 && c.position.y < this.groundBelow(s.x, s.z, s.y - 0.35) - 0.5) continue;
         this.snowTimers.set(c.id, P.snowTick);
         c.takeDamage(P.snowDamage, null, s.ownerId, c.center(tmp), { chill: P.snowChill, dot: true });
         this.bus.emit('fx:burst', { point: new Vector3(c.position.x, c.position.y + 0.2, c.position.z), element: 'water', size: 0.35 });
