@@ -308,7 +308,7 @@ export const GameConfig = {
       /** Ardışık duvarlar arası mesafe (m) */
       step: 2.6,
       /** Duvarlar arası süre (s) */
-      interval: 1,
+      interval: 0.5,
       minSteps: 2,
       maxSteps: 6,
       damage: 12,
