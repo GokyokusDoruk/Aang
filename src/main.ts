@@ -16,6 +16,7 @@ import { EffectsView } from './render/EffectsView';
 import { ProjectileView } from './render/ProjectileView';
 import { WallView } from './render/WallView';
 import { IcePathView } from './render/IcePathView';
+import { AirView } from './render/AirView';
 import { TrailView } from './render/TrailView';
 import { Hud } from './ui/Hud';
 import { AbilityBar } from './ui/AbilityBar';
@@ -63,6 +64,7 @@ void loadCharacterAsset(GameConfig.player.height).then((asset) => {
 const effects = new EffectsView(gfx.scene, bus, isTouch ? GameConfig.render.mobileEffectScale : 1);
 const projectileView = new ProjectileView(gfx.scene, session.projectiles);
 const icePathView = new IcePathView(gfx.scene, session.icePaths);
+const airView = new AirView(gfx.scene, session.air);
 const wallView = new WallView(gfx.scene, session.walls, (pts, el) => el === 'earth' && effects.earthEruption(pts));
 const trailView = new TrailView(gfx.scene);
 const crateView = new CrateView(gfx.scene, session.crates);
@@ -311,6 +313,7 @@ function frame(now: number): void {
   projectileView.update(dt, alpha);
   wallView.update();
   icePathView.update(dt);
+  airView.update(dt, alpha, session.combatants);
   crateView.update();
   decor.update(dt);
   trailView.update(dt, session.combatants);

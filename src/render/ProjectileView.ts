@@ -22,6 +22,14 @@ export class ProjectileView {
   });
   private readonly look = new THREE.Vector3();
   private readonly fireCore = new THREE.MeshBasicMaterial({ color: 0xfff1a8 });
+  private readonly airCore = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9 });
+  private readonly airShell = new THREE.MeshBasicMaterial({
+    color: 0xbfe9ff,
+    transparent: true,
+    opacity: 0.35,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  });
   private readonly fireShell = new THREE.MeshBasicMaterial({
     color: 0xff6b1a,
     transparent: true,
@@ -54,6 +62,16 @@ export class ProjectileView {
       shell.name = 'shell';
       mesh.add(shell);
       mesh.userData.flicker = true;
+    } else if (p.kind === 'airball') {
+      // Beyaz çekirdek + dönen, titreyen saydam rüzgar kabuğu
+      mesh = new THREE.Mesh(this.orbGeo, this.airCore);
+      mesh.scale.setScalar(p.spec.radius * 0.6);
+      const shell = new THREE.Mesh(this.orbGeo, this.airShell);
+      shell.scale.setScalar(1.9);
+      shell.name = 'shell';
+      mesh.add(shell);
+      mesh.userData.flicker = true;
+      mesh.castShadow = false;
     } else if (p.kind === 'flame') {
       // Yaşlandıkça büyüyen, sarıdan kırmızıya dönen, sönen alev topağı (toplamalı)
       mesh = new THREE.Mesh(
@@ -68,7 +86,7 @@ export class ProjectileView {
       mesh = new THREE.Mesh(this.orbGeo, new THREE.MeshBasicMaterial({ color }));
       mesh.scale.setScalar(p.spec.radius);
     }
-    if (!mesh.userData.flame) mesh.castShadow = true;
+    if (!mesh.userData.flame && p.kind !== 'airball') mesh.castShadow = true;
     mesh.rotation.set(Math.random() * 6, Math.random() * 6, 0);
     this.scene.add(mesh);
     this.meshes.set(p.id, mesh);
@@ -100,7 +118,7 @@ export class ProjectileView {
     for (const [id, m] of this.meshes) {
       if (seen.has(id)) continue;
       this.scene.remove(m);
-      const shared = [this.rockMat, this.shardMat, this.fireCore];
+      const shared = [this.rockMat, this.shardMat, this.fireCore, this.airCore];
       if (!shared.includes(m.material as never)) (m.material as THREE.Material).dispose();
       this.meshes.delete(id);
     }

@@ -247,7 +247,12 @@ export class BotBrain {
     // Ana saldırı (fireGate: güce göre ateşler arası ek bekleme)
     const ready = A.canUse('primary') && this.fireGate <= 0;
     if (el === 'air') {
-      if (dist < 6.5) it.primaryPressed = ready;
+      if (dist < 20) it.primaryPressed = ready;
+      // Yakında: Şok Dalgası (iter, mermileri geri savurur)
+      if (dist < 5.5 && A.canUse('special') && Math.random() < 0.04) {
+        it.specialPressed = true;
+        it.primaryPressed = false;
+      }
     } else if (dist < 30) {
       it.primaryPressed = ready;
       it.primaryHeld = el === 'water' && ready;

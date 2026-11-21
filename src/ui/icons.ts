@@ -18,7 +18,8 @@ const ABILITY: Record<string, string> = {
   fireBall: FLAME,
   lightningLine: F('M14 2 L5 13.5 H11 L9.5 22 L19 9.5 H13 Z'),
   airShockwave: F('M12 10 A2 2 0 1 1 12 14 A2 2 0 1 1 12 10 Z') + S('M7.5 7.5 A6.4 6.4 0 0 0 7.5 16.5 M16.5 7.5 A6.4 6.4 0 0 1 16.5 16.5 M4.5 4.5 A10.6 10.6 0 0 0 4.5 19.5 M19.5 4.5 A10.6 10.6 0 0 1 19.5 19.5'),
-  airLeap: S('M6 12 L12 6 L18 12 M6 19 L12 13 L18 19', 2.4),
+  airBall: S('M12 4 A8 8 0 1 1 4 12 M12 8 A4 4 0 1 1 8 12 M12 12 h0.1', 2.2),
+  airSphere: S('M12 3 A9 9 0 1 1 11.9 3 Z', 1.6) + S('M8 14 L12 9 L16 14', 2.4),
 };
 
 const ELEMENT: Record<ElementId, string> = { earth: ROCK, water: DROP, fire: FLAME, air: SWIRL };

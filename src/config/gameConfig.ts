@@ -109,6 +109,10 @@ export const GameConfig = {
       boulder: { cooldown: 20, moveMult: 0.5, maxDuration: 1 },
       /** Toprak sağ tık uzun: nişana doğru sırayla yükselen duvarlar */
       earthWave: { cooldown: 30, moveMult: 1, maxDuration: 0 },
+      /** Hava sol tık uzun: yönlendirilebilir hortum */
+      tornado: { cooldown: 20, moveMult: 0.5, maxDuration: 4, tickInterval: 1 / 30 },
+      /** Hava sağ tık uzun: iki kat büyük, çarpan rüzgar küresi */
+      bigSphere: { cooldown: 30, moveMult: 1, maxDuration: 0 },
     },
 
     tuning: {
@@ -123,8 +127,10 @@ export const GameConfig = {
       fireBall: { cooldown: 0.6, castTime: 0.15, castMoveMult: 0.8 },
       lightningLine: { cooldown: 3.5, castTime: 0.45, castMoveMult: 0.4 },
       // Hava
-      airShockwave: { cooldown: 3.0, castTime: 0.2, castMoveMult: 0.7 },
-      airLeap: { cooldown: 5.0, castTime: 0.1, castMoveMult: 1.0 },
+      airBall: { cooldown: 0.8, castTime: 0.12, castMoveMult: 0.8 },
+      airSphere: { cooldown: 4.0, castTime: 0.05, castMoveMult: 1.0 },
+      /** E: Şok Dalgası (rakipleri iter, mermileri geri savurur) */
+      airShockwave: { cooldown: 5.0, castTime: 0.2, castMoveMult: 0.7 },
     },
   },
 
@@ -471,6 +477,58 @@ export const GameConfig = {
       deflectSpeedMult: 1.15,
       /** Bu mesafeden yakındakiler koni dışında da itilir */
       pointBlank: 1.3,
+    },
+    /** Hava topu (sol tık): çarptığı yerde küçük fırtına; az hasar, çarpma noktasından güçlü savurma */
+    ball: {
+      radius: 0.32,
+      speed: 38,
+      gravity: 0.5,
+      damage: 4,
+      knockback: 22,
+      knockbackUp: 9,
+      wallDamage: 6,
+      lifetime: 1.6,
+      explosionRadius: 3.2,
+      splashDamage: 3,
+      splashKnockback: 22,
+      splashKnockbackUp: 9,
+      /** Kendi fırtınan seni de savurur (hasarsız) */
+      selfKnockbackMult: 0.7,
+      selfLaunchUp: 9,
+    },
+    /** Hortum (sol tık uzun basış): nişanı izleyen, içindekileri savuran girdap */
+    tornado: {
+      speed: 9,
+      radius: 1.9,
+      height: 4,
+      damage: 3,
+      /** Aynı rakibe vurma aralığı (s) */
+      hitInterval: 0.35,
+      /** Dışa itme, girdap (teğetsel) ve kaldırma hızları (m/s) */
+      push: 9,
+      swirl: 5,
+      lift: 6,
+      spawnDistance: 2.5,
+      maxLifetime: 6,
+      /** Bırakınca sönme süresi (s) */
+      fadeTime: 0.5,
+    },
+    /** Rüzgar küresi (sağ tık): her yöne hızlı, kısa uçuş; hep hareket eder */
+    sphere: {
+      duration: 1.5,
+      /** Koşu hızına göre çarpan (+%50) */
+      speedMult: 1.5,
+      /** Nişanın yukarı / aşağı açısı sınırı (derece) */
+      maxPitchDeg: 60,
+      /** Kürenin yarıçapı (görsel ve çarpma) */
+      radius: 1.1,
+      /** Uzun basış: küre bu kat büyük ve çarpar */
+      bigScale: 2,
+      ramDamage: 10,
+      ramKnockback: 16,
+      ramKnockbackUp: 6,
+      /** Bu güçte bir itme uçuşu bozar */
+      knockOffImpulse: 6,
     },
     leap: {
       upVelocity: 15,

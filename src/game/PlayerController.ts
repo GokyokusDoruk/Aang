@@ -50,6 +50,13 @@ export class PlayerController {
   aimPitch = 0;
   /** Dış etkilerle yerçekimi çarpanı (havaya fırlatılınca süzülme) */
   gravityMult = 1;
+  /** >0 iken Rüzgar Küresi uçuşu (Hava) */
+  sphereTimer = 0;
+  /** Dev küre (uzun basış) */
+  sphereBig = false;
+  /** true: uçuş yönü kamerayı izler (oyuncu); false: başlangıç yönünde gider (bot) */
+  steerByCamera = false;
+  private readonly sphereDir = new Vector3();
   /** >0 iken Rüzgar süzülmesi (Hava): zıplama basılıyken yavaş düşüş. */
   floatTimer = 0;
   dashCooldown = 0;
@@ -83,7 +90,7 @@ export class PlayerController {
     if (this.sliding) return 'sliding';
     if (this.crouching) return 'crouching';
     if (this.glideTimer > 0) return 'gliding';
-    if (this.floatTimer > 0 && !this.grounded) return 'floating';
+    if ((this.floatTimer > 0 || this.sphereTimer > 0) && !this.grounded) return 'floating';
     return this.grounded ? 'grounded' : 'airborne';
   }
 
@@ -101,7 +108,8 @@ export class PlayerController {
     this.dashTimer = this.slideTimer = this.coyoteTimer = this.jumpBufferTimer = 0;
     this.dashCooldown = this.slideCooldown = 0;
     this.knockbackTimer = 0;
-    this.glideTimer = this.floatTimer = 0;
+    this.glideTimer = this.floatTimer = this.sphereTimer = 0;
+    this.sphereBig = false;
     this.airJumpsLeft = GameConfig.player.maxAirJumps;
     this.airDashesLeft = GameConfig.dash.maxAirDashes;
   }
@@ -121,6 +129,10 @@ export class PlayerController {
     this.knockbackTimer = Math.max(0, this.knockbackTimer - dt);
     this.glideTimer = Math.max(0, this.glideTimer - dt);
     this.floatTimer = Math.max(0, this.floatTimer - dt);
+    if (this.sphereTimer > 0) {
+      this.sphereTimer -= dt;
+      if (this.sphereTimer <= 0) this.endSphere();
+    }
     this.dashCooldown = Math.max(0, this.dashCooldown - dt);
     this.slideCooldown = Math.max(0, this.slideCooldown - dt);
     this.coyoteTimer = this.grounded ? P.coyoteTime : Math.max(0, this.coyoteTimer - dt);
@@ -148,6 +160,19 @@ export class PlayerController {
 
     // Eğilme: kayma tuşu basılıyken yerde, kayma bitince de eğik kal
     this.crouching = !this.sliding && input.held.slide && this.grounded && !this.dashing && this.glideTimer <= 0;
+
+    // --- Rüzgar küresi: tam yön kontrolü, yerçekimi yok, hep hareket
+    if (this.sphereTimer > 0 && !this.dashing) {
+      this.updateSphere(cameraYaw, input.moveX);
+      this.moveHorizontal(dt);
+      this.moveVertical(dt);
+      this.facingYaw = wrapAngle(this.facingYaw + wrapAngle(Math.atan2(-this.velocity.x, -this.velocity.z) - this.facingYaw) * damp(P.turnSharpness, dt));
+      if (this.position.y < GameConfig.physics.killY) {
+        this.respawn();
+        this.fellOut = true;
+      }
+      return;
+    }
 
     // --- Yatay hız
     if (this.dashing) {
@@ -210,6 +235,7 @@ export class PlayerController {
       this.coyoteTimer = 0;
     }
     this.knockbackTimer = GameConfig.combat.knockbackControlLoss;
+    if (this.sphereTimer > 0 && Math.hypot(impulse.x, impulse.y, impulse.z) >= GameConfig.air.sphere.knockOffImpulse) this.endSphere();
     // Güçlü itme buz yolundan düşürür
     if (this.glideTimer > 0 && Math.hypot(impulse.x, impulse.y, impulse.z) >= GameConfig.water.glide.knockOffImpulse) this.glideTimer = 0;
   }
@@ -240,6 +266,49 @@ export class PlayerController {
     this.velocity.x = (dirX / l) * speed;
     this.velocity.z = (dirZ / l) * speed;
     this.glideTimer = G.duration;
+  }
+
+  /** Rüzgar Küresi: verilen (3B) yönde hızlı uçuş başlat. */
+  startSphere(dir: Vector3, big: boolean): void {
+    const S = GameConfig.air.sphere;
+    if (this.sliding) this.endSlide();
+    this.dashing = false;
+    this.glideTimer = 0;
+    this.sphereDir.copy(dir);
+    if (this.sphereDir.lengthSq() < 1e-6) this.sphereDir.set(0, 0, -1);
+    this.sphereDir.normalize();
+    this.sphereTimer = S.duration;
+    this.sphereBig = big;
+    this.grounded = false;
+    this.coyoteTimer = 0;
+  }
+
+  private updateSphere(cameraYaw: number, strafe: number): void {
+    const S = GameConfig.air.sphere;
+    const d = this.sphereDir;
+    if (this.steerByCamera) {
+      const lim = (S.maxPitchDeg * Math.PI) / 180;
+      const p = Math.max(-lim, Math.min(lim, this.aimPitch));
+      d.set(-Math.sin(cameraYaw) * Math.cos(p), Math.sin(p), -Math.cos(cameraYaw) * Math.cos(p));
+      // A/D: yana kayarak uç
+      d.x += Math.cos(cameraYaw) * strafe * 0.6;
+      d.z += -Math.sin(cameraYaw) * strafe * 0.6;
+      d.normalize();
+    }
+    const speed = GameConfig.player.runSpeed * S.speedMult * this.statusSpeedMultiplier;
+    this.velocity.copy(d).multiplyScalar(speed);
+    if (d.y > 0.05) {
+      this.grounded = false;
+      this.coyoteTimer = 0;
+    }
+  }
+
+  /** Uçuş bitti: hız yumuşar, zıplama basılıyken süzülerek inilir. */
+  private endSphere(): void {
+    this.sphereTimer = 0;
+    this.sphereBig = false;
+    this.velocity.multiplyScalar(0.55);
+    this.floatTimer = GameConfig.air.leap.floatDuration;
   }
 
   /** Rüzgar Sıçrayışı: yukarı + ileri fırlat, ardından süzülme penceresi aç. */

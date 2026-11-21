@@ -30,7 +30,7 @@ npm run build      # typecheck + production build
 | Yeniden doğ | R | ↺ |
 | Element seç | 1-4 · Q · fare tekerleği | Üstteki element çipleri |
 | Ana / ikincil yetenek | Sol tık (basılı tut = tekrar) / Sağ tık | Büyük / küçük yetenek butonu (aktif yeteneğin ikonu ve adı) |
-| 3. yetenek (şimdilik yalnız Su: Buz Duvarı) | E | Yetenek butonlarının solundaki 3. buton |
+| 3. yetenek (Su: Buz Duvarı, Hava: Şok Dalgası) | E | Yetenek butonlarının solundaki 3. buton |
 | Ses aç/kapa | M | Menüdeki ses düğmesi |
 
 ## Yetenek sistemi
@@ -67,8 +67,11 @@ npm run build      # typecheck + production build
 - **Kaya Fırlatma** (Toprak, sol tık): zemine çarptığı yerde 5 sn duran, sonra geri inen toprak tepeciği yükseltir (rakibe çarparsa yükseltmez). Kendi toprak duvarına 3.5 m yakınken sol tık: duvar kopar ve nişana fırlar (kayanın 2 katı hasar). Ayar: `gameConfig.earth.bump`, `earth.wallThrow`.
 - **Dev Kaya** (Toprak, sol tık basılı tut, 20 sn): başının üstünde 1 sn'de dolan dev kaya; bırakınca fırlar, büyük patlama + etrafa saçılan kaya parçaları. Ayar: `earth.boulder`, `earth.debris`.
 - **Duvar Dizisi** (Toprak, sağ tık basılı tut, 30 sn): senden nişana doğru saniyede bir yükselen duvarlar. Değdiği rakibi 12 hasarla havaya atar; rakip süzülerek düşer ve yere düşünce 1 sn yerde kalır (hareket ve yetenek yok). Ayar: `earth.wave`.
-- **Şok Dalgası** (Hava, sol tık): koni içindeki rakipleri iter, rakip mermilerini sahibine geri savurur; duvar arkası korunur
-- **Rüzgar Sıçrayışı** (Hava, sağ tık): yukarı + ileri fırlatma; ardından zıplamayı basılı tut = yavaş süzül
+- **Hava Topu** (Hava, sol tık): çarptığı yerde küçük fırtına; az hasar (4), çarpma noktasından güçlü savurma. Yakında patlarsa seni de hasarsız fırlatır. Ayar: `gameConfig.air.ball`
+- **Hortum** (Hava, sol tık basılı tut, 20 sn): 4 sn'ye kadar nişanını izleyen hortum; içindekileri dışa ve yukarı savurur, girdapla döndürür, az hasar verir. Bırakınca söner. Ayar: `air.tornado`
+- **Rüzgar Küresi** (Hava, sağ tık): küre içinde baktığın yöne (yukarı / aşağı dahil, A/D ile yana) 1.5 sn hızlı uçuş (koşu hızının 1.5 katı); hep hareket eder. Bitince zıplamayı basılı tut = süzül. Ayar: `air.sphere`
+- **Dev Küre** (Hava, sağ tık basılı tut, 30 sn): iki kat büyük küre; değdiği rakibe 10 hasar ve güçlü itme
+- **Şok Dalgası** (Hava, E): koni içindeki rakipleri iter, rakip mermilerini sahibine geri savurur; duvar arkası korunur
 - Ayarlar: `gameConfig.water` (üşüme: `gameConfig.water.chill`) / `gameConfig.air`; hareket modları `PlayerController` (`startGlide`, `launch`)
 
 ## Ateş / Yıldırım ve savaş döngüsü (Task 5)

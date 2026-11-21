@@ -156,8 +156,10 @@ export class EffectsView {
 
   /** Ateş patlaması: parlak çekirdek + genişleyen turuncu küre + yerde halka + kor parçaları */
   private explosion(e: GameEvents['fx:explosion']): void {
-    const core = new THREE.MeshBasicMaterial({ color: 0xfff3b0, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
-    const shell = new THREE.MeshBasicMaterial({ color: 0xff5a1a, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+    const air = e.element === 'air';
+    if (air) this.storm(e.point, e.radius);
+    const core = new THREE.MeshBasicMaterial({ color: air ? 0xffffff : 0xfff3b0, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+    const shell = new THREE.MeshBasicMaterial({ color: air ? 0xa9dcff : 0xff5a1a, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
     const a = new THREE.Mesh(this.sphere, core);
     const b = new THREE.Mesh(this.sphere, shell);
     a.position.copy(e.point);
@@ -182,7 +184,7 @@ export class EffectsView {
         shell.opacity = 0.75 * (1 - t);
       },
     });
-    const ringMat = new THREE.MeshBasicMaterial({ color: 0xff8a3d, transparent: true, side: THREE.DoubleSide, depthWrite: false });
+    const ringMat = new THREE.MeshBasicMaterial({ color: air ? 0xe6f7ff : 0xff8a3d, transparent: true, side: THREE.DoubleSide, depthWrite: false });
     const ring = new THREE.Mesh(this.ring, ringMat);
     ring.position.copy(e.point);
     ring.rotation.x = -Math.PI / 2;
@@ -196,7 +198,32 @@ export class EffectsView {
         ringMat.opacity = 0.7 * (1 - t);
       },
     });
-    this.debris(e.point, UP, 0xff7a2a, 7, 0.07, 6);
+    if (air) this.dust(e.point, 0xe6f7ff, e.radius * 0.8);
+    else this.debris(e.point, UP, 0xff7a2a, 7, 0.07, 6);
+  }
+
+  /** Küçük fırtına: çarpma noktasında yükselip dağılan dönen rüzgar halkaları */
+  private storm(at: THREE.Vector3, radius: number): void {
+    for (let i = 0; i < 4; i++) {
+      const mat = new THREE.MeshBasicMaterial({ color: 0xe6f7ff, transparent: true, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending });
+      const ring = new THREE.Mesh(this.ring, mat);
+      ring.position.copy(at);
+      const tilt = (Math.random() - 0.5) * 0.6;
+      const spin = 8 + Math.random() * 6;
+      this.add({
+        obj: ring,
+        mats: [mat],
+        life: -i * 0.06,
+        max: 0.7,
+        tick: (t) => {
+          const k = Math.max(0, t);
+          ring.position.y = at.y + k * 2.2 + i * 0.3;
+          ring.rotation.set(-Math.PI / 2 + tilt, 0, k * spin);
+          ring.scale.setScalar(radius * (0.3 + 0.5 * k) * (1 - i * 0.12));
+          mat.opacity = 0.6 * (1 - k) * (t >= 0 ? 1 : 0);
+        },
+      });
+    }
   }
 
   /** Zikzaklı yıldırım: parlak çekirdek + renkli parıltı, kısa süre titrer */

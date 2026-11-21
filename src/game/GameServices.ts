@@ -4,6 +4,7 @@ import type { CollisionWorld } from '../physics/CollisionWorld';
 import type { Combatant } from '../combat/Combatant';
 import type { ProjectileSystem } from '../combat/ProjectileSystem';
 import type { WallSystem } from '../combat/WallSystem';
+import type { AirSystem } from '../combat/AirSystem';
 
 /** Yeteneklerin ve sistemlerin erişebildiği ortak oyun servisleri (render'dan bağımsız). */
 export interface GameServices {
@@ -12,4 +13,5 @@ export interface GameServices {
   combatants: Combatant[];
   projectiles: ProjectileSystem;
   walls: WallSystem;
+  air: AirSystem;
 }

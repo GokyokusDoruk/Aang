@@ -260,8 +260,13 @@ export class SoundSystem {
         this.noiseHit(o, { type: 'bandpass', f0: 250, f1: 1600, dur: 0.45, gain: 0.9, q: 1.2, attack: 0.04 });
         this.tone(o, { type: 'sine', f0: 90, f1: 50, dur: 0.3, gain: 0.5 });
         return;
-      case 'airLeap':
-        this.noiseHit(o, { type: 'bandpass', f0: 300, f1: 2000, dur: 0.4, gain: 0.7, q: 1.5, attack: 0.05 });
+      case 'airBall':
+        this.noiseHit(o, { type: 'bandpass', f0: 600, f1: 2400, dur: 0.3, gain: 0.7, q: 1.4, attack: 0.02 });
+        this.tone(o, { type: 'sine', f0: 300, f1: 900, dur: 0.15, gain: 0.15 });
+        return;
+      case 'airSphere':
+        this.noiseHit(o, { type: 'bandpass', f0: 300, f1: 2000, dur: 0.5, gain: 0.8, q: 1.5, attack: 0.05 });
+        this.tone(o, { type: 'sine', f0: 200, f1: 500, dur: 0.4, gain: 0.2 });
         return;
     }
     // Bilinmeyen yetenek: elemente göre genel ses
