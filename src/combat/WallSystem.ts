@@ -58,8 +58,21 @@ const easeOutBack = (t: number) => {
  * Her sütun CollisionWorld'e gerçek bir AABB olarak eklenir → siper, platform, mermi engeli.
  * Yükselirken üstünde duran karakteri kaldırır (zemin takibi sayesinde).
  */
+interface Wave {
+  ownerId: string;
+  x: number;
+  z: number;
+  y: number;
+  dx: number;
+  dz: number;
+  index: number;
+  steps: number;
+  timer: number;
+}
+
 export class WallSystem {
   readonly walls: Wall[] = [];
+  private readonly waves: Wave[] = [];
   /** Duvara ait olmayan kutular için ek hasar alıcı (ör. kırılabilen kasalar). */
   extraDamage: ((box: AABB | null, amount: number, point: Vector3) => boolean) | null = null;
   private readonly byBox = new Map<AABB, Wall>();
@@ -98,6 +111,74 @@ export class WallSystem {
     return this.placeWall('water', GameConfig.water.iceWall, ownerId, casterPos, target, aimDir);
   }
 
+  /** Toprak tepeciği: noktada ortada yüksek, çevresi alçak küçük sütun kümesi. */
+  placeBump(ownerId: string, point: Vector3): Wall | null {
+    const B = GameConfig.earth.bump;
+    const offs = [
+      [0, 0, 1],
+      [B.spacing, 0, 0.7],
+      [-B.spacing, 0, 0.7],
+      [0, B.spacing, 0.7],
+      [0, -B.spacing, 0.7],
+    ].slice(0, B.columns);
+    const columns: WallColumn[] = [];
+    for (const [ox, oz, hm] of offs) {
+      const x = point.x + ox;
+      const z = point.z + oz;
+      const ground = this.world.groundHeight(x, z, 0.15, point.y + 0.5);
+      if (!Number.isFinite(ground) || Math.abs(ground - point.y) > 0.6) continue;
+      const half = B.columnWidth / 2;
+      columns.push({ box: { minX: x - half, maxX: x + half, minZ: z - half, maxZ: z + half, minY: ground - 0.4, maxY: ground }, x, z, baseY: ground, height: B.height * hm });
+    }
+    return this.commit('earth', B, ownerId, columns);
+  }
+
+  /** Duvar dizisi başlat: başlangıçtan nişana doğru, aralıklarla yükselen duvarlar. */
+  startWave(ownerId: string, from: Vector3, target: Vector3, aimDir: Vector3): void {
+    const W = GameConfig.earth.wave;
+    let dx = target.x - from.x;
+    let dz = target.z - from.z;
+    let dist = Math.hypot(dx, dz);
+    if (dist < 1e-3) {
+      dx = aimDir.x;
+      dz = aimDir.z;
+      dist = W.step * W.minSteps;
+    }
+    const l = Math.hypot(dx, dz) || 1;
+    const steps = Math.max(W.minSteps, Math.min(W.maxSteps, Math.round(dist / W.step)));
+    this.waves.push({ ownerId, x: from.x, z: from.z, y: from.y, dx: dx / l, dz: dz / l, index: 0, steps, timer: 0 });
+  }
+
+  /** Sahibinin yakınındaki ayakta duran toprak duvarı (fırlatmak için) koparır; merkezini döner. */
+  takeThrowableWall(ownerId: string, pos: Vector3): Vector3 | null {
+    const range = GameConfig.earth.wallThrow.grabRange;
+    let best: Wall | null = null;
+    let bestD = range;
+    for (const w of this.walls) {
+      if (w.ownerId !== ownerId || w.spec !== GameConfig.earth.wall || w.state === 'sinking') continue;
+      for (const c of w.columns) {
+        const d = Math.hypot(c.x - pos.x, c.z - pos.z);
+        if (d < bestD) {
+          bestD = d;
+          best = w;
+        }
+      }
+    }
+    if (!best) return null;
+    let x = 0;
+    let z = 0;
+    let y = 0;
+    for (const c of best.columns) {
+      x += c.x;
+      z += c.z;
+      y += c.baseY;
+    }
+    const n = best.columns.length;
+    const center = new Vector3(x / n, y / n + Math.max(0.6, (best.columns[0].box.maxY - best.columns[0].baseY) * 0.5), z / n);
+    this.destroy(best);
+    return center;
+  }
+
   private placeWall(element: ElementId, W: WallSpec, ownerId: string, casterPos: Vector3, target: Vector3, aimDir: Vector3): Wall | null {
     let hx = target.x - casterPos.x;
     let hz = target.z - casterPos.z;
@@ -133,10 +214,30 @@ export class WallSystem {
       const box: AABB = { minX: x - half, maxX: x + half, minZ: z - half, maxZ: z + half, minY: ground - 0.4, maxY: ground };
       columns.push({ box, x, z, baseY: ground, height });
     }
+    return this.commit(element, W, ownerId, columns);
+  }
+
+  /** Belirli merkezde, verilen doğrultuya (px, pz) yayılan sıra duvar */
+  private placeRowAt(element: ElementId, W: WallSpec, ownerId: string, cx: number, cz: number, px: number, pz: number, searchTop: number, minY: number): Wall | null {
+    const columns: WallColumn[] = [];
+    const step = W.columnWidth * W.spacing;
+    for (let i = 0; i < W.columns; i++) {
+      const off = (i - (W.columns - 1) / 2) * step;
+      const x = cx + px * off;
+      const z = cz + pz * off;
+      const ground = this.world.groundHeight(x, z, 0.15, searchTop);
+      if (!Number.isFinite(ground) || ground < minY) continue;
+      const half = W.columnWidth / 2;
+      columns.push({ box: { minX: x - half, maxX: x + half, minZ: z - half, maxZ: z + half, minY: ground - 0.4, maxY: ground }, x, z, baseY: ground, height: W.height });
+    }
+    return this.commit(element, W, ownerId, columns);
+  }
+
+  private commit(element: ElementId, W: WallSpec, ownerId: string, columns: WallColumn[]): Wall | null {
     if (columns.length === 0) return null;
 
-    // Sahip başına sınır: en eskiyi batır
-    const mine = this.walls.filter((w) => w.ownerId === ownerId && w.element === element && w.state !== 'sinking');
+    // Sahip başına sınır (aynı tür): en eskiyi batır
+    const mine = this.walls.filter((w) => w.ownerId === ownerId && w.spec === W && w.state !== 'sinking');
     if (mine.length >= W.maxPerCaster) this.startSinking(mine[0]);
 
     const wall: Wall = {
@@ -181,9 +282,50 @@ export class WallSystem {
 
   clear(): void {
     for (const w of [...this.walls]) this.remove(w);
+    this.waves.length = 0;
+  }
+
+  private updateWaves(dt: number): void {
+    const W = GameConfig.earth.wave;
+    for (let i = this.waves.length - 1; i >= 0; i--) {
+      const v = this.waves[i];
+      v.timer -= dt;
+      if (v.timer > 0) continue;
+      v.timer += W.interval;
+      v.index++;
+      const cx = v.x + v.dx * W.step * v.index;
+      const cz = v.z + v.dz * W.step * v.index;
+      const wall = this.placeRowAt('earth', W.wall, v.ownerId, cx, cz, -v.dz, v.dx, v.y + 2.5, v.y - 8);
+      if (wall) {
+        // Ardışık duvarlar yükseklik farkını takip eder (rampa / platform)
+        v.y = wall.columns.reduce((s, c) => s + c.baseY, 0) / wall.columns.length;
+        this.launchOver(wall, v);
+      }
+      if (v.index >= v.steps) this.waves.splice(i, 1);
+    }
+  }
+
+  /** Yükselen dizi duvarının üstündeki / önündeki rakipleri havaya at. */
+  private launchOver(wall: Wall, v: Wave): void {
+    const W = GameConfig.earth.wave;
+    const n = wall.columns.length;
+    const cx = wall.columns.reduce((s, c) => s + c.x, 0) / n;
+    const cz = wall.columns.reduce((s, c) => s + c.z, 0) / n;
+    const halfW = (W.wall.columns * W.wall.columnWidth * W.wall.spacing) / 2;
+    for (const k of this.combatants) {
+      if (!k.alive || k.id === wall.ownerId) continue;
+      const rx = k.position.x - cx;
+      const rz = k.position.z - cz;
+      const along = rx * v.dx + rz * v.dz;
+      const across = -rx * v.dz + rz * v.dx;
+      if (Math.abs(along) > W.hitDepth || Math.abs(across) > halfW + k.radius) continue;
+      if (Math.abs(k.position.y - v.y) > 2) continue;
+      k.knockUp(W.damage, W.launchUp, wall.ownerId, k.center(new Vector3()));
+    }
   }
 
   update(dt: number): void {
+    this.updateWaves(dt);
     for (let i = this.walls.length - 1; i >= 0; i--) {
       const w = this.walls[i];
       const W = w.spec;

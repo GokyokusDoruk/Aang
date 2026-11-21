@@ -35,6 +35,8 @@ const damp = (k: number, dt: number) => 1 - Math.exp(-k * dt);
  */
 export class PlayerView {
   readonly root = new THREE.Group();
+  /** Yere düşme pozu için ayak hizasında devrilen ara grup */
+  private readonly tilt = new THREE.Group();
   private readonly body = new THREE.Group(); // kalça yüksekliğinde, eğilme burada
   private readonly torso = new THREE.Group();
   private readonly head = new THREE.Group();
@@ -78,7 +80,8 @@ export class PlayerView {
 
     // Gövde: kalça → göğüs
     this.body.position.y = 0.92 * s;
-    this.root.add(this.body);
+    this.root.add(this.tilt);
+    this.tilt.add(this.body);
 
     const pelvis = new THREE.Mesh(new THREE.BoxGeometry(0.36 * s, 0.16 * s, 0.22 * s), pants);
     pelvis.castShadow = true;
@@ -176,7 +179,7 @@ export class PlayerView {
     if (this.model) return;
     const inst = new CharacterInstance(asset, this.clothMat.color.getHex(), this.accentMat);
     this.model = inst;
-    this.root.add(inst.root);
+    this.tilt.add(inst.root);
     this.body.visible = false;
     for (const m of inst.materials) this.mats.push(m);
     inst.root.updateMatrixWorld(true);
@@ -242,7 +245,12 @@ export class PlayerView {
     chill = 0,
     /** Yanıyor mu */
     burning = false,
+    /** 0 = ayakta, 1 = sırtüstü yerde */
+    downed = 0,
   ): void {
+    // Sırtüstü devril (ayak ekseni etrafında), kalkarken geri dön
+    this.tilt.rotation.x = (Math.PI / 2) * downed;
+    this.tilt.position.y = 0.22 * downed;
     if (chill >= 1) dt = 0; // donmuşken animasyon durur
     this.root.position.copy(position);
     this.root.rotation.y = yaw;

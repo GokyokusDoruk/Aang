@@ -126,6 +126,7 @@ export class SoundSystem {
     bus.on('fx:lightning', (e) => this.thunder(e.from));
     bus.on('projectile:deflect', () => this.ping());
     bus.on('combat:frozen', (e) => this.freeze(e.point));
+    bus.on('combat:downed', (e) => this.thud(e.point));
     bus.on('ability:chargedStart', (e) => this.chargeUp(e.ability.element, e.casterId === me));
     bus.on('round:phase', (e) => {
       if (e.phase === 'fight') {
@@ -364,6 +365,14 @@ export class SoundSystem {
     if (!o) return;
     this.noiseHit(o, { type: 'highpass', f0: 4000, f1: 1500, dur: 0.12, gain: 0.8 });
     this.noiseHit(o, { type: 'lowpass', f0: 800, f1: 60, dur: 0.9, gain: 0.7, delay: 0.05, attack: 0.02 });
+  }
+
+  /** Havadan yere düşüş: tok gümleme */
+  private thud(at: THREE.Vector3): void {
+    const o = this.out(at, 1);
+    if (!o) return;
+    this.tone(o, { type: 'sine', f0: 120, f1: 45, dur: 0.3, gain: 0.7 });
+    this.noiseHit(o, { type: 'lowpass', f0: 900, f1: 120, dur: 0.25, gain: 0.6 });
   }
 
   /** Yanma tiki: kısa cızırtı */

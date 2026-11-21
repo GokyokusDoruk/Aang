@@ -82,6 +82,7 @@ export class EffectsView {
     // Yanma: her hasar anında gövdeden yükselen kıvılcım
     bus.on('combat:damage', (e) => e.kind === 'burn' && this.debris(e.point, UP, FIRE_COLOR, 4, 0.06, 3));
     bus.on('combat:burn', (e) => this.dust(e.point, FIRE_COLOR, 0.7));
+    bus.on('combat:downed', (e) => this.dust(e.point, DUST_COLOR, 1.4));
     bus.on('fx:lightning', (e) => this.lightning(e));
     bus.on('fx:burst', (e) => {
       const color = e.element === 'earth' ? DUST_COLOR : ELEMENTS[e.element].color;

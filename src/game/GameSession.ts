@@ -188,7 +188,7 @@ export class GameSession {
     this.crates.update(dt);
 
     if (this.player.alive) {
-      const inp = fighting && this.player.frozenTimer <= 0 ? s : FROZEN;
+      const inp = fighting && !this.player.incapacitated ? s : FROZEN;
       this.playerAbilities.update(dt, this.toIntent(inp));
       this.playerCtl.moveSpeedMultiplier = this.playerAbilities.moveMultiplier;
       this.playerCaster.getAim(this.aimO, this.aimD, this.aimT);

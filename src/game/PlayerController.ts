@@ -48,6 +48,8 @@ export class PlayerController {
   glideSnow = false;
   /** Nişanın dikey açısı (rad, + yukarı). Buz yolunda yükselişi belirler. */
   aimPitch = 0;
+  /** Dış etkilerle yerçekimi çarpanı (havaya fırlatılınca süzülme) */
+  gravityMult = 1;
   /** >0 iken Rüzgar süzülmesi (Hava): zıplama basılıyken yavaş düşüş. */
   floatTimer = 0;
   dashCooldown = 0;
@@ -161,7 +163,7 @@ export class PlayerController {
     if (this.glideTimer > 0 && !this.dashing) {
       this.rideVertical();
     } else if (!this.dashing) {
-      let g = GameConfig.physics.gravity;
+      let g = GameConfig.physics.gravity * this.gravityMult;
       if (this.velocity.y <= 0) this.jumpRising = false;
       // Değişken zıplama yalnızca gerçek zıplamalarda (fırlatma/itme yüksekliğini kesmez)
       if (this.velocity.y > 0 && this.jumpRising && !this.jumpHeld) g *= P.jumpCutGravityMult;

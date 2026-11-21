@@ -219,7 +219,7 @@ function drawFighter(view: PlayerView, c: Combatant, alpha: number, now: number,
   tmpPos.lerpVectors(ctl.prevPosition, ctl.position, alpha);
   const ratio = ctl.prevHeightRatio + (ctl.heightRatio - ctl.prevHeightRatio) * alpha;
   const flash = c.hitFlash > 0;
-  view.update(tmpPos, lerpAngle(ctl.prevFacingYaw, ctl.facingYaw, alpha), ratio, ctl.dashing, 10, elementColor, castProgress, motionOf(ctl), frameDt, flash, chillOf(c), c.burning);
+  view.update(tmpPos, lerpAngle(ctl.prevFacingYaw, ctl.facingYaw, alpha), ratio, ctl.dashing, 10, elementColor, castProgress, motionOf(ctl), frameDt, flash, chillOf(c), c.burning, c.downedPose);
 }
 
 /** El parlaması / hazırlık pozu: normal hazırlık ya da süren uzun basış (şarj dolarken artar). */
@@ -291,6 +291,7 @@ function frame(now: number): void {
     player.hitFlash > 0,
     chillOf(player),
     player.burning,
+    player.downedPose,
   );
 
   const inMatch = session.running && session.mode === 'match';

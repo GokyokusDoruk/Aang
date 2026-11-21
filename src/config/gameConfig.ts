@@ -105,6 +105,10 @@ export const GameConfig = {
       flameStream: { cooldown: 20, moveMult: 0.55, maxDuration: 3, tickInterval: 0.06 },
       /** Su sağ tık uzun: kar izi bırakan buz yolu */
       snowRide: { cooldown: 30, moveMult: 1, maxDuration: 0 },
+      /** Toprak sol tık uzun: başının üstünde büyüyen dev kaya, bırakınca fırlar (şarj 1 sn) */
+      boulder: { cooldown: 20, moveMult: 0.5, maxDuration: 1 },
+      /** Toprak sağ tık uzun: nişana doğru sırayla yükselen duvarlar */
+      earthWave: { cooldown: 30, moveMult: 1, maxDuration: 0 },
     },
 
     tuning: {
@@ -225,6 +229,104 @@ export const GameConfig = {
       lifetime: 2.5,
       /** Yerdeyken kaya karakterin bu kadar önünden, yerden kopar. */
       groundSpawnForward: 0.9,
+      /** Zemine çarpınca orada toprak tepeciği yükselir */
+      bumpOnImpact: true,
+    },
+    /** Kaya zemine çarpınca yükselen tepecik: 5 sn durur, sonra geri iner. Üstünde durulabilir. */
+    bump: {
+      columns: 5,
+      columnWidth: 0.85,
+      spacing: 0.7,
+      height: 0.85,
+      riseTime: 0.15,
+      sinkTime: 0.8,
+      hp: 60,
+      lifetime: 5,
+      maxPerCaster: 6,
+      minDistance: 0,
+      maxDistance: 0,
+    },
+    /** Dev kaya (sol tık uzun basış): yavaş, ağır, büyük patlama + etrafa saçılan kaya parçaları */
+    boulder: {
+      radius: 0.85,
+      speed: 30,
+      gravity: 8,
+      damage: 30,
+      knockback: 12,
+      knockbackUp: 6,
+      wallDamage: 80,
+      lifetime: 3,
+      explosionRadius: 3.6,
+      splashDamage: 14,
+      splashKnockback: 10,
+      splashKnockbackUp: 6,
+      bumpOnImpact: true,
+      /** Patlamada saçılan parça sayısı */
+      fragments: 9,
+      /** Şarj 0'da güç oranı (tam şarjda 1) */
+      minChargePower: 0.6,
+      /** Başının bu kadar üstünde oluşur (m) */
+      spawnHeight: 2.6,
+    },
+    /** Dev kayadan saçılan parça */
+    debris: {
+      radius: 0.2,
+      speed: 15,
+      gravity: 18,
+      damage: 7,
+      knockback: 3,
+      knockbackUp: 2,
+      wallDamage: 5,
+      lifetime: 1.2,
+    },
+    /** Kendi duvarının yanında sol tık: duvar kopup nişana fırlar (kayanın 2 katı hasar) */
+    wallThrow: {
+      /** Duvarın en yakın sütununa bu kadar yakınsan (m) duvarı fırlatırsın */
+      grabRange: 3.5,
+      radius: 0.8,
+      speed: 32,
+      gravity: 7,
+      damage: 40,
+      knockback: 18,
+      knockbackUp: 8,
+      wallDamage: 60,
+      lifetime: 2.5,
+      explosionRadius: 2.4,
+      splashDamage: 10,
+      splashKnockback: 9,
+      splashKnockbackUp: 5,
+      bumpOnImpact: true,
+    },
+    /** Duvar dizisi (sağ tık uzun basış): nişana doğru sırayla yükselen duvarlar, isabet edeni havaya atar */
+    wave: {
+      /** Ardışık duvarlar arası mesafe (m) */
+      step: 2.6,
+      /** Duvarlar arası süre (s) */
+      interval: 1,
+      minSteps: 2,
+      maxSteps: 6,
+      damage: 12,
+      /** Havaya fırlatma hızı (m/s) */
+      launchUp: 13,
+      /** Havadayken yerçekimi çarpanı (süzülür) */
+      floatGravityMult: 0.5,
+      /** Yere düşünce sersemleme (s) */
+      downTime: 1,
+      /** Duvarın önü/arkası isabet payı (m) */
+      hitDepth: 1.1,
+      wall: {
+        columns: 3,
+        columnWidth: 0.95,
+        spacing: 0.88,
+        height: 2.2,
+        riseTime: 0.12,
+        sinkTime: 0.35,
+        hp: 80,
+        lifetime: 1.6,
+        maxPerCaster: 8,
+        minDistance: 0,
+        maxDistance: 0,
+      },
     },
     wall: {
       /** Duvar = yan yana yükselen bazalt sütunlar */
