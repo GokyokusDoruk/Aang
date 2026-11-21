@@ -103,7 +103,22 @@ export class WallSystem {
    * Hiç sütun konamazsa (boşluk) null döner.
    */
   placeEarthWall(ownerId: string, casterPos: Vector3, target: Vector3, aimDir: Vector3): Wall | null {
-    return this.placeWall('earth', GameConfig.earth.wall, ownerId, casterPos, target, aimDir);
+    const wall = this.placeWall('earth', GameConfig.earth.wall, ownerId, casterPos, target, aimDir);
+    if (wall) this.launchFromBelow(wall);
+    return wall;
+  }
+
+  /** Duvar bir rakibin altından çıktıysa: hasar + havaya fırlatma (yere düşünce sersemler). */
+  private launchFromBelow(wall: Wall): void {
+    const W = GameConfig.earth.wave;
+    for (const k of this.combatants) {
+      if (!k.alive || k.id === wall.ownerId) continue;
+      const p = k.position;
+      const under = wall.columns.some(
+        (c) => CollisionWorld.circleOverlapsRect(p.x, p.z, k.radius, c.box) && p.y >= c.baseY - 0.5 && p.y <= c.baseY + 1.2,
+      );
+      if (under) k.knockUp(W.damage, W.launchUp, wall.ownerId, k.center(new Vector3()));
+    }
   }
 
   /** Buz duvarı: nişan yönünde, karakterin hemen önüne (mesafe sabit). */
