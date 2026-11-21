@@ -38,7 +38,7 @@ export class IcePathView {
     opacity: 0.92,
   });
   /** Kar yağışı: kar izi plakalarının üstünden yağan taneler (havuzlu parçacıklar) */
-  private readonly flakeMax = 7000;
+  private readonly flakeMax = 10000;
   private readonly flakePos = new Float32Array(this.flakeMax * 3);
   private readonly flakeVel = new Float32Array(this.flakeMax * 3);
   private readonly flakeFloor = new Float32Array(this.flakeMax).fill(-1e9);
@@ -73,7 +73,7 @@ export class IcePathView {
       const s = snow[(Math.random() * snow.length) | 0];
       const i = this.flakeNext;
       this.flakeNext = (this.flakeNext + 1) % this.flakeMax;
-      const r = s.width * 0.6;
+      const r = P.snowRadius;
       const x = s.x + (Math.random() - 0.5) * 2 * r;
       const z = s.z + (Math.random() - 0.5) * 2 * r;
       // Yolun altından yere doğru yağar; altı boşsa (yerdeyse) plakanın etrafında savrulur

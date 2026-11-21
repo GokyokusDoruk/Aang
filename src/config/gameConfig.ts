@@ -455,13 +455,14 @@ export const GameConfig = {
       endPlatform: 2.4,
       maxSegments: 220,
       /** Kar izi (uzun basış) */
-      snowRadius: 1.4,
+      /** Kar alanının yarıçapı (yağış görseli ve hasar/yavaşlatma) */
+      snowRadius: 2.1,
       snowHeight: 1.8,
       snowTick: 0.5,
       snowDamage: 2,
       snowChill: 0.5,
       /** Kar izi plakası başına saniyede yağan kar tanesi */
-      snowfallRate: 75,
+      snowfallRate: 110,
     },
   },
 
