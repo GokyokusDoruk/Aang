@@ -59,6 +59,12 @@ export class IcePathSystem {
     this.snowTimers.clear();
   }
 
+  /** Noktanın altındaki zemin yüksekliği (yoksa 15 m aşağısı) — kar yağışı görseli için */
+  groundBelow(x: number, z: number, fromY: number): number {
+    const g = this.world.groundHeight(x, z, 0.05, fromY);
+    return Number.isFinite(g) ? g : fromY - 15;
+  }
+
   update(dt: number): void {
     const P = GameConfig.water.icePath;
     for (const c of this.combatants) this.track(c);

@@ -38,7 +38,7 @@ export class IcePathView {
     opacity: 0.92,
   });
   /** Kar yağışı: kar izi plakalarının üstünden yağan taneler (havuzlu parçacıklar) */
-  private readonly flakeMax = 1200;
+  private readonly flakeMax = 7000;
   private readonly flakePos = new Float32Array(this.flakeMax * 3);
   private readonly flakeVel = new Float32Array(this.flakeMax * 3);
   private readonly flakeFloor = new Float32Array(this.flakeMax).fill(-1e9);
@@ -57,7 +57,7 @@ export class IcePathView {
     g.setAttribute('position', new THREE.BufferAttribute(this.flakePos, 3));
     this.flakes = new THREE.Points(
       g,
-      new THREE.PointsMaterial({ color: 0xffffff, size: 0.11, map: flakeTexture(), transparent: true, opacity: 0.95, depthWrite: false, sizeAttenuation: true }),
+      new THREE.PointsMaterial({ color: 0xffffff, size: 0.18, map: flakeTexture(), transparent: true, opacity: 0.95, depthWrite: false, sizeAttenuation: true }),
     );
     this.flakes.frustumCulled = false;
     scene.add(this.flakes);
@@ -73,24 +73,34 @@ export class IcePathView {
       const s = snow[(Math.random() * snow.length) | 0];
       const i = this.flakeNext;
       this.flakeNext = (this.flakeNext + 1) % this.flakeMax;
-      const r = P.snowRadius;
-      this.flakePos[i * 3] = s.x + (Math.random() - 0.5) * 2 * r;
-      this.flakePos[i * 3 + 1] = s.y + 1.6 + Math.random() * 1.4;
-      this.flakePos[i * 3 + 2] = s.z + (Math.random() - 0.5) * 2 * r;
-      this.flakeVel[i * 3] = (Math.random() - 0.5) * 0.6;
-      this.flakeVel[i * 3 + 1] = -(1.4 + Math.random() * 1.2);
-      this.flakeVel[i * 3 + 2] = (Math.random() - 0.5) * 0.6;
-      this.flakeFloor[i] = s.y;
+      const r = s.width * 0.6;
+      const x = s.x + (Math.random() - 0.5) * 2 * r;
+      const z = s.z + (Math.random() - 0.5) * 2 * r;
+      // Yolun altından yere doğru yağar; altı boşsa (yerdeyse) plakanın etrafında savrulur
+      const ground = this.system.groundBelow(x, z, s.y - 0.35);
+      const gap = s.y - ground;
+      const under = gap > 0.8;
+      this.flakePos[i * 3] = x;
+      this.flakePos[i * 3 + 1] = under ? s.y - P.thickness - Math.random() * 0.3 : s.y + Math.random() * 1.6;
+      this.flakePos[i * 3 + 2] = z;
+      // Fırtına: güçlü, girdaplı yatay savrulma
+      const a = Math.random() * Math.PI * 2;
+      const w = 1 + Math.random() * 2.5;
+      this.flakeVel[i * 3] = Math.cos(a) * w;
+      this.flakeVel[i * 3 + 1] = under ? -(2.5 + Math.random() * 3) : -(0.6 + Math.random() * 1.2);
+      this.flakeVel[i * 3 + 2] = Math.sin(a) * w;
+      this.flakeFloor[i] = under ? ground : s.y - 0.2;
     }
     if (snow.length === 0) this.emitAcc = 0;
     const t = performance.now() / 1000;
     for (let i = 0; i < this.flakeMax; i++) {
       const y = this.flakePos[i * 3 + 1];
       if (y < -1e3) continue;
-      // Hafif salınım: kar tanesi sallanarak düşer
-      this.flakePos[i * 3] += (this.flakeVel[i * 3] + Math.sin(t * 3 + i) * 0.4) * dt;
+      // Girdap: tane sallanarak ve savrularak düşer
+      const sw = 1.6;
+      this.flakePos[i * 3] += (this.flakeVel[i * 3] + Math.sin(t * 4 + i * 1.7) * sw) * dt;
       this.flakePos[i * 3 + 1] = y + this.flakeVel[i * 3 + 1] * dt;
-      this.flakePos[i * 3 + 2] += (this.flakeVel[i * 3 + 2] + Math.cos(t * 2.6 + i) * 0.4) * dt;
+      this.flakePos[i * 3 + 2] += (this.flakeVel[i * 3 + 2] + Math.cos(t * 3.4 + i * 1.3) * sw) * dt;
       if (this.flakePos[i * 3 + 1] < this.flakeFloor[i]) this.flakePos[i * 3 + 1] = -1e4;
     }
     (this.flakes.geometry.attributes.position as THREE.BufferAttribute).needsUpdate = true;
