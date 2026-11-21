@@ -105,6 +105,14 @@ export const GameConfig = {
       flameStream: { cooldown: 20, moveMult: 0.55, maxDuration: 3, tickInterval: 0.06 },
       /** Su sağ tık uzun: kar izi bırakan buz yolu */
       snowRide: { cooldown: 30, moveMult: 1, maxDuration: 0 },
+      /** Toprak sol tık uzun: başının üstünde büyüyen dev kaya, bırakınca fırlar (şarj 1 sn) */
+      boulder: { cooldown: 20, moveMult: 0.5, maxDuration: 1 },
+      /** Toprak sağ tık uzun: nişana doğru sırayla yükselen duvarlar */
+      earthWave: { cooldown: 30, moveMult: 1, maxDuration: 0 },
+      /** Hava sol tık uzun: yönlendirilebilir hortum */
+      tornado: { cooldown: 20, moveMult: 0.5, maxDuration: 4, tickInterval: 1 / 30 },
+      /** Hava sağ tık uzun: iki kat büyük, çarpan rüzgar küresi */
+      bigSphere: { cooldown: 30, moveMult: 1, maxDuration: 0 },
     },
 
     tuning: {
@@ -119,8 +127,10 @@ export const GameConfig = {
       fireBall: { cooldown: 0.6, castTime: 0.15, castMoveMult: 0.8 },
       lightningLine: { cooldown: 3.5, castTime: 0.45, castMoveMult: 0.4 },
       // Hava
-      airShockwave: { cooldown: 3.0, castTime: 0.2, castMoveMult: 0.7 },
-      airLeap: { cooldown: 5.0, castTime: 0.1, castMoveMult: 1.0 },
+      airBall: { cooldown: 0.8, castTime: 0.12, castMoveMult: 0.8 },
+      airSphere: { cooldown: 4.0, castTime: 0.05, castMoveMult: 1.0 },
+      /** E: Şok Dalgası (rakipleri iter, mermileri geri savurur) */
+      airShockwave: { cooldown: 5.0, castTime: 0.2, castMoveMult: 0.7 },
     },
   },
 
@@ -225,6 +235,104 @@ export const GameConfig = {
       lifetime: 2.5,
       /** Yerdeyken kaya karakterin bu kadar önünden, yerden kopar. */
       groundSpawnForward: 0.9,
+      /** Zemine çarpınca orada toprak tepeciği yükselir */
+      bumpOnImpact: true,
+    },
+    /** Kaya zemine çarpınca yükselen tepecik: 5 sn durur, sonra geri iner. Üstünde durulabilir. */
+    bump: {
+      columns: 5,
+      columnWidth: 0.85,
+      spacing: 0.7,
+      height: 0.85,
+      riseTime: 0.15,
+      sinkTime: 0.8,
+      hp: 60,
+      lifetime: 5,
+      maxPerCaster: 6,
+      minDistance: 0,
+      maxDistance: 0,
+    },
+    /** Dev kaya (sol tık uzun basış): yavaş, ağır, büyük patlama + etrafa saçılan kaya parçaları */
+    boulder: {
+      radius: 0.85,
+      speed: 30,
+      gravity: 8,
+      damage: 30,
+      knockback: 12,
+      knockbackUp: 6,
+      wallDamage: 80,
+      lifetime: 3,
+      explosionRadius: 3.6,
+      splashDamage: 14,
+      splashKnockback: 10,
+      splashKnockbackUp: 6,
+      bumpOnImpact: true,
+      /** Patlamada saçılan parça sayısı */
+      fragments: 9,
+      /** Şarj 0'da güç oranı (tam şarjda 1) */
+      minChargePower: 0.6,
+      /** Başının bu kadar üstünde oluşur (m) */
+      spawnHeight: 2.6,
+    },
+    /** Dev kayadan saçılan parça */
+    debris: {
+      radius: 0.2,
+      speed: 15,
+      gravity: 18,
+      damage: 7,
+      knockback: 3,
+      knockbackUp: 2,
+      wallDamage: 5,
+      lifetime: 1.2,
+    },
+    /** Kendi duvarının yanında sol tık: duvar kopup nişana fırlar (kayanın 2 katı hasar) */
+    wallThrow: {
+      /** Duvarın en yakın sütununa bu kadar yakınsan (m) duvarı fırlatırsın */
+      grabRange: 3.5,
+      radius: 0.8,
+      speed: 32,
+      gravity: 7,
+      damage: 40,
+      knockback: 18,
+      knockbackUp: 8,
+      wallDamage: 60,
+      lifetime: 2.5,
+      explosionRadius: 2.4,
+      splashDamage: 10,
+      splashKnockback: 9,
+      splashKnockbackUp: 5,
+      bumpOnImpact: true,
+    },
+    /** Duvar dizisi (sağ tık uzun basış): nişana doğru sırayla yükselen duvarlar, isabet edeni havaya atar */
+    wave: {
+      /** Ardışık duvarlar arası mesafe (m) */
+      step: 2.6,
+      /** Duvarlar arası süre (s) */
+      interval: 0.5,
+      minSteps: 2,
+      maxSteps: 6,
+      damage: 12,
+      /** Havaya fırlatma hızı (m/s) */
+      launchUp: 13,
+      /** Havadayken yerçekimi çarpanı (süzülür) */
+      floatGravityMult: 0.5,
+      /** Yere düşünce sersemleme (s) */
+      downTime: 1,
+      /** Duvarın önü/arkası isabet payı (m) */
+      hitDepth: 1.1,
+      wall: {
+        columns: 3,
+        columnWidth: 0.95,
+        spacing: 0.88,
+        height: 2.2,
+        riseTime: 0.12,
+        sinkTime: 0.35,
+        hp: 80,
+        lifetime: 1.6,
+        maxPerCaster: 8,
+        minDistance: 0,
+        maxDistance: 0,
+      },
     },
     wall: {
       /** Duvar = yan yana yükselen bazalt sütunlar */
@@ -347,11 +455,14 @@ export const GameConfig = {
       endPlatform: 2.4,
       maxSegments: 220,
       /** Kar izi (uzun basış) */
-      snowRadius: 1.4,
+      /** Kar alanının yarıçapı (yağış görseli ve hasar/yavaşlatma) */
+      snowRadius: 2.1,
       snowHeight: 1.8,
       snowTick: 0.5,
       snowDamage: 2,
       snowChill: 0.5,
+      /** Kar izi plakası başına saniyede yağan kar tanesi */
+      snowfallRate: 110,
     },
   },
 
@@ -367,6 +478,60 @@ export const GameConfig = {
       deflectSpeedMult: 1.15,
       /** Bu mesafeden yakındakiler koni dışında da itilir */
       pointBlank: 1.3,
+    },
+    /** Hava topu (sol tık): çarptığı yerde küçük fırtına; az hasar, çarpma noktasından güçlü savurma */
+    ball: {
+      radius: 0.32,
+      speed: 38,
+      gravity: 0.5,
+      damage: 4,
+      knockback: 22,
+      knockbackUp: 9,
+      wallDamage: 6,
+      lifetime: 1.6,
+      explosionRadius: 3.2,
+      splashDamage: 3,
+      splashKnockback: 22,
+      splashKnockbackUp: 9,
+      /** Kendi fırtınan seni de savurur (hasarsız) */
+      selfKnockbackMult: 0.7,
+      selfLaunchUp: 9,
+    },
+    /** Hortum (sol tık uzun basış): nişanı izleyen, içindekileri savuran girdap */
+    tornado: {
+      speed: 9,
+      radius: 1.9,
+      height: 4,
+      damage: 3,
+      /** Aynı rakibe vurma aralığı (s) */
+      hitInterval: 0.35,
+      /** Dışa itme, girdap (teğetsel) ve kaldırma hızları (m/s) */
+      push: 9,
+      swirl: 5,
+      lift: 6,
+      spawnDistance: 2.5,
+      maxLifetime: 6,
+      /** Bırakınca sönme süresi (s) */
+      fadeTime: 0.5,
+    },
+    /** Rüzgar küresi (sağ tık): her yöne hızlı, kısa uçuş; hep hareket eder */
+    sphere: {
+      duration: 1.5,
+      /** Dev küre (uzun basış) uçuş süresi (s) */
+      bigDuration: 3,
+      /** Koşu hızına göre çarpan (1.5 × 1.25) */
+      speedMult: 1.875,
+      /** Nişanın yukarı / aşağı açısı sınırı (derece) */
+      maxPitchDeg: 60,
+      /** Kürenin yarıçapı (görsel ve çarpma) */
+      radius: 1.1,
+      /** Uzun basış: küre bu kat büyük ve çarpar */
+      bigScale: 2,
+      ramDamage: 10,
+      ramKnockback: 16,
+      ramKnockbackUp: 6,
+      /** Bu güçte bir itme uçuşu bozar */
+      knockOffImpulse: 6,
     },
     leap: {
       upVelocity: 15,

@@ -16,6 +16,8 @@ import { EffectsView } from './render/EffectsView';
 import { ProjectileView } from './render/ProjectileView';
 import { WallView } from './render/WallView';
 import { IcePathView } from './render/IcePathView';
+import { AirView } from './render/AirView';
+import { DashView } from './render/DashView';
 import { TrailView } from './render/TrailView';
 import { Hud } from './ui/Hud';
 import { AbilityBar } from './ui/AbilityBar';
@@ -63,8 +65,10 @@ void loadCharacterAsset(GameConfig.player.height).then((asset) => {
 const effects = new EffectsView(gfx.scene, bus, isTouch ? GameConfig.render.mobileEffectScale : 1);
 const projectileView = new ProjectileView(gfx.scene, session.projectiles);
 const icePathView = new IcePathView(gfx.scene, session.icePaths);
+const airView = new AirView(gfx.scene, session.air);
 const wallView = new WallView(gfx.scene, session.walls, (pts, el) => el === 'earth' && effects.earthEruption(pts));
 const trailView = new TrailView(gfx.scene);
+const dashView = new DashView(gfx.scene, isTouch ? GameConfig.render.mobileEffectScale : 1);
 const crateView = new CrateView(gfx.scene, session.crates);
 const feel = new GameFeel(
   app,
@@ -219,7 +223,7 @@ function drawFighter(view: PlayerView, c: Combatant, alpha: number, now: number,
   tmpPos.lerpVectors(ctl.prevPosition, ctl.position, alpha);
   const ratio = ctl.prevHeightRatio + (ctl.heightRatio - ctl.prevHeightRatio) * alpha;
   const flash = c.hitFlash > 0;
-  view.update(tmpPos, lerpAngle(ctl.prevFacingYaw, ctl.facingYaw, alpha), ratio, ctl.dashing, 10, elementColor, castProgress, motionOf(ctl), frameDt, flash, chillOf(c), c.burning);
+  view.update(tmpPos, lerpAngle(ctl.prevFacingYaw, ctl.facingYaw, alpha), ratio, ctl.dashing, 10, elementColor, castProgress, motionOf(ctl), frameDt, flash, chillOf(c), c.burning, c.downedPose);
 }
 
 /** El parlaması / hazırlık pozu: normal hazırlık ya da süren uzun basış (şarj dolarken artar). */
@@ -291,6 +295,7 @@ function frame(now: number): void {
     player.hitFlash > 0,
     chillOf(player),
     player.burning,
+    player.downedPose,
   );
 
   const inMatch = session.running && session.mode === 'match';
@@ -309,10 +314,20 @@ function frame(now: number): void {
   effects.update(dt);
   projectileView.update(dt, alpha);
   wallView.update();
-  icePathView.update();
+  icePathView.update(dt);
+  airView.update(dt, alpha, session.combatants);
   crateView.update();
   decor.update(dt);
   trailView.update(dt, session.combatants);
+  dashView.update(
+    dt,
+    session.running
+      ? [
+          { c: player, view: playerView, element: abilities.activeElement },
+          ...(session.mode === 'match' ? [{ c: bot, view: botView, element: session.botAbilities.activeElement }] : []),
+        ]
+      : [],
+  );
   overlay.update(dt, gfx.camera, session.combatants, alpha, window.innerWidth, window.innerHeight);
 
   const dashCd = playerCtl.dashCooldown / GameConfig.dash.cooldown;

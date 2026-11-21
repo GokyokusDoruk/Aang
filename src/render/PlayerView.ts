@@ -35,6 +35,8 @@ const damp = (k: number, dt: number) => 1 - Math.exp(-k * dt);
  */
 export class PlayerView {
   readonly root = new THREE.Group();
+  /** Yere düşme pozu için ayak hizasında devrilen ara grup */
+  private readonly tilt = new THREE.Group();
   private readonly body = new THREE.Group(); // kalça yüksekliğinde, eğilme burada
   private readonly torso = new THREE.Group();
   private readonly head = new THREE.Group();
@@ -78,7 +80,8 @@ export class PlayerView {
 
     // Gövde: kalça → göğüs
     this.body.position.y = 0.92 * s;
-    this.root.add(this.body);
+    this.root.add(this.tilt);
+    this.tilt.add(this.body);
 
     const pelvis = new THREE.Mesh(new THREE.BoxGeometry(0.36 * s, 0.16 * s, 0.22 * s), pants);
     pelvis.castShadow = true;
@@ -162,6 +165,28 @@ export class PlayerView {
     scene.add(this.root);
   }
 
+  /** El ve ayak kemikleri (model varsa): dash görselleri için */
+  private limbBones: THREE.Object3D[] = [];
+
+  /**
+   * Dünya koordinatında sol el, sağ el, sol ayak, sağ ayak.
+   * Model yoksa karakterin köküne göre yaklaşık noktalar.
+   */
+  limbPoints(out: THREE.Vector3[]): void {
+    if (this.limbBones.length === 4) {
+      for (let i = 0; i < 4; i++) this.limbBones[i].getWorldPosition(out[i]);
+      return;
+    }
+    const s = GameConfig.player.height / 1.8;
+    const local = [
+      [-0.38, 1.0, 0.1],
+      [0.38, 1.0, 0.1],
+      [-0.13, 0.08, 0],
+      [0.13, 0.08, 0],
+    ];
+    for (let i = 0; i < 4; i++) out[i].set(local[i][0] * s, local[i][1] * s, local[i][2] * s).applyMatrix4(this.root.matrixWorld);
+  }
+
   /** Bir yetenek çıktığında çağrılır: kısa, sert bir itme/yumruk hamlesi. */
   triggerCast(): void {
     this.castPulse = 1;
@@ -176,7 +201,9 @@ export class PlayerView {
     if (this.model) return;
     const inst = new CharacterInstance(asset, this.clothMat.color.getHex(), this.accentMat);
     this.model = inst;
-    this.root.add(inst.root);
+    this.tilt.add(inst.root);
+    const bones = ['hand_l', 'hand_r', 'foot_l', 'foot_r'].map((n) => inst.root.getObjectByName(n));
+    if (bones.every(Boolean)) this.limbBones = bones as THREE.Object3D[];
     this.body.visible = false;
     for (const m of inst.materials) this.mats.push(m);
     inst.root.updateMatrixWorld(true);
@@ -242,7 +269,12 @@ export class PlayerView {
     chill = 0,
     /** Yanıyor mu */
     burning = false,
+    /** 0 = ayakta, 1 = sırtüstü yerde */
+    downed = 0,
   ): void {
+    // Sırtüstü devril (ayak ekseni etrafında), kalkarken geri dön
+    this.tilt.rotation.x = (Math.PI / 2) * downed;
+    this.tilt.position.y = 0.22 * downed;
     if (chill >= 1) dt = 0; // donmuşken animasyon durur
     this.root.position.copy(position);
     this.root.rotation.y = yaw;

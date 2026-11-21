@@ -131,7 +131,7 @@ export class BotBrain {
 
     // --- Yetenekler
     this.decideAbilities(dist, los);
-    if (me.frozenTimer > 0) this.clearInput(); // donmuşken ne hareket ne yetenek
+    if (me.incapacitated) this.clearInput(); // donmuş / havada / yerde sersemken ne hareket ne yetenek
     this.abilities.update(dt, this.intent);
     ctl.moveSpeedMultiplier = this.abilities.moveMultiplier * this.difficulty.speedMult;
     ctl.fixedUpdate(dt, this.input, yaw);
@@ -247,7 +247,12 @@ export class BotBrain {
     // Ana saldırı (fireGate: güce göre ateşler arası ek bekleme)
     const ready = A.canUse('primary') && this.fireGate <= 0;
     if (el === 'air') {
-      if (dist < 6.5) it.primaryPressed = ready;
+      if (dist < 20) it.primaryPressed = ready;
+      // Yakında: Şok Dalgası (iter, mermileri geri savurur)
+      if (dist < 5.5 && A.canUse('special') && Math.random() < 0.04) {
+        it.specialPressed = true;
+        it.primaryPressed = false;
+      }
     } else if (dist < 30) {
       it.primaryPressed = ready;
       it.primaryHeld = el === 'water' && ready;

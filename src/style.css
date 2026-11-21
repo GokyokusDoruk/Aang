@@ -520,6 +520,12 @@ body {
   color: #ffb36b;
   text-shadow: 0 0 6px #ff5a1a;
 }
+.player-hp .chill.daze {
+  background: rgba(70, 55, 30, 0.8);
+  border-color: #e0b86a;
+  color: #ffe2a3;
+  text-shadow: 0 0 6px #b08030;
+}
 .player-hp .chill.frozen {
   color: #e8f8ff;
   animation: pulse 0.25s ease-in-out infinite alternate;

@@ -8,6 +8,7 @@ import { ProjectileSystem } from '../combat/ProjectileSystem';
 import { WallSystem } from '../combat/WallSystem';
 import { CrateSystem } from '../combat/CrateSystem';
 import { IcePathSystem } from '../combat/IcePathSystem';
+import { AirSystem } from '../combat/AirSystem';
 import { Vector3 } from 'three';
 import { AbilitySystem, type AbilityIntent } from '../abilities/AbilitySystem';
 import { createDefaultRegistry, type AbilityRegistry } from '../abilities/AbilityRegistry';
@@ -39,6 +40,7 @@ export class GameSession {
   readonly crates: CrateSystem;
   readonly projectiles: ProjectileSystem;
   readonly icePaths: IcePathSystem;
+  readonly air: AirSystem;
   readonly services: GameServices;
   readonly registry: AbilityRegistry;
 
@@ -87,11 +89,13 @@ export class GameSession {
     this.walls.extraDamage = (box, amount, point) => this.crates.damageByBox(box, amount, point);
     this.projectiles = new ProjectileSystem(this.world, bus, this.combatants, this.walls);
     this.icePaths = new IcePathSystem(this.world, bus, this.combatants);
-    this.services = { world: this.world, bus, combatants: this.combatants, projectiles: this.projectiles, walls: this.walls };
+    this.air = new AirSystem(this.world, bus, this.combatants);
+    this.services = { world: this.world, bus, combatants: this.combatants, projectiles: this.projectiles, walls: this.walls, air: this.air };
     this.registry = createDefaultRegistry();
 
     const [pSpawn, bSpawn] = layout.spawnPoints;
     this.playerCtl = new PlayerController(this.world, pSpawn);
+    this.playerCtl.steerByCamera = true;
     this.player = new Combatant('player', this.playerCtl, bus, { maxHp: GameConfig.combat.playerMaxHp, respawnDelay: null }, pSpawn);
     this.playerCaster = new PlayerCaster('player', this.playerCtl, camera);
     this.playerAbilities = new AbilitySystem(this.playerCaster, this.registry, this.services);
@@ -159,6 +163,7 @@ export class GameSession {
   private resetRound(): void {
     this.walls.clear();
     this.icePaths.clear();
+    this.air.clear();
     this.crates.reset();
     this.projectiles.clear();
     this.player.respawn();
@@ -188,7 +193,7 @@ export class GameSession {
     this.crates.update(dt);
 
     if (this.player.alive) {
-      const inp = fighting && this.player.frozenTimer <= 0 ? s : FROZEN;
+      const inp = fighting && !this.player.incapacitated ? s : FROZEN;
       this.playerAbilities.update(dt, this.toIntent(inp));
       this.playerCtl.moveSpeedMultiplier = this.playerAbilities.moveMultiplier;
       this.playerCaster.getAim(this.aimO, this.aimD, this.aimT);
@@ -203,6 +208,7 @@ export class GameSession {
 
     for (const c of this.combatants) c.fixedUpdate(dt, this.playerCtl.position);
     this.icePaths.update(dt);
+    this.air.update(dt);
     this.projectiles.update(dt);
     if (this.mode === 'match') this.round.update(dt);
   }

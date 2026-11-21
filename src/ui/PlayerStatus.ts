@@ -83,13 +83,15 @@ export class PlayerStatus {
     this.bar.classList.toggle('shield', c.spawnProtected);
     const max = GameConfig.water.chill.maxStacks;
     const stacks = Math.floor(c.chillStacks);
-    const chillKey = `${c.frozenTimer > 0 ? 'frozen' : stacks}|${c.burnTicks}`;
+    const dazed = c.launched || c.downedTimer > 0;
+    const chillKey = `${c.frozenTimer > 0 ? 'frozen' : stacks}|${c.burnTicks}|${dazed}`;
     if (chillKey !== this.shownChill) {
       this.shownChill = chillKey;
       const ice = c.frozenTimer > 0 ? '❄ DONDUN' : stacks > 0 ? `❄ ${'●'.repeat(stacks)}${'○'.repeat(max - stacks)}` : '';
       const fire = c.burnTicks > 0 ? `🔥 YANIYORSUN ${c.burnTicks}` : '';
-      this.chill.className = `chill${c.frozenTimer > 0 ? ' frozen' : ice ? ' on' : fire ? ' on burn' : ''}`;
-      this.chill.textContent = [ice, fire].filter(Boolean).join('  ');
+      const daze = dazed ? '💫 SERSEMLEDİN' : '';
+      this.chill.className = `chill${c.frozenTimer > 0 ? ' frozen' : ice ? ' on' : fire ? ' on burn' : daze ? ' on daze' : ''}`;
+      this.chill.textContent = [ice, fire, daze].filter(Boolean).join('  ');
     }
     const hp = Math.ceil(c.hp);
     if (hp !== this.shownHp) {

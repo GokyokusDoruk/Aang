@@ -59,6 +59,12 @@ export class IcePathSystem {
     this.snowTimers.clear();
   }
 
+  /** Noktanın altındaki zemin yüksekliği (yoksa 15 m aşağısı) — kar yağışı görseli için */
+  groundBelow(x: number, z: number, fromY: number): number {
+    const g = this.world.groundHeight(x, z, 0.05, fromY);
+    return Number.isFinite(g) ? g : fromY - 15;
+  }
+
   update(dt: number): void {
     const P = GameConfig.water.icePath;
     for (const c of this.combatants) this.track(c);
@@ -165,7 +171,9 @@ export class IcePathSystem {
         const dz = c.position.z - s.z;
         if (dx * dx + dz * dz > P.snowRadius * P.snowRadius) continue;
         const dy = c.position.y - s.y;
-        if (dy < -0.8 || dy > P.snowHeight) continue;
+        // Üstünde / yanında ya da altındaki kar fırtınasının içinde (yere kadar)
+        if (dy > P.snowHeight) continue;
+        if (dy < -0.8 && c.position.y < this.groundBelow(s.x, s.z, s.y - 0.35) - 0.5) continue;
         this.snowTimers.set(c.id, P.snowTick);
         c.takeDamage(P.snowDamage, null, s.ownerId, c.center(tmp), { chill: P.snowChill, dot: true });
         this.bus.emit('fx:burst', { point: new Vector3(c.position.x, c.position.y + 0.2, c.position.z), element: 'water', size: 0.35 });

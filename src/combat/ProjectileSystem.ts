@@ -5,6 +5,7 @@ import type { CollisionWorld } from '../physics/CollisionWorld';
 import type { ElementId } from '../abilities/elements';
 import type { Combatant } from './Combatant';
 import type { WallSystem } from './WallSystem';
+import { GameConfig } from '../config/gameConfig';
 
 /** Mermi ayarları (gameConfig'teki nesneler doğrudan verilir). */
 export interface ProjectileSpec {
@@ -31,6 +32,10 @@ export interface ProjectileSpec {
   selfDamageMult?: number;
   /** İsabet / patlamada tutuşturma ihtimali (ateş) */
   burnChance?: number;
+  /** Zemine çarpınca toprak tepeciği yükselt */
+  bumpOnImpact?: boolean;
+  /** Patlamada etrafa saçılan parça sayısı (gameConfig.earth.debris) */
+  fragments?: number;
 }
 
 function rollBurn(s: ProjectileSpec): boolean {
@@ -131,6 +136,21 @@ export class ProjectileSystem {
       }
     }
     this.bus.emit('fx:explosion', { point: at.clone(), radius, element: p.element });
+    this.scatter(p, at);
+  }
+
+  /** Dev kaya parçaları: patlama noktasından yukarı ve dışarı saçılır */
+  private scatter(p: Projectile, at: Vector3): void {
+    const n = p.spec.fragments ?? 0;
+    if (n <= 0) return;
+    const from = at.clone();
+    from.y += 0.5;
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2 + Math.random() * 0.5;
+      const up = 0.35 + Math.random() * 0.45;
+      dir.set(Math.sin(a), up, Math.cos(a)).normalize();
+      this.spawn('rock', 'earth', GameConfig.earth.debris, p.ownerId, from, dir);
+    }
   }
 
   /**
@@ -206,7 +226,10 @@ export class ProjectileSystem {
         this.list.splice(i, 1);
       } else if (worldHit) {
         p.position.copy(worldHit.point).addScaledVector(dir, -r * 0.5);
+        const wallHit = this.walls.wallOfBox(worldHit.box);
         this.walls.damageByBox(worldHit.box, p.spec.wallDamage, worldHit.point);
+        // Toprak: düz zemine (duvar / tepecik değil) çarpınca tepecik yükselir
+        if (p.spec.bumpOnImpact && worldHit.normal.y > 0.6 && !wallHit) this.walls.placeBump(p.ownerId, worldHit.point);
         this.bus.emit('projectile:impact', {
           kind: p.kind,
           element: p.element,

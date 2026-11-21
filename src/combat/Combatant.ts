@@ -54,6 +54,11 @@ export class Combatant {
   chillStacks = 0;
   /** >0 iken donmuş: hareket edemez. */
   frozenTimer = 0;
+  /** Havaya fırlatıldı (duvar dizisi): kontrol yok, yere düşünce sersemler */
+  launched = false;
+  /** >0 iken yerde sersem: hareket / yetenek yok */
+  downedTimer = 0;
+  private launchAir = 0;
   /** Kalan yanma hasarı sayısı (0 = yanmıyor) */
   burnTicks = 0;
   private burnTimer = 0;
@@ -157,6 +162,37 @@ export class Combatant {
     return this.burnTicks > 0;
   }
 
+  /** Hareket ve yetenek kilitli mi (donmuş, havaya fırlatılmış ya da yerde sersem) */
+  get incapacitated(): boolean {
+    return this.frozenTimer > 0 || this.launched || this.downedTimer > 0;
+  }
+
+  /** Görsel: 0 = ayakta, 1 = yerde yatıyor (düşüş hızlı, kalkış son 0.35 sn) */
+  get downedPose(): number {
+    if (this.downedTimer <= 0) return 0;
+    const D = GameConfig.earth.wave.downTime;
+    const fall = Math.min(1, (D - this.downedTimer) / 0.15);
+    const up = Math.min(1, this.downedTimer / 0.35);
+    return Math.min(fall, up);
+  }
+
+  /** Yerden fırlayan duvar: hasar + havaya at; havada süzülür, yere düşünce sersemler. */
+  knockUp(amount: number, up: number, sourceId: string, point: Vector3): boolean {
+    if (this.launched || this.downedTimer > 0) return false;
+    const W = GameConfig.earth.wave;
+    this.tmp.set(0, up, 0);
+    if (!this.takeDamage(amount, this.tmp, sourceId, point)) return false;
+    if (!this.alive) return true;
+    this.controller.velocity.x *= 0.2;
+    this.controller.velocity.z *= 0.2;
+    this.controller.velocity.y = up;
+    this.controller.gravityMult = W.floatGravityMult;
+    this.controller.glideTimer = 0;
+    this.launched = true;
+    this.launchAir = 0;
+    return true;
+  }
+
   private dead(): boolean {
     return this.hp <= 0;
   }
@@ -182,6 +218,9 @@ export class Combatant {
   clearStatus(): void {
     this.burnTicks = 0;
     this.burnTimer = 0;
+    this.launched = false;
+    this.downedTimer = 0;
+    this.controller.gravityMult = 1;
     this.clearChill();
   }
 
@@ -232,6 +271,25 @@ export class Combatant {
     } else if (this.chillStacks > 0) {
       this.chillTimer -= dt;
       if (this.chillTimer <= 0) this.clearChill();
+    }
+    if (this.launched && this.alive) {
+      const ctl = this.controller;
+      this.launchAir += dt;
+      ctl.knockbackTimer = Math.max(ctl.knockbackTimer, 0.1);
+      if (this.launchAir > 0.2 && ctl.grounded && ctl.velocity.y <= 0) {
+        const D = GameConfig.earth.wave.downTime;
+        this.launched = false;
+        ctl.gravityMult = 1;
+        this.downedTimer = D;
+        ctl.velocity.x = 0;
+        ctl.velocity.z = 0;
+        this.bus.emit('combat:downed', { targetId: this.id, duration: D, point: ctl.position.clone() });
+      }
+    } else if (this.downedTimer > 0) {
+      this.downedTimer -= dt;
+      this.controller.knockbackTimer = Math.max(this.controller.knockbackTimer, Math.max(0, this.downedTimer));
+      this.controller.velocity.x = 0;
+      this.controller.velocity.z = 0;
     }
     if (this.burnTicks > 0 && this.alive) {
       this.burnTimer -= dt;
