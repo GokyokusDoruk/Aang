@@ -7,6 +7,8 @@ import { Combatant } from '../combat/Combatant';
 import { ProjectileSystem } from '../combat/ProjectileSystem';
 import { WallSystem } from '../combat/WallSystem';
 import { CrateSystem } from '../combat/CrateSystem';
+import { IcePathSystem } from '../combat/IcePathSystem';
+import { Vector3 } from 'three';
 import { AbilitySystem, type AbilityIntent } from '../abilities/AbilitySystem';
 import { createDefaultRegistry, type AbilityRegistry } from '../abilities/AbilityRegistry';
 import { ELEMENT_ORDER, type ElementId } from '../abilities/elements';
@@ -36,6 +38,7 @@ export class GameSession {
   readonly walls: WallSystem;
   readonly crates: CrateSystem;
   readonly projectiles: ProjectileSystem;
+  readonly icePaths: IcePathSystem;
   readonly services: GameServices;
   readonly registry: AbilityRegistry;
 
@@ -67,6 +70,11 @@ export class GameSession {
     interrupt: false,
   };
 
+  private readonly playerCaster: PlayerCaster;
+  private readonly aimO = new Vector3();
+  private readonly aimD = new Vector3();
+  private readonly aimT = new Vector3();
+
   /** Oyuncunun kamera rig'i (nişan noktası yetenekler tarafından kullanılır). */
   readonly camera: ThirdPersonCamera;
 
@@ -78,13 +86,15 @@ export class GameSession {
     this.crates = new CrateSystem(this.world, bus, layout.crates);
     this.walls.extraDamage = (box, amount, point) => this.crates.damageByBox(box, amount, point);
     this.projectiles = new ProjectileSystem(this.world, bus, this.combatants, this.walls);
+    this.icePaths = new IcePathSystem(this.world, bus, this.combatants);
     this.services = { world: this.world, bus, combatants: this.combatants, projectiles: this.projectiles, walls: this.walls };
     this.registry = createDefaultRegistry();
 
     const [pSpawn, bSpawn] = layout.spawnPoints;
     this.playerCtl = new PlayerController(this.world, pSpawn);
     this.player = new Combatant('player', this.playerCtl, bus, { maxHp: GameConfig.combat.playerMaxHp, respawnDelay: null }, pSpawn);
-    this.playerAbilities = new AbilitySystem(new PlayerCaster('player', this.playerCtl, camera), this.registry, this.services);
+    this.playerCaster = new PlayerCaster('player', this.playerCtl, camera);
+    this.playerAbilities = new AbilitySystem(this.playerCaster, this.registry, this.services);
 
     this.bot = new Combatant('bot', new PlayerController(this.world, bSpawn), bus, { maxHp: GameConfig.combat.playerMaxHp, respawnDelay: null }, bSpawn);
     const botCaster = new BotCaster('bot', this.bot, () => this.botBrain.difficulty);
@@ -148,6 +158,7 @@ export class GameSession {
   /** Raund başı: alanı temizle, dövüşçüleri doğuş noktalarına koy. */
   private resetRound(): void {
     this.walls.clear();
+    this.icePaths.clear();
     this.crates.reset();
     this.projectiles.clear();
     this.player.respawn();
@@ -180,6 +191,8 @@ export class GameSession {
       const inp = fighting && this.player.frozenTimer <= 0 ? s : FROZEN;
       this.playerAbilities.update(dt, this.toIntent(inp));
       this.playerCtl.moveSpeedMultiplier = this.playerAbilities.moveMultiplier;
+      this.playerCaster.getAim(this.aimO, this.aimD, this.aimT);
+      this.playerCtl.aimPitch = Math.asin(Math.max(-1, Math.min(1, this.aimD.y)));
       this.playerCtl.fixedUpdate(dt, inp, cameraYaw);
     } else {
       this.playerAbilities.reset();
@@ -189,6 +202,7 @@ export class GameSession {
     if (this.mode === 'match') this.botBrain.fixedUpdate(dt, fighting);
 
     for (const c of this.combatants) c.fixedUpdate(dt, this.playerCtl.position);
+    this.icePaths.update(dt);
     this.projectiles.update(dt);
     if (this.mode === 'match') this.round.update(dt);
   }

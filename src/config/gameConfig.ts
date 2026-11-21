@@ -103,6 +103,8 @@ export const GameConfig = {
       lightningCharged: { cooldown: 30, moveMult: 0.4, maxDuration: 5 },
       /** Ateş sol tık uzun: yönlendirilebilir alev püskürtme */
       flameStream: { cooldown: 20, moveMult: 0.55, maxDuration: 3, tickInterval: 0.06 },
+      /** Su sağ tık uzun: kar izi bırakan buz yolu */
+      snowRide: { cooldown: 30, moveMult: 1, maxDuration: 0 },
     },
 
     tuning: {
@@ -315,6 +317,41 @@ export const GameConfig = {
       turnRate: 3.0,
       /** Havada düşüş yerçekimi çarpanı (süzülme) */
       airGravityMult: 0.35,
+      /**
+       * Buz yolu: kayarken yükseklik nişanı izler (yukarı bak = rampa gibi tırman).
+       * Bu açının altındaki nişan düz sayılır (yükseklik korunur).
+       */
+      pitchDeadzoneDeg: 6,
+      maxPitchDeg: 40,
+      minPitchDeg: -35,
+      /** Dikey hız sınırları (m/s) */
+      maxClimb: 7.5,
+      maxDescend: 10,
+      /** Zıplama basılıyken en az bu hızla yüksel (m/s) */
+      jumpRiseSpeed: 6,
+      /** Bu güçte (m/s) bir itme yersen buz yolundan düşersin */
+      knockOffImpulse: 4,
+    },
+    /** Kayarken ayağın altında oluşan, sonra eriyen buz yolu */
+    icePath: {
+      /** İki plaka arası mesafe (m) */
+      spacing: 0.6,
+      width: 1.5,
+      thickness: 0.28,
+      /** Plakanın ömrü (s); son meltTime saniyesinde erir */
+      lifetime: 5,
+      meltTime: 1,
+      /** Kuran oyuncu geçip gitsin diye çarpışma bu kadar sonra devreye girer (s) */
+      armDelay: 0.3,
+      /** Kayma havada biterse altında oluşan platformun kenarı (m) */
+      endPlatform: 2.4,
+      maxSegments: 220,
+      /** Kar izi (uzun basış) */
+      snowRadius: 1.4,
+      snowHeight: 1.8,
+      snowTick: 0.5,
+      snowDamage: 2,
+      snowChill: 0.5,
     },
   },
 
