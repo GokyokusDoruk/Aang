@@ -310,7 +310,7 @@ function frame(now: number): void {
   effects.update(dt);
   projectileView.update(dt, alpha);
   wallView.update();
-  icePathView.update();
+  icePathView.update(dt);
   crateView.update();
   decor.update(dt);
   trailView.update(dt, session.combatants);

@@ -454,6 +454,8 @@ export const GameConfig = {
       snowTick: 0.5,
       snowDamage: 2,
       snowChill: 0.5,
+      /** Kar izi plakası başına saniyede yağan kar tanesi */
+      snowfallRate: 14,
     },
   },
 
