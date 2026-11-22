@@ -30,7 +30,7 @@ npm run build      # typecheck + production build
 | Yeniden doğ | R | ↺ |
 | Element seç | 1-4 · Q · fare tekerleği | Üstteki element çipleri |
 | Ana / ikincil yetenek | Sol tık (basılı tut = tekrar) / Sağ tık | Büyük / küçük yetenek butonu (aktif yeteneğin ikonu ve adı) |
-| 3. yetenek (Su: Buz Duvarı, Hava: Şok Dalgası) | E | Yetenek butonlarının solundaki 3. buton |
+| 3. yetenek (Su: Şifa Suyu / basılı: Buz Duvarı, Hava: Şok Dalgası) | E | Yetenek butonlarının solundaki 3. buton |
 | Ses aç/kapa | M | Menüdeki ses düğmesi |
 
 ## Yetenek sistemi
@@ -61,7 +61,8 @@ npm run build      # typecheck + production build
 ## Su / Buz ve Hava (Task 4)
 
 - **Buz Kıymığı** (Su, sol tık): hızlı, hafif mermi; basılı tut = seri atış. Her isabet 1 **üşüme** yığını ekler (yığın başına %15 yavaşlama, 2.2 sn sonra söner); 3 yığında hedef 0.7 sn **donar** (hareket ve yetenek yok). Üşüyen karakter maviye döner; oyuncunun HP barının yanında ❄ ●●○ göstergesi çıkar.
-- **Buz Duvarı** (Su, E): hemen önünde anında (0.1 sn) yükselen buz siperi. Toprak duvardan hızlı ama kırılgan (90 HP, 5 sn); aynı anda 1 tane. Kırılınca parçaları 3.2 m içindeki rakiplere 1 üşüme yığını ekler. Ayar: `gameConfig.water.iceWall`.
+- **Şifa Suyu** (Su, E, 14 sn): etrafında su döner, 3 sn'de 30 can yeniler (yeşil sayılar). Ayar: `gameConfig.water.heal`.
+- **Buz Duvarı** (Su, E basılı tut, 7 sn): hemen önünde anında (0.1 sn) yükselen buz siperi. Toprak duvardan hızlı ama kırılgan (90 HP, 5 sn); aynı anda 1 tane. Kırılınca parçaları 3.2 m içindeki rakiplere 1 üşüme yığını ekler. Ayar: `gameConfig.water.iceWall`.
 - **Buz Yolu** (Su, sağ tık): ayağının altında buzdan yol yaratıp üstünde kayarsın. Yukarı bakınca yol rampa gibi yükselir, aşağı bakınca alçalır, düz bakınca yükseklik korunur; Space basılıyken tırmanır. Plakalar 5 sn üstünde durulabilir (rakipler de), sonra erir. Kayma havada biterse altında bir platform oluşur; eriyince düşersin. Güçlü bir itme seni yoldan düşürür.
 - **Kar Yolu** (Su, sağ tık basılı tut, 30 sn): aynı yol, ama kar izi bırakır; üstüne/yanına gelen rakipler yarım saniyede bir 2 hasar alır ve üşür.
 - **Kaya Fırlatma** (Toprak, sol tık): zemine çarptığı yerde 5 sn duran, sonra geri inen toprak tepeciği yükseltir (rakibe çarparsa yükseltmez). Kendi toprak duvarına 3.5 m yakınken sol tık: duvar kopar ve nişana fırlar (kayanın 2 katı hasar). Ayar: `gameConfig.earth.bump`, `earth.wallThrow`.

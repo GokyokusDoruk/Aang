@@ -32,6 +32,13 @@ export class WorldOverlay {
       this.root.appendChild(el);
       this.texts.push({ el, pos: e.point.clone().add(new THREE.Vector3((Math.random() - 0.5) * 0.4, 0.3, 0)), age: 0 });
     });
+    bus.on('combat:heal', (e) => {
+      const el = document.createElement('div');
+      el.className = 'dmg heal';
+      el.textContent = `+${Math.round(e.amount)}`;
+      this.root.appendChild(el);
+      this.texts.push({ el, pos: e.point.clone().add(new THREE.Vector3((Math.random() - 0.5) * 0.4, 0.5, 0)), age: 0 });
+    });
     bus.on('combat:ringout', (e) => {
       // Basit bildirim: arena dışı (Task 5'te raund mantığına bağlanacak)
       const el = document.createElement('div');

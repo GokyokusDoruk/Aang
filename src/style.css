@@ -654,6 +654,11 @@ body {
 .dmg.mine {
   color: #ffd166;
 }
+.dmg.heal {
+  color: #5dff9a;
+  font-size: 15px;
+  text-shadow: 0 0 6px #0b7a3a, 0 1px 3px rgba(0, 0, 0, 0.9);
+}
 .dmg.burn {
   color: #ff9a4a;
   font-size: 13px;

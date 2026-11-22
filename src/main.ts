@@ -18,6 +18,7 @@ import { WallView } from './render/WallView';
 import { IcePathView } from './render/IcePathView';
 import { AirView } from './render/AirView';
 import { DashView } from './render/DashView';
+import { HealView } from './render/HealView';
 import { TrailView } from './render/TrailView';
 import { Hud } from './ui/Hud';
 import { AbilityBar } from './ui/AbilityBar';
@@ -68,6 +69,7 @@ const icePathView = new IcePathView(gfx.scene, session.icePaths);
 const airView = new AirView(gfx.scene, session.air);
 const wallView = new WallView(gfx.scene, session.walls, (pts, el) => el === 'earth' && effects.earthEruption(pts));
 const trailView = new TrailView(gfx.scene);
+const healView = new HealView(gfx.scene);
 const dashView = new DashView(gfx.scene, isTouch ? GameConfig.render.mobileEffectScale : 1);
 const crateView = new CrateView(gfx.scene, session.crates);
 const feel = new GameFeel(
@@ -319,6 +321,7 @@ function frame(now: number): void {
   crateView.update();
   decor.update(dt);
   trailView.update(dt, session.combatants);
+  healView.update(dt, alpha, session.combatants);
   dashView.update(
     dt,
     session.running

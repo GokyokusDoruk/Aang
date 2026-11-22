@@ -251,6 +251,11 @@ export class SoundSystem {
         this.tone(o, { type: 'triangle', f0: 2850, f1: 3600, dur: 0.3, gain: 0.12, delay: 0.05 });
         this.noiseHit(o, { type: 'highpass', f0: 5000, f1: 3000, dur: 0.4, gain: 0.25 });
         return;
+      case 'waterHeal':
+        this.tone(o, { type: 'sine', f0: 520, f1: 780, dur: 0.5, gain: 0.25, attack: 0.05 });
+        this.tone(o, { type: 'sine', f0: 780, f1: 1040, dur: 0.45, gain: 0.15, delay: 0.12, attack: 0.05 });
+        this.noiseHit(o, { type: 'bandpass', f0: 900, f1: 1600, dur: 0.6, gain: 0.25, q: 1.2, attack: 0.1 });
+        return;
       case 'iceWall':
         this.noiseHit(o, { type: 'highpass', f0: 4200, f1: 1800, dur: 0.3, gain: 0.55, attack: 0.02 });
         this.tone(o, { type: 'triangle', f0: 900, f1: 1800, dur: 0.18, gain: 0.25 });

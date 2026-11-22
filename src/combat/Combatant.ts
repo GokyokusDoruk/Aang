@@ -59,6 +59,11 @@ export class Combatant {
   /** >0 iken yerde sersem: hareket / yetenek yok */
   downedTimer = 0;
   private launchAir = 0;
+  /** >0 iken Şifa Suyu: can dolar */
+  healTimer = 0;
+  private healRate = 0;
+  private healPop = 0;
+  private healAcc = 0;
   /** Kalan yanma hasarı sayısı (0 = yanmıyor) */
   burnTicks = 0;
   private burnTimer = 0;
@@ -162,6 +167,15 @@ export class Combatant {
     return this.burnTicks > 0;
   }
 
+  /** Zamanla can yenile (yeniden kullanılırsa süre yenilenir). */
+  startHeal(amount: number, duration: number): void {
+    if (!this.alive) return;
+    this.healTimer = duration;
+    this.healRate = amount / duration;
+    this.healPop = 0;
+    this.healAcc = 0;
+  }
+
   /** Hareket ve yetenek kilitli mi (donmuş, havaya fırlatılmış ya da yerde sersem) */
   get incapacitated(): boolean {
     return this.frozenTimer > 0 || this.launched || this.downedTimer > 0;
@@ -216,6 +230,7 @@ export class Combatant {
 
   /** Durum etkilerini temizle (doğuş / raund başı). */
   clearStatus(): void {
+    this.healTimer = 0;
     this.burnTicks = 0;
     this.burnTimer = 0;
     this.launched = false;
@@ -271,6 +286,19 @@ export class Combatant {
     } else if (this.chillStacks > 0) {
       this.chillTimer -= dt;
       if (this.chillTimer <= 0) this.clearChill();
+    }
+    if (this.healTimer > 0 && this.alive) {
+      const step = Math.min(dt, this.healTimer);
+      this.healTimer -= dt;
+      const before = this.hp;
+      this.hp = Math.min(this.opts.maxHp, this.hp + this.healRate * step);
+      this.healAcc += this.hp - before;
+      this.healPop -= dt;
+      if ((this.healPop <= 0 || this.healTimer <= 0) && this.healAcc >= 0.5) {
+        this.healPop = GameConfig.water.heal.popInterval;
+        this.bus.emit('combat:heal', { targetId: this.id, amount: this.healAcc, point: this.center(new Vector3()) });
+        this.healAcc = 0;
+      }
     }
     if (this.launched && this.alive) {
       const ctl = this.controller;

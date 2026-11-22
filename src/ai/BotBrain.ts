@@ -262,8 +262,8 @@ export class BotBrain {
       if (def) this.fireGate = (def.tuning.cooldown + def.tuning.castTime) * this.difficulty.fireIntervalMult;
     }
 
-    // Buz Duvarı: canı azalmışken orta mesafede anlık siper
-    if (el === 'water' && A.canUse('special') && dist > 5 && dist < 22 && me.hp / me.opts.maxHp < 0.6 && Math.random() < 0.015) {
+    // Şifa Suyu (E): canı azalmışken can yenile
+    if (el === 'water' && A.canUse('special') && me.hp / me.opts.maxHp < 0.6 && Math.random() < 0.02) {
       this.caster.aimOverride = tC.clone();
       it.specialPressed = true;
       it.primaryPressed = it.primaryHeld = false;

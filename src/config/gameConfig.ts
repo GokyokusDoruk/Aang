@@ -109,6 +109,8 @@ export const GameConfig = {
       boulder: { cooldown: 20, moveMult: 0.5, maxDuration: 1 },
       /** Toprak sağ tık uzun: nişana doğru sırayla yükselen duvarlar */
       earthWave: { cooldown: 30, moveMult: 1, maxDuration: 0 },
+      /** Su E basılı tut: Buz Duvarı (eskiden E'nin kısa basışıydı) */
+      iceWallHold: { cooldown: 7, moveMult: 1, maxDuration: 0 },
       /** Hava sol tık uzun: yönlendirilebilir hortum */
       tornado: { cooldown: 20, moveMult: 0.5, maxDuration: 4, tickInterval: 1 / 30 },
       /** Hava sağ tık uzun: iki kat büyük, çarpan rüzgar küresi */
@@ -122,6 +124,8 @@ export const GameConfig = {
       // Su / Buz
       waterShard: { cooldown: 0.45, castTime: 0.1, castMoveMult: 0.85 },
       iceGlide: { cooldown: 6.0, castTime: 0.15, castMoveMult: 1.0 },
+      /** E: Şifa Suyu (etrafında dönen su, zamanla can) */
+      waterHeal: { cooldown: 14.0, castTime: 0.1, castMoveMult: 0.8 },
       iceWall: { cooldown: 7.0, castTime: 0.1, castMoveMult: 0.5 },
       // Ateş / Yıldırım
       fireBall: { cooldown: 0.6, castTime: 0.15, castMoveMult: 0.8 },
@@ -390,8 +394,16 @@ export const GameConfig = {
       /** Tam yığında donma süresi (s); sonra yığınlar sıfırlanır */
       freezeTime: 0.7,
     },
+    /** Şifa Suyu (E): etrafında dönen su, süre boyunca canı doldurur */
+    heal: {
+      duration: 3,
+      /** Toplam yenilenen can */
+      amount: 30,
+      /** Ekranda yeşil sayı gösterme aralığı (s) */
+      popInterval: 0.5,
+    },
     /**
-     * Buz Duvarı (E): hemen önünde anında yükselen, toprak duvardan hızlı ama kırılgan siper.
+     * Buz Duvarı (E basılı tut): hemen önünde anında yükselen, toprak duvardan hızlı ama kırılgan siper.
      * Kırılınca parçalanır ve yakındaki rakipleri üşütür.
      */
     iceWall: {

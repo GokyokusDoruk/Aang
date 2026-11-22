@@ -20,6 +20,8 @@ export type GameEvents = {
   'combat:burn': { targetId: string; sourceId: string; point: Vector3 };
   /** Üşüme tam yığına ulaştı: hedef kısa süre donar. */
   'combat:frozen': { targetId: string; duration: number; point: Vector3 };
+  /** Can yenilendi (biriken miktar, yeşil sayı için) */
+  'combat:heal': { targetId: string; amount: number; point: Vector3 };
   /** Havaya fırlatılan hedef yere düştü: kısa süre yerde (sersem) */
   'combat:downed': { targetId: string; duration: number; point: Vector3 };
   'combat:death': { targetId: string; cause: 'hp' | 'ringout'; killerId: string | null };
