@@ -15,6 +15,7 @@ import type { AbilitySystem } from './abilities/AbilitySystem';
 import { loadCharacterAsset } from './render/CharacterAsset';
 import { EffectsView } from './render/EffectsView';
 import { ProjectileView } from './render/ProjectileView';
+import { Vfx } from './render/Vfx';
 import { WallView } from './render/WallView';
 import { IcePathView } from './render/IcePathView';
 import { AirView } from './render/AirView';
@@ -66,7 +67,8 @@ void loadCharacterAsset(GameConfig.player.height).then((asset) => {
   if (asset) for (const v of [playerView, botView, ...dummyViews]) v.attachModel(asset);
 });
 const effects = new EffectsView(gfx.scene, bus, isTouch ? GameConfig.render.mobileEffectScale : 1);
-const projectileView = new ProjectileView(gfx.scene, session.projectiles);
+const vfx = new Vfx(gfx.scene, bus, isTouch ? GameConfig.render.mobileEffectScale : 1);
+const projectileView = new ProjectileView(gfx.scene, session.projectiles, vfx);
 const icePathView = new IcePathView(gfx.scene, session.icePaths);
 const airView = new AirView(gfx.scene, session.air);
 const wallView = new WallView(gfx.scene, session.walls, (pts, el) => el === 'earth' && effects.earthEruption(pts));
@@ -347,6 +349,7 @@ function frame(now: number): void {
   aimMarker.visible = active && camera.aimHit;
   effects.update(dt);
   projectileView.update(dt, alpha);
+  vfx.update(dt, session.combatants, (gfx.renderer.domElement.clientHeight || window.innerHeight) * gfx.renderer.getPixelRatio(), gfx.camera.fov);
   wallView.update();
   icePathView.update(dt);
   airView.update(dt, alpha, session.combatants);
