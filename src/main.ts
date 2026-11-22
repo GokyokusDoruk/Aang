@@ -69,8 +69,15 @@ void loadCharacterAsset(GameConfig.player.height).then((asset) => {
 const effects = new EffectsView(gfx.scene, bus, isTouch ? GameConfig.render.mobileEffectScale : 1);
 const vfx = new Vfx(gfx.scene, bus, isTouch ? GameConfig.render.mobileEffectScale : 1);
 const projectileView = new ProjectileView(gfx.scene, session.projectiles, vfx);
+// Ateş nefesi görseli karakterin gerçek ağız noktasından çıkar
+vfx.mouthOf = (id, out) => {
+  const v = id === 'player' ? playerView : id === 'bot' ? botView : null;
+  if (!v) return false;
+  v.headPoint(out);
+  return true;
+};
 const icePathView = new IcePathView(gfx.scene, session.icePaths);
-const airView = new AirView(gfx.scene, session.air);
+const airView = new AirView(gfx.scene, session.air, vfx);
 const wallView = new WallView(gfx.scene, session.walls, (pts, el) => el === 'earth' && effects.earthEruption(pts));
 const trailView = new TrailView(gfx.scene);
 const healView = new HealView(gfx.scene);

@@ -77,6 +77,7 @@ export class Vfx {
       }
       if (Math.random() < dt * 8) this.smokeParticle(p.x, p.y + c.height, p.z, 0.5);
     }
+    this.updateBreaths(dt);
     for (const f of this.fields) {
       f.setViewportHeight(viewportHeight, fov);
       f.update(dt);
@@ -249,36 +250,61 @@ export class Vfx {
     }
   }
 
-  /** Ateş nefesi: koni boyunca akan, genişleyen ve yükselen yoğun alev */
+  /** Süren ateş nefesleri: ağızdan 0.4 sn boyunca akan alev */
+  private readonly breaths: { e: GameEvents['fx:breath']; t: number; side: THREE.Vector3; up: THREE.Vector3; dir: THREE.Vector3 }[] = [];
+  /** Dövüşçünün ağız noktası (görsel kemik); yoksa olaydaki nokta kullanılır */
+  mouthOf: ((casterId: string, out: THREE.Vector3) => boolean) | null = null;
+  private readonly mouth = new THREE.Vector3();
+
   private breath(e: GameEvents['fx:breath']): void {
     const dir = e.direction.clone().normalize();
     const side = new THREE.Vector3().crossVectors(dir, new THREE.Vector3(0, 1, 0)).normalize();
     const up = new THREE.Vector3().crossVectors(side, dir).normalize();
-    const n = Math.round((140 + e.charge * 260) * this.scale);
-    const speed = e.range / 0.4;
-    for (let i = 0; i < n; i++) {
-      const ang = Math.random() * Math.PI * 2;
-      const spread = Math.tan(e.halfAngle) * Math.sqrt(Math.random());
-      const d = dir.clone().addScaledVector(side, Math.cos(ang) * spread).addScaledVector(up, Math.sin(ang) * spread).normalize();
-      const sp = speed * (0.6 + Math.random() * 0.5);
-      // Zaman içinde yayılmış çıkış: ağızdan sürekli akış hissi
-      const lead = Math.random() * 0.12;
-      this.flameParticle(
-        e.origin.x + d.x * sp * lead,
-        e.origin.y + d.y * sp * lead,
-        e.origin.z + d.z * sp * lead,
-        d.x * sp,
-        d.y * sp + 0.5,
-        d.z * sp,
-        0.25 + Math.random() * 0.25 + e.charge * 0.2,
-        0.35 + Math.random() * 0.25,
-        2.2,
-        0.6 + e.charge * 0.5,
-      );
-    }
-    for (let i = 0; i < (20 + e.charge * 30) * this.scale; i++) {
-      const d = dir.clone().addScaledVector(side, rnd(Math.tan(e.halfAngle))).normalize();
-      this.smokeParticle(e.origin.x + d.x * e.range * 0.7, e.origin.y + 0.3, e.origin.z + d.z * e.range * 0.7, 0.6 + e.charge * 0.6);
+    this.breaths.push({ e, t: 0, side, up, dir });
+  }
+
+  private updateBreaths(dt: number): void {
+    const DUR = 0.4;
+    for (let i = this.breaths.length - 1; i >= 0; i--) {
+      const b = this.breaths[i];
+      b.t += dt;
+      if (b.t > DUR) {
+        // Akış bitti: koni boyunca yükselen duman
+        for (let k = 0; k < (14 + b.e.charge * 20) * this.scale; k++) {
+          const f = 0.4 + Math.random() * 0.6;
+          const d = b.dir.clone().addScaledVector(b.side, rnd(Math.tan(b.e.halfAngle) * f));
+          this.smokeParticle(b.e.origin.x + d.x * b.e.range * f, b.e.origin.y + d.y * b.e.range * f, b.e.origin.z + d.z * b.e.range * f, 0.5 + b.e.charge * 0.5);
+        }
+        this.breaths.splice(i, 1);
+        continue;
+      }
+      const e = b.e;
+      const o = this.mouthOf && this.mouthOf(e.casterId, this.mouth) ? this.mouth : e.origin;
+      // Akışın başında ve sonunda daha ince
+      const env = Math.sin((b.t / DUR) * Math.PI);
+      const n = this.count(dt, (500 + e.charge * 700) * (0.4 + 0.6 * env));
+      const speed = e.range / 0.38;
+      for (let k = 0; k < n; k++) {
+        const ang = Math.random() * Math.PI * 2;
+        const spread = Math.tan(e.halfAngle) * Math.sqrt(Math.random()) * (0.6 + 0.4 * env);
+        const d = b.dir.clone().addScaledVector(b.side, Math.cos(ang) * spread).addScaledVector(b.up, Math.sin(ang) * spread).normalize();
+        const sp = speed * (0.75 + Math.random() * 0.4);
+        const hot = Math.random() < 0.4;
+        // Ağızda küçük ve sıcak, ilerledikçe büyüyen ve kızıllaşan alev
+        this.fire.emit(o.x + rnd(0.04), o.y + rnd(0.04), o.z + rnd(0.04), d.x * sp, d.y * sp + 0.4, d.z * sp, {
+          life: 0.38 + Math.random() * 0.22,
+          size0: 0.1,
+          size1: (0.9 + Math.random() * 0.7) * (1 + e.charge * 0.8),
+          color0: hot ? FIRE_HOT : FIRE_MID,
+          color1: FIRE_END,
+          alpha: hot ? 0.8 : 0.65,
+          drag: 2.4,
+          lift: 2.5,
+          turbulence: 6,
+        });
+      }
+      // Ağızda parlayan çekirdek
+      if (Math.random() < dt * 40) this.fire.emit(o.x, o.y, o.z, b.dir.x * 2, b.dir.y * 2, b.dir.z * 2, { life: 0.12, size0: 0.35, size1: 0.2, color0: FIRE_HOT, color1: FIRE_MID, alpha: 0.9, drag: 0 });
     }
   }
 

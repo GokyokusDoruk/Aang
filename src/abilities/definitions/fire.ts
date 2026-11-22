@@ -100,7 +100,7 @@ function breath(ctx: AbilityContext, charge: number): void {
     impulse.y = 1.5;
     k.takeDamage(damage * (1 - 0.3 * (d / range)), impulse, c.id, k.center(new Vector3()), { burn: true });
   }
-  ctx.bus.emit('fx:breath', { origin: mouth.clone(), direction: dir.clone(), range, halfAngle: half, charge });
+  ctx.bus.emit('fx:breath', { casterId: c.id, origin: mouth.clone(), direction: dir.clone(), range, halfAngle: half, charge });
 }
 
 export const fireAbilities: AbilityDef[] = [

@@ -6,6 +6,8 @@ import type { AbilitySlot } from '../abilities/types';
  * Büyü → hareket yakalama klibi (Quaternius UAL1/UAL2, CC0). Dizi: sırayla değişen sağ / sol hamleler.
  * Hız: klip oynatma hızı.
  */
+const UP_AXIS = new THREE.Vector3(0, 1, 0);
+
 const CAST_CLIPS: Record<string, { clips: string[]; speed: number }> = {
   earthRock: { clips: ['OverhandThrow'], speed: 1.7 },
   boulder: { clips: ['OverhandThrow'], speed: 1.2 },
@@ -274,6 +276,44 @@ export class PlayerView {
     else if (this.model.hasClip('Hit_Chest')) this.model.playNamedOnce(amount >= 8 ? 'Hit_Chest' : 'Hit_Head', 1.8, true);
   }
 
+  /** Yana / geri yürüme: alt gövdenin hareket yönüne dönüşü (yumuşatılmış) */
+  private legYaw = 0;
+  private strafeBones: THREE.Object3D[] | null = null;
+  private readonly sq = new THREE.Quaternion();
+  private readonly pq2 = new THREE.Quaternion();
+  private readonly fq = new THREE.Quaternion();
+
+  /**
+   * Kalçayı hareket yönüne çevir, gövdeyi nişana geri döndür: yana yürürken bacaklar yana adım atar,
+   * üst gövde ve kollar ileri bakar. Arkaya yürürken koşu klibi tersten oynar (bacak dönüşü küçük kalır).
+   */
+  private strafeTwist(dt: number, target: number): void {
+    const m = this.model!;
+    if (!this.strafeBones) {
+      const names = ['pelvis', 'spine_01', 'spine_02', 'spine_03'];
+      const b = names.map((n) => m.root.getObjectByName(n)).filter(Boolean) as THREE.Object3D[];
+      this.strafeBones = b.length === 4 ? b : [];
+    }
+    this.legYaw += (target - this.legYaw) * damp(10, dt);
+    if (this.strafeBones.length !== 4 || Math.abs(this.legYaw) < 1e-3) return;
+    const [pelvis, s1, s2, s3] = this.strafeBones;
+    this.root.updateMatrixWorld(true);
+    this.root.getWorldQuaternion(this.fq);
+    const turn = (bone: THREE.Object3D, ang: number) => {
+      bone.parent!.updateWorldMatrix(true, false);
+      bone.parent!.getWorldQuaternion(this.pq2);
+      // Karakter ekseninde Y dönüşü → kemik yereli
+      this.sq.setFromAxisAngle(UP_AXIS, ang);
+      const world = this.fq.clone().multiply(this.sq).multiply(this.fq.clone().invert());
+      bone.quaternion.premultiply(this.pq2.clone().invert().multiply(world).multiply(this.pq2));
+      bone.updateMatrixWorld(true);
+    };
+    turn(pelvis, this.legYaw);
+    turn(s1, -this.legYaw * 0.35);
+    turn(s2, -this.legYaw * 0.35);
+    turn(s3, -this.legYaw * 0.3);
+  }
+
   private castIndex = 0;
   private floatLift = 0;
   private moving = false;
@@ -417,6 +457,7 @@ export class PlayerView {
     this.sideLean += (Math.max(-0.25, Math.min(0.25, -(sideSpeed / run) * 0.15)) - this.sideLean) * damp(8, dt);
 
     if (this.model) {
+      let legTarget = 0;
       let key: AnimKey = 'idle';
       let ts = 1;
       if (dashing) key = 'dash';
@@ -428,10 +469,17 @@ export class PlayerView {
       else if (gliding) key = 'glide';
       else if (!grounded) key = (v?.y ?? 0) > 0 ? 'jump' : 'fall';
       else if (speed > 0.8) {
-        key = fwdSpeed < -0.5 && this.model.has('runBack') ? 'runBack' : 'run';
+        key = 'run';
         ts = Math.max(0.6, Math.min(1.6, speed / run));
+        // Hareket yönü (karakter ekseninde, sola pozitif): yana → bacaklar o yöne; arkaya → tersten koşu
+        const a = Math.atan2(-sideSpeed, fwdSpeed);
+        if (Math.abs(a) > 1.95) {
+          ts = -ts;
+          legTarget = Math.max(-0.6, Math.min(0.6, a - Math.PI * Math.sign(a)));
+        } else legTarget = Math.max(-1.25, Math.min(1.25, a));
       } else if (castProgress > 0 && this.model.has('charge')) key = 'charge';
       this.animateModel(dt, key, ts);
+      this.strafeTwist(dt, legTarget);
     }
 
     const sw = Math.sin(this.phase);

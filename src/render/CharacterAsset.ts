@@ -184,7 +184,7 @@ export class CharacterInstance {
     if (cached) return cached;
     const src = this.clipByName.get(name);
     if (!src) return null;
-    const clip = upper ? new THREE.AnimationClip(key, src.duration, src.tracks.filter((t) => UPPER_BODY.test(t.name))) : src;
+    const clip = upper ? new THREE.AnimationClip(key, src.duration, src.tracks.filter((t) => UPPER_BODY.test(t.name))) : inPlace(src);
     const a = this.mixer.clipAction(clip);
     this.named.set(key, a);
     return a;
@@ -273,6 +273,28 @@ export class CharacterInstance {
 
 /** Üst gövde kemikleri (kalça dönüşü ve bacaklar durum animasyonunda kalır) */
 const UPPER_BODY = /^(spine_02|spine_03|neck_01|Head|head|clavicle_[lr]|upperarm_[lr]|lowerarm_[lr]|hand_[lr])\./;
+
+/**
+ * Klibi yerinde oynat: kök hareketi atılır, kalçanın yatay kayması ilk kareye sabitlenir
+ * (darbe / fırlatma kliplerinde karakter başka yere kaymasın; yükseklik değişimi korunur).
+ */
+function inPlace(src: THREE.AnimationClip): THREE.AnimationClip {
+  const tracks = src.tracks
+    .filter((t) => !/^root\.position$/.test(t.name))
+    .map((t) => {
+      if (!/^pelvis\.position$/.test(t.name)) return t;
+      const c = t.clone();
+      const v = c.values;
+      const x0 = v[0];
+      const z0 = v[2];
+      for (let i = 0; i < v.length; i += 3) {
+        v[i] = x0;
+        v[i + 2] = z0;
+      }
+      return c;
+    });
+  return new THREE.AnimationClip(src.name + '#ip', src.duration, tracks);
+}
 
 function pickClip(clips: THREE.AnimationClip[], hints: RegExp[], used: Set<THREE.AnimationClip>): THREE.AnimationClip | null {
   for (const re of hints) {
