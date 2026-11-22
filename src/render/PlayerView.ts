@@ -1,4 +1,52 @@
 import * as THREE from 'three';
+import type { ElementId } from '../abilities/elements';
+import type { AbilitySlot } from '../abilities/types';
+
+/**
+ * Büyü → hareket yakalama klibi (Quaternius UAL1/UAL2, CC0). Dizi: sırayla değişen sağ / sol hamleler.
+ * Hız: klip oynatma hızı.
+ */
+const CAST_CLIPS: Record<string, { clips: string[]; speed: number }> = {
+  earthRock: { clips: ['OverhandThrow'], speed: 1.7 },
+  boulder: { clips: ['OverhandThrow'], speed: 1.2 },
+  earthWall: { clips: ['Spell_Simple_Shoot'], speed: 1.4 },
+  earthWave: { clips: ['Spell_Simple_Shoot'], speed: 1.2 },
+  earthArmor: { clips: ['Shield_OneShot'], speed: 1.4 },
+  earthArmorHeavy: { clips: ['Shield_OneShot'], speed: 1.1 },
+  fireBall: { clips: ['Punch_Jab', 'Punch_Cross'], speed: 1.7 },
+  lightningLine: { clips: ['Pistol_Shoot'], speed: 1.3 },
+  lightningCharged: { clips: ['Pistol_Shoot'], speed: 1 },
+  fireBreath: { clips: ['Spell_Simple_Shoot'], speed: 1.4 },
+  fireBreathCharged: { clips: ['Spell_Simple_Shoot'], speed: 1.1 },
+  waterShard: { clips: ['Sword_Regular_A', 'Sword_Regular_B'], speed: 1.8 },
+  waterHeal: { clips: ['Spell_Simple_Enter'], speed: 1.4 },
+  airBall: { clips: ['Melee_Hook', 'Sword_Regular_C'], speed: 1.7 },
+  airSphere: { clips: ['NinjaJump_Start'], speed: 1.6 },
+  bigSphere: { clips: ['NinjaJump_Start'], speed: 1.3 },
+  airShockwave: { clips: ['Spell_Simple_Shoot'], speed: 1.5 },
+  galeBurst: { clips: ['Sword_Heavy_Combo'], speed: 1.8 },
+};
+
+/** Süren uzun basış → tutulan üst gövde klibi */
+const HOLD_CLIPS: Record<string, string> = {
+  lightningCharged: 'Pistol_Aim_Up',
+  boulder: 'Spell_Simple_Idle_Loop',
+  fireBreathCharged: 'Spell_Simple_Idle_Loop',
+  icicleStream: 'Pistol_Aim_Neutral',
+  flameStream: 'Pistol_Aim_Neutral',
+  tornado: 'Pistol_Aim_Neutral',
+};
+
+/** Animasyonu etkileyen dövüşçü durumu (main her karede verir) */
+export interface FighterAnimState {
+  chargeId: string | null;
+  /** Su Küresi içinde */
+  waterSphere: boolean;
+  /** Rüzgar küresine binmiş */
+  riding: boolean;
+  /** 0 = ayakta; yere düşmüşse 0→1 ilerleme */
+  downedProgress: number;
+}
 import { GameConfig } from '../config/gameConfig';
 import type { MoveState } from '../game/PlayerController';
 import { CharacterInstance, type AnimKey, type CharacterAsset } from './CharacterAsset';
@@ -201,10 +249,53 @@ export class PlayerView {
   }
 
   /** Bir yetenek çıktığında çağrılır: kısa, sert bir itme/yumruk hamlesi. */
-  triggerCast(): void {
+  triggerCast(info?: { element: ElementId; slot: AbilitySlot; id: string }): void {
     this.castPulse = 1;
     this.castSide = -this.castSide;
-    if (this.model) this.model.playOnce(this.castSide > 0 && this.model.has('punch') ? 'punch' : 'cast');
+    if (!this.model) return;
+    const m = info ? CAST_CLIPS[info.id] : undefined;
+    if (m) {
+      const names = m.clips.filter((n) => this.model!.hasClip(n));
+      if (names.length) {
+        this.castIndex = (this.castIndex + 1) % names.length;
+        // Koşarken / havadayken yalnızca üst gövde: bacaklar harekete devam eder
+        this.model.playNamedOnce(names[this.castIndex % names.length], m.speed, this.moving);
+        return;
+      }
+      if (m.clips.length === 0) return;
+    }
+    this.model.playOnce(this.castSide > 0 && this.model.has('punch') ? 'punch' : 'cast');
+  }
+
+  /** Darbe aldı: küçük darbede üst gövde sarsılır, büyükte geri savrulur */
+  triggerHit(amount: number): void {
+    if (!this.model || this.anim.downedProgress > 0 || this.anim.waterSphere) return;
+    if (amount >= 15 && this.model.hasClip('Hit_Knockback')) this.model.playNamedOnce('Hit_Knockback', 1.6, this.moving);
+    else if (this.model.hasClip('Hit_Chest')) this.model.playNamedOnce(amount >= 8 ? 'Hit_Chest' : 'Hit_Head', 1.8, true);
+  }
+
+  private castIndex = 0;
+  private floatLift = 0;
+  private moving = false;
+  private anim: FighterAnimState = { chargeId: null, waterSphere: false, riding: false, downedProgress: 0 };
+
+  setAnimState(s: FighterAnimState): void {
+    this.anim = s;
+  }
+
+  /** Durumdan baskın klibi seç (yerde yatma > su küresi > küre binme > şarj) */
+  private applyOverride(): void {
+    const m = this.model!;
+    const a = this.anim;
+    if (a.downedProgress > 0 && m.hasClip('LayToIdle')) {
+      // Önce yatar (klibin başı), son %55'te kalkar
+      const dur = m.clipDuration('LayToIdle');
+      const p = a.downedProgress;
+      m.setOverride('LayToIdle', false, 1, p < 0.45 ? 0 : ((p - 0.45) / 0.55) * dur);
+    } else if (a.waterSphere && m.hasClip('Swim_Idle_Loop')) m.setOverride('Swim_Idle_Loop');
+    else if (a.riding && m.hasClip('NinjaJump_Idle_Loop')) m.setOverride('NinjaJump_Idle_Loop');
+    else if (a.chargeId && HOLD_CLIPS[a.chargeId] && m.hasClip(HOLD_CLIPS[a.chargeId])) m.setOverride(HOLD_CLIPS[a.chargeId], true);
+    else m.setOverride(null);
   }
 
   /**
@@ -265,6 +356,7 @@ export class PlayerView {
   private animateModel(dt: number, key: AnimKey, timeScale: number): void {
     const m = this.model!;
     m.play(m.has(key) ? key : key === 'runBack' || key === 'dash' ? 'run' : 'idle', timeScale);
+    this.applyOverride();
     m.update(dt);
   }
 
@@ -287,8 +379,13 @@ export class PlayerView {
     downed = 0,
   ): void {
     // Sırtüstü devril (ayak ekseni etrafında), kalkarken geri dön
-    this.tilt.rotation.x = (Math.PI / 2) * downed;
-    this.tilt.position.y = 0.22 * downed;
+    // Model yerden kalkma klibiyle yatar; prosedürel karakter devrilir
+    const tiltDown = this.model?.hasClip('LayToIdle') ? 0 : downed;
+    this.tilt.rotation.x = (Math.PI / 2) * tiltDown;
+    this.tilt.position.y = 0.22 * tiltDown;
+    // Su küresinde: yüzme pozunda kürenin ortasında süzülür
+    this.floatLift += ((this.anim.waterSphere && this.model ? 0.75 : 0) - this.floatLift) * damp(6, dt);
+    this.tilt.position.y += this.floatLift + Math.sin(this.idleTime * 2) * 0.05 * this.floatLift;
     if (chill >= 1) dt = 0; // donmuşken animasyon durur
     this.root.position.copy(position);
     this.root.rotation.y = yaw;
@@ -301,6 +398,7 @@ export class PlayerView {
     const vx = v?.x ?? 0;
     const vz = v?.z ?? 0;
     const speed = Math.hypot(vx, vz);
+    this.moving = speed > 1.5 || !grounded;
     const fwdSpeed = vx * this.fwd.x + vz * this.fwd.z;
     const sideSpeed = vx * -this.fwd.z + vz * this.fwd.x; // sağa pozitif
     const run = GameConfig.player.runSpeed;

@@ -10,7 +10,8 @@ import { buildArenaView } from './render/ArenaView';
 import { ArenaDecor } from './render/ArenaDecor';
 import { CrateView } from './render/CrateView';
 import { GameFeel } from './render/GameFeel';
-import { PlayerView, type FighterMotion } from './render/PlayerView';
+import { PlayerView, type FighterMotion, type FighterAnimState } from './render/PlayerView';
+import type { AbilitySystem } from './abilities/AbilitySystem';
 import { loadCharacterAsset } from './render/CharacterAsset';
 import { EffectsView } from './render/EffectsView';
 import { ProjectileView } from './render/ProjectileView';
@@ -89,8 +90,22 @@ const feel = new GameFeel(
 );
 // Yetenek çıktığı an karakter vuruş hamlesi yapar
 bus.on('ability:cast', (e) => {
-  if (e.casterId === 'player') playerView.triggerCast();
-  else if (e.casterId === 'bot') botView.triggerCast();
+  const info = { element: e.ability.element, slot: e.ability.slot, id: e.ability.id };
+  if (e.casterId === 'player') playerView.triggerCast(info);
+  else if (e.casterId === 'bot') botView.triggerCast(info);
+});
+// Uzun basış bırakıldı / anlık uzun basış: o büyünün hareketi
+bus.on('ability:chargedEnd', (e) => {
+  if (e.cancelled || e.charged.kind === 'channel') return;
+  const info = { element: e.ability.element, slot: e.ability.slot, id: e.charged.id };
+  if (e.casterId === 'player') playerView.triggerCast(info);
+  else if (e.casterId === 'bot') botView.triggerCast(info);
+});
+// Darbe tepkisi (yanma gibi sürekli hasarda değil)
+bus.on('combat:damage', (e) => {
+  if (e.kind === 'burn' || e.amount < 3) return;
+  const view = e.targetId === 'player' ? playerView : e.targetId === 'bot' ? botView : dummyViews[session.dummies.findIndex((d) => d.id === e.targetId)];
+  view?.triggerHit(e.amount);
 });
 
 const aimMarker = new THREE.Mesh(
@@ -219,6 +234,16 @@ let fps = 60;
 const renderPos = new THREE.Vector3();
 const tmpPos = new THREE.Vector3();
 
+/** Animasyon durumu: şarj, su küresi, küreye binme, yerde yatma */
+function animStateOf(c: Combatant, a: AbilitySystem | null): FighterAnimState {
+  return {
+    chargeId: a?.chargedActive?.charged.id ?? null,
+    waterSphere: c.sphereTimer > 0,
+    riding: c.controller.sphereTimer > 0,
+    downedProgress: c.downedProgress,
+  };
+}
+
 function drawFighter(view: PlayerView, c: Combatant, alpha: number, now: number, elementColor: number, castProgress: number): void {
   const blink = c.spawnProtected && Math.floor(now / 90) % 2 === 0;
   view.root.visible = c.alive && !blink;
@@ -286,6 +311,7 @@ function frame(now: number): void {
   // Oyuncu (kendi görünümü kamera mesafesine göre saydamlaşır)
   const blink = player.spawnProtected && Math.floor(now / 90) % 2 === 0;
   playerView.root.visible = session.running && player.alive && !blink;
+  playerView.setAnimState(animStateOf(player, abilities));
   playerView.update(
     renderPos,
     lerpAngle(playerCtl.prevFacingYaw, playerCtl.facingYaw, alpha),
@@ -306,10 +332,14 @@ function frame(now: number): void {
   const inTraining = session.running && session.mode === 'training';
   if (inMatch) {
     const ba = session.botAbilities;
+    botView.setAnimState(animStateOf(bot, ba));
     drawFighter(botView, bot, alpha, now, ELEMENTS[ba.activeElement].color, castVisual(ba));
   } else botView.root.visible = false;
   session.dummies.forEach((d, i) => {
-    if (inTraining) drawFighter(dummyViews[i], d, alpha, now, 0x331a10, 0);
+    if (inTraining) {
+      dummyViews[i].setAnimState(animStateOf(d, null));
+      drawFighter(dummyViews[i], d, alpha, now, 0x331a10, 0);
+    }
     else dummyViews[i].root.visible = false;
   });
 

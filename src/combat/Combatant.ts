@@ -245,6 +245,11 @@ export class Combatant {
   }
 
   /** Görsel: 0 = ayakta, 1 = yerde yatıyor (düşüş hızlı, kalkış son 0.35 sn) */
+  /** Yere düşme ilerlemesi: 0 = ayakta, 0→1 yerde geçen süre oranı */
+  get downedProgress(): number {
+    return this.downedTimer > 0 ? Math.min(1, 1 - this.downedTimer / Math.max(0.01, this.downDuration)) : 0;
+  }
+
   get downedPose(): number {
     if (this.downedTimer <= 0) return 0;
     const D = this.downDuration;
