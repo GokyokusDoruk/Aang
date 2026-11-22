@@ -9,6 +9,7 @@ import { WallSystem } from '../combat/WallSystem';
 import { CrateSystem } from '../combat/CrateSystem';
 import { IcePathSystem } from '../combat/IcePathSystem';
 import { AirSystem } from '../combat/AirSystem';
+import { resolveBodies } from '../combat/BodyCollision';
 import { Vector3 } from 'three';
 import { AbilitySystem, type AbilityIntent } from '../abilities/AbilitySystem';
 import { createDefaultRegistry, type AbilityRegistry } from '../abilities/AbilityRegistry';
@@ -207,6 +208,7 @@ export class GameSession {
     if (this.mode === 'match') this.botBrain.fixedUpdate(dt, fighting);
 
     for (const c of this.combatants) c.fixedUpdate(dt, this.playerCtl.position);
+    resolveBodies(this.combatants);
     this.icePaths.update(dt);
     this.air.update(dt);
     this.projectiles.update(dt);

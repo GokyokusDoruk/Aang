@@ -32,6 +32,21 @@ export class WorldOverlay {
       this.root.appendChild(el);
       this.texts.push({ el, pos: e.point.clone().add(new THREE.Vector3((Math.random() - 0.5) * 0.4, 0.3, 0)), age: 0 });
     });
+    bus.on('combat:armorHit', (e) => {
+      if (e.amount < 0.5) return;
+      const el = document.createElement('div');
+      el.className = 'dmg armor';
+      el.textContent = `🪨${Math.round(e.amount)}`;
+      this.root.appendChild(el);
+      this.texts.push({ el, pos: e.point.clone().add(new THREE.Vector3((Math.random() - 0.5) * 0.4, 0.3, 0)), age: 0 });
+    });
+    bus.on('combat:heal', (e) => {
+      const el = document.createElement('div');
+      el.className = 'dmg heal';
+      el.textContent = `+${Math.round(e.amount)}`;
+      this.root.appendChild(el);
+      this.texts.push({ el, pos: e.point.clone().add(new THREE.Vector3((Math.random() - 0.5) * 0.4, 0.5, 0)), age: 0 });
+    });
     bus.on('combat:ringout', (e) => {
       // Basit bildirim: arena dışı (Task 5'te raund mantığına bağlanacak)
       const el = document.createElement('div');
@@ -74,6 +89,7 @@ export class WorldOverlay {
         bar.el.classList.toggle('chilled', c.chillStacks > 0 || c.frozenTimer > 0);
         bar.el.classList.toggle('frozen', c.frozenTimer > 0);
         bar.el.classList.toggle('burning', c.burning);
+        bar.el.classList.toggle('armored', c.armor > 0);
       }
     }
 

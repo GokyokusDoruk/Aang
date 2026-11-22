@@ -248,7 +248,7 @@ export class BotBrain {
     const ready = A.canUse('primary') && this.fireGate <= 0;
     if (el === 'air') {
       if (dist < 20) it.primaryPressed = ready;
-      // Yakında: Şok Dalgası (iter, mermileri geri savurur)
+      // Yakında: Rüzgar Patlaması (savurur, yere düşürür)
       if (dist < 5.5 && A.canUse('special') && Math.random() < 0.04) {
         it.specialPressed = true;
         it.primaryPressed = false;
@@ -262,12 +262,24 @@ export class BotBrain {
       if (def) this.fireGate = (def.tuning.cooldown + def.tuning.castTime) * this.difficulty.fireIntervalMult;
     }
 
-    // Buz Duvarı: canı azalmışken orta mesafede anlık siper
-    if (el === 'water' && A.canUse('special') && dist > 5 && dist < 22 && me.hp / me.opts.maxHp < 0.6 && Math.random() < 0.015) {
+    // Şifa Suyu (E): canı azalmışken can yenile
+    if (el === 'water' && A.canUse('special') && me.hp / me.opts.maxHp < 0.6 && Math.random() < 0.02) {
       this.caster.aimOverride = tC.clone();
       it.specialPressed = true;
       it.primaryPressed = it.primaryHeld = false;
       return;
+    }
+
+    // Ateş Nefesi: çok yakındaysa
+    if (el === 'fire' && dist < 4.2 && A.canUse('special') && Math.random() < 0.06) {
+      this.caster.aimOverride = tC.clone();
+      it.specialPressed = true;
+      it.primaryPressed = it.primaryHeld = false;
+      return;
+    }
+    // Toprak Zırhı: dövüşte, zırhı yokken
+    if (el === 'earth' && me.armor <= 0 && dist < 16 && A.canUse('special') && Math.random() < 0.02) {
+      it.specialPressed = true;
     }
 
     // İkincil

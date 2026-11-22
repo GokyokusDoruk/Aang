@@ -20,6 +20,14 @@ export type GameEvents = {
   'combat:burn': { targetId: string; sourceId: string; point: Vector3 };
   /** Üşüme tam yığına ulaştı: hedef kısa süre donar. */
   'combat:frozen': { targetId: string; duration: number; point: Vector3 };
+  /** Can yenilendi (biriken miktar, yeşil sayı için) */
+  'combat:heal': { targetId: string; amount: number; point: Vector3 };
+  /** Zırh hasar emdi */
+  'combat:armorHit': { targetId: string; amount: number; point: Vector3; broken: boolean };
+  /** Rüzgar patlaması (Hava E) */
+  'fx:windBurst': { origin: Vector3; radius: number; strong: boolean };
+  /** Ateş nefesi (Ateş E) */
+  'fx:breath': { origin: Vector3; direction: Vector3; range: number; halfAngle: number; charge: number };
   /** Havaya fırlatılan hedef yere düştü: kısa süre yerde (sersem) */
   'combat:downed': { targetId: string; duration: number; point: Vector3 };
   'combat:death': { targetId: string; cause: 'hp' | 'ringout'; killerId: string | null };

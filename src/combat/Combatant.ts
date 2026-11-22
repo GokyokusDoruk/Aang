@@ -59,6 +59,18 @@ export class Combatant {
   /** >0 iken yerde sersem: hareket / yetenek yok */
   downedTimer = 0;
   private launchAir = 0;
+  /** Toprak zırhı (hasar önce buradan düşer) */
+  armor = 0;
+  armorMax = 0;
+  private armorTimer = 0;
+  /** >0 iken Su Küresi: hareketsiz, itilemez, süre sonunda can tam */
+  sphereTimer = 0;
+  /** Yere düşme süresi (görsel poz için) */
+  private downDuration = 1;
+  /** >0 iken Şifa Suyu: can dolar */
+  healTimer = 0;
+  private healPop = 0;
+  private healAcc = 0;
   /** Kalan yanma hasarı sayısı (0 = yanmıyor) */
   burnTicks = 0;
   private burnTimer = 0;
@@ -114,6 +126,19 @@ export class Combatant {
     const C = GameConfig.combat;
 
     const missing = 1 - this.hp / this.opts.maxHp;
+    // Zırh hasarı emer ve itmeyi azaltır
+    const armored = this.armor > 0;
+    let kbMult = 1;
+    if (armored) {
+      const A = GameConfig.earth.armor;
+      kbMult = 1 - Math.min(A.maxReduction, this.armor / A.fullReductionAt);
+      const absorbed = Math.min(this.armor, amount);
+      this.armor -= absorbed;
+      amount -= absorbed;
+      if (absorbed > 0) this.bus.emit('combat:armorHit', { targetId: this.id, amount: absorbed, point: point.clone(), broken: this.armor <= 0 });
+      if (this.armor <= 0) this.armorMax = 0;
+    }
+    if (this.sphereTimer > 0) kbMult = 0;
     this.hp = Math.max(0, this.hp - amount);
     this.hitFlash = opts.dot ? 0.06 : 0.15;
     if (!opts.dot) {
@@ -125,11 +150,11 @@ export class Combatant {
       this.lastAttackTime = this.clock;
     }
 
-    if (impulse) {
-      this.scaled.copy(impulse).multiplyScalar(1 + missing * C.lowHpKnockbackBonus);
+    if (impulse && kbMult > 0) {
+      this.scaled.copy(impulse).multiplyScalar((1 + missing * C.lowHpKnockbackBonus) * kbMult);
       this.controller.applyKnockback(this.scaled);
     }
-    if (!opts.dot && sourceId !== this.id) {
+    if (!opts.dot && sourceId !== this.id && !armored) {
       const stun = C.hitStun + (opts.stun ?? 0);
       this.controller.knockbackTimer = Math.max(this.controller.knockbackTimer, stun);
     }
@@ -138,6 +163,7 @@ export class Combatant {
     if (opts.burn && !this.dead()) this.ignite(sourceId);
 
     const killed = this.hp <= 0;
+    if (amount <= 0 && !killed) return true; // tamamen zırh emdi
     this.bus.emit('combat:damage', { targetId: this.id, sourceId, amount, point: point.clone(), killed, kind: opts.kind });
     if (killed) {
       // Kendi patlamanla ölürsen eleme son vurana yazılır
@@ -150,7 +176,7 @@ export class Combatant {
 
   /** Tutuştur: yanma sayacını yeniler (donmuşken tutuşmaz). Buz yanmayı söndürür. */
   ignite(sourceId: string): void {
-    if (!this.alive || this.frozenTimer > 0) return;
+    if (!this.alive || this.frozenTimer > 0 || this.armor > 0) return;
     const B = GameConfig.fire.burn;
     if (this.burnTicks <= 0) this.burnTimer = B.interval;
     this.burnTicks = B.ticks;
@@ -162,15 +188,66 @@ export class Combatant {
     return this.burnTicks > 0;
   }
 
+  /** Anında can (Şifa Suyu kısa): kısa su girdabı görseli ile */
+  healNow(amount: number): void {
+    if (!this.alive) return;
+    const before = this.hp;
+    this.hp = Math.min(this.opts.maxHp, this.hp + amount);
+    this.healTimer = GameConfig.water.heal.swirlTime;
+    const got = this.hp - before;
+    if (got >= 0.5) this.bus.emit('combat:heal', { targetId: this.id, amount: got, point: this.center(new Vector3()) });
+  }
+
+  /** Su Küresi: hareketsiz kal, süre sonunda can tam dolar (yol boyunca dolar). */
+  enterWaterSphere(): void {
+    if (!this.alive) return;
+    this.sphereTimer = GameConfig.water.sphere.duration;
+    this.healPop = GameConfig.water.heal.popInterval;
+    this.healAcc = 0;
+    this.controller.velocity.set(0, Math.min(0, this.controller.velocity.y), 0);
+    this.controller.glideTimer = 0;
+    this.controller.sphereTimer = 0;
+    this.clearBurnAndChill();
+  }
+
+  /** Toprak zırhı: var olan zırhtan büyükse yeniler. */
+  addArmor(amount: number, duration: number): void {
+    if (!this.alive) return;
+    if (amount >= this.armor) {
+      this.armor = amount;
+      this.armorMax = amount;
+    }
+    this.armorTimer = Math.max(this.armorTimer, duration);
+    this.clearBurnAndChill();
+  }
+
+  private clearBurnAndChill(): void {
+    this.burnTicks = 0;
+    if (this.frozenTimer <= 0 && this.chillStacks > 0) this.clearChill();
+  }
+
+  /** Senden dışarı savrul, yere düşünce downTime kadar sersem (Hava E). */
+  knockDown(push: Vector3, up: number, amount: number, downTime: number, sourceId: string, point: Vector3): boolean {
+    if (this.launched || this.downedTimer > 0) return false;
+    this.tmp.set(push.x, up, push.z);
+    if (!this.takeDamage(amount, this.tmp, sourceId, point, { ignoreInvuln: amount <= 0 })) return false;
+    if (!this.alive || this.armor > 0 || this.sphereTimer > 0) return true; // zırh / küre: sersemlemez
+    this.controller.glideTimer = 0;
+    this.launched = true;
+    this.launchAir = 0;
+    this.downDuration = downTime;
+    return true;
+  }
+
   /** Hareket ve yetenek kilitli mi (donmuş, havaya fırlatılmış ya da yerde sersem) */
   get incapacitated(): boolean {
-    return this.frozenTimer > 0 || this.launched || this.downedTimer > 0;
+    return this.frozenTimer > 0 || this.launched || this.downedTimer > 0 || this.sphereTimer > 0;
   }
 
   /** Görsel: 0 = ayakta, 1 = yerde yatıyor (düşüş hızlı, kalkış son 0.35 sn) */
   get downedPose(): number {
     if (this.downedTimer <= 0) return 0;
-    const D = GameConfig.earth.wave.downTime;
+    const D = this.downDuration;
     const fall = Math.min(1, (D - this.downedTimer) / 0.15);
     const up = Math.min(1, this.downedTimer / 0.35);
     return Math.min(fall, up);
@@ -182,7 +259,8 @@ export class Combatant {
     const W = GameConfig.earth.wave;
     this.tmp.set(0, up, 0);
     if (!this.takeDamage(amount, this.tmp, sourceId, point)) return false;
-    if (!this.alive) return true;
+    if (!this.alive || this.armor > 0 || this.sphereTimer > 0) return true; // zırh / küre: fırlamaz, sersemlemez
+    this.downDuration = W.downTime;
     this.controller.velocity.x *= 0.2;
     this.controller.velocity.z *= 0.2;
     this.controller.velocity.y = up;
@@ -200,7 +278,7 @@ export class Combatant {
   /** Üşüme yığını ekler; tam yığında kısa süre dondurur (donmuşken yığın birikmez). */
   addChill(stacks: number): void {
     const K = GameConfig.water.chill;
-    if (this.frozenTimer > 0) return;
+    if (this.frozenTimer > 0 || this.armor > 0) return;
     this.chillStacks = Math.min(K.maxStacks, this.chillStacks + stacks);
     this.chillTimer = K.duration;
     this.burnTicks = 0; // buz yanmayı söndürür
@@ -216,6 +294,9 @@ export class Combatant {
 
   /** Durum etkilerini temizle (doğuş / raund başı). */
   clearStatus(): void {
+    this.healTimer = 0;
+    this.armor = this.armorMax = this.armorTimer = 0;
+    this.sphereTimer = 0;
     this.burnTicks = 0;
     this.burnTimer = 0;
     this.launched = false;
@@ -272,12 +353,40 @@ export class Combatant {
       this.chillTimer -= dt;
       if (this.chillTimer <= 0) this.clearChill();
     }
+    if (this.healTimer > 0) this.healTimer = Math.max(0, this.healTimer - dt);
+    if (this.armorTimer > 0 && this.alive) {
+      this.armorTimer -= dt;
+      if (this.armorTimer <= 0 && this.armor > 0) {
+        this.armor = this.armorMax = 0;
+        this.bus.emit('combat:armorHit', { targetId: this.id, amount: 0, point: this.center(new Vector3()), broken: true });
+      }
+    }
+    if (this.sphereTimer > 0 && this.alive) {
+      // Kalan süreye göre: süre sonunda tam can (alınan hasar da telafi edilir)
+      const ctl = this.controller;
+      ctl.velocity.x = 0;
+      ctl.velocity.z = 0;
+      ctl.knockbackTimer = Math.max(ctl.knockbackTimer, 0.05);
+      const step = Math.min(dt, this.sphereTimer);
+      const rate = (this.opts.maxHp - this.hp) / Math.max(dt, this.sphereTimer);
+      this.sphereTimer -= dt;
+      const before = this.hp;
+      this.hp = Math.min(this.opts.maxHp, this.hp + rate * step);
+      if (this.sphereTimer <= 0) this.hp = this.opts.maxHp;
+      this.healAcc += this.hp - before;
+      this.healPop -= dt;
+      if ((this.healPop <= 0 || this.sphereTimer <= 0) && this.healAcc >= 0.5) {
+        this.healPop = GameConfig.water.heal.popInterval;
+        this.bus.emit('combat:heal', { targetId: this.id, amount: this.healAcc, point: this.center(new Vector3()) });
+        this.healAcc = 0;
+      }
+    }
     if (this.launched && this.alive) {
       const ctl = this.controller;
       this.launchAir += dt;
       ctl.knockbackTimer = Math.max(ctl.knockbackTimer, 0.1);
       if (this.launchAir > 0.2 && ctl.grounded && ctl.velocity.y <= 0) {
-        const D = GameConfig.earth.wave.downTime;
+        const D = this.downDuration;
         this.launched = false;
         ctl.gravityMult = 1;
         this.downedTimer = D;

@@ -30,7 +30,7 @@ npm run build      # typecheck + production build
 | Yeniden doğ | R | ↺ |
 | Element seç | 1-4 · Q · fare tekerleği | Üstteki element çipleri |
 | Ana / ikincil yetenek | Sol tık (basılı tut = tekrar) / Sağ tık | Büyük / küçük yetenek butonu (aktif yeteneğin ikonu ve adı) |
-| 3. yetenek (Su: Buz Duvarı, Hava: Şok Dalgası) | E | Yetenek butonlarının solundaki 3. buton |
+| 3. yetenek (her elementte; basılı tutunca güçlü versiyonu) | E | Yetenek butonlarının solundaki 3. buton |
 | Ses aç/kapa | M | Menüdeki ses düğmesi |
 
 ## Yetenek sistemi
@@ -61,7 +61,9 @@ npm run build      # typecheck + production build
 ## Su / Buz ve Hava (Task 4)
 
 - **Buz Kıymığı** (Su, sol tık): hızlı, hafif mermi; basılı tut = seri atış. Her isabet 1 **üşüme** yığını ekler (yığın başına %15 yavaşlama, 2.2 sn sonra söner); 3 yığında hedef 0.7 sn **donar** (hareket ve yetenek yok). Üşüyen karakter maviye döner; oyuncunun HP barının yanında ❄ ●●○ göstergesi çıkar.
-- **Buz Duvarı** (Su, E): hemen önünde anında (0.1 sn) yükselen buz siperi. Toprak duvardan hızlı ama kırılgan (90 HP, 5 sn); aynı anda 1 tane. Kırılınca parçaları 3.2 m içindeki rakiplere 1 üşüme yığını ekler. Ayar: `gameConfig.water.iceWall`.
+- **Şifa Suyu** (Su, E, 5 sn): anında 15 can, etrafında kısa su girdabı. Ayar: `gameConfig.water.heal`.
+- **Su Küresi** (Su, E basılı tut, 30 sn): kendini su küresine alırsın; 5 sn hareket edemezsin, itilemezsin, sonunda canın tam dolar (alınan hasar da telafi edilir). Ayar: `water.sphere`.
+- **Buz Duvarı** (yetenek tanımı ve `water.iceWall` ayarı duruyor, şu an bir tuşa bağlı değil).
 - **Buz Yolu** (Su, sağ tık): ayağının altında buzdan yol yaratıp üstünde kayarsın. Yukarı bakınca yol rampa gibi yükselir, aşağı bakınca alçalır, düz bakınca yükseklik korunur; Space basılıyken tırmanır. Plakalar 5 sn üstünde durulabilir (rakipler de), sonra erir. Kayma havada biterse altında bir platform oluşur; eriyince düşersin. Güçlü bir itme seni yoldan düşürür.
 - **Kar Yolu** (Su, sağ tık basılı tut, 30 sn): aynı yol, ama kar izi bırakır; üstüne/yanına gelen rakipler yarım saniyede bir 2 hasar alır ve üşür.
 - **Kaya Fırlatma** (Toprak, sol tık): zemine çarptığı yerde 5 sn duran, sonra geri inen toprak tepeciği yükseltir (rakibe çarparsa yükseltmez). Kendi toprak duvarına 3.5 m yakınken sol tık: duvar kopar ve nişana fırlar (kayanın 2 katı hasar). Ayar: `gameConfig.earth.bump`, `earth.wallThrow`.
@@ -69,10 +71,14 @@ npm run build      # typecheck + production build
 - **Duvar Dizisi** (Toprak, sağ tık basılı tut, 30 sn): senden nişana doğru yarım saniyede bir yükselen duvarlar. Değdiği rakibi 12 hasarla havaya atar; rakip süzülerek düşer ve yere düşünce 1 sn yerde kalır (hareket ve yetenek yok). Ayar: `earth.wave`.
 - **Hava Topu** (Hava, sol tık): çarptığı yerde küçük fırtına; az hasar (4), çarpma noktasından güçlü savurma. Yakında patlarsa seni de hasarsız fırlatır. Ayar: `gameConfig.air.ball`
 - **Hortum** (Hava, sol tık basılı tut, 20 sn): 4 sn'ye kadar nişanını izleyen hortum; içindekileri dışa ve yukarı savurur, girdapla döndürür, az hasar verir. Bırakınca söner. Ayar: `air.tornado`
-- **Rüzgar Küresi** (Hava, sağ tık): küre içinde baktığın yöne (yukarı / aşağı dahil, A/D ile yana) 1.5 sn hızlı uçuş (koşu hızının ~1.9 katı); hep hareket eder. Bitince zıplamayı basılı tut = süzül. Ayar: `air.sphere`
+- **Rüzgar Küresi** (Hava, sağ tık): kürenin üstüne binip baktığın yöne (yukarı / aşağı dahil, A/D ile yana) 1.5 sn hızlı uçuş (koşu hızının ~1.9 katı); hep hareket eder. Bitince zıplamayı basılı tut = süzül. Ayar: `air.sphere`
 - **Dev Küre** (Hava, sağ tık basılı tut, 30 sn): iki kat büyük, 3 sn süren küre; değdiği rakibe 10 hasar ve güçlü itme
+- **Karakter çarpışması** (`src/combat/BodyCollision.ts`): oyuncu, bot ve kuklalar birbirinin içinden geçemez; iç içe girince eşit itilerek ayrılır, birbirine doğru giden hız kesilir. Su Küresi içindeki karakter yerinden oynamaz (diğeri itilir).
 - **Elemente göre dash görseli** (`src/render/DashView.ts`, yalnızca görsel): Toprak'ta seni taşıyan taş plaka (bitince düşüp ufalanır), Su'da altında kayan buz levhası (bitince erir), Hava'da ellerden ve ayaklardan geriye savrulan rüzgar, Ateş'te ellerden ve ayaklardan geriye püsküren alev.
-- **Şok Dalgası** (Hava, E): koni içindeki rakipleri iter, rakip mermilerini sahibine geri savurur; duvar arkası korunur
+- **Rüzgar Patlaması** (Hava, E, 6 sn): etrafındaki herkesi senden dışarı savurur ve 1 sn yere düşürür, hasarsız; etraftaki mermileri geri çevirir. Ayar: `air.gust`.
+- **Fırtına Patlaması** (Hava, E basılı tut, 20 sn): daha geniş, 12 hasar, 3 sn yere düşürür; dönen rüzgar halkaları + toz. Ayar: `air.gale`.
+- **Toprak Zırhı** (Toprak, E, 5 sn): 30 zırh (8 sn). Basılı tut (20 sn): 75 zırh (12 sn). Hasar önce zırhtan düşer; zırh arttıkça itme azalır (75'te %85'e kadar); zırh varken yanmaz, yavaşlamaz/donmaz, sersemlemez, havaya fırlamazsın. Ayar: `earth.armor`.
+- **Ateş Nefesi** (Ateş, E, 5 sn): ağızdan 4.5 m, dar ateş konisi; değdiği herkese hasar + yanma. Basılı tut (15 sn): 1.5 sn'ye kadar şarj — ağızda büyüyen ateş topu; menzil 10 m'ye, koni 40°'ye, hasar 24'e çıkar. Ayar: `fire.breath`.
 - Ayarlar: `gameConfig.water` (üşüme: `gameConfig.water.chill`) / `gameConfig.air`; hareket modları `PlayerController` (`startGlide`, `launch`)
 
 ## Ateş / Yıldırım ve savaş döngüsü (Task 5)

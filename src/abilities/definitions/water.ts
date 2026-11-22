@@ -63,12 +63,27 @@ export const waterAbilities: AbilityDef[] = [
     },
   },
   {
-    id: 'iceWall',
+    id: 'waterHeal',
     element: 'water',
     slot: 'special',
-    name: 'Buz Duvarı',
-    description: 'Hemen önünde anında buz siperi yükselt. Kırılgandır; kırılınca parçaları yakındaki rakipleri üşütür.',
-    tuning: T.iceWall,
-    execute: (ctx) => ctx.services.walls.placeIceWall(ctx.caster.id, ctx.caster.position, ctx.target, ctx.direction) !== null,
+    name: 'Şifa Suyu',
+    description: 'Etrafında su döner, anında can verir. Basılı tut: su küresine gir, 5 sn sonra canın tam dolar (hareket edemezsin, itilemezsin).',
+    tuning: T.waterHeal,
+    execute: (ctx) => {
+      ctx.services.combatants.find((k) => k.id === ctx.caster.id)?.healNow(GameConfig.water.heal.amount);
+      const p = ctx.caster.position;
+      ctx.bus.emit('fx:burst', { point: new Vector3(p.x, p.y + 0.1, p.z), element: 'water', size: 1 });
+    },
+    charged: {
+      id: 'waterSphere',
+      name: 'Su Küresi',
+      kind: 'instant',
+      ...C.waterSphere,
+      start: (ctx) => {
+        ctx.services.combatants.find((k) => k.id === ctx.caster.id)?.enterWaterSphere();
+        const p = ctx.caster.position;
+        ctx.bus.emit('fx:burst', { point: new Vector3(p.x, p.y + 0.5, p.z), element: 'water', size: 1.6 });
+      },
+    },
   },
 ];

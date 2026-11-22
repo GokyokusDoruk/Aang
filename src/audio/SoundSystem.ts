@@ -127,6 +127,12 @@ export class SoundSystem {
     bus.on('projectile:deflect', () => this.ping());
     bus.on('combat:frozen', (e) => this.freeze(e.point));
     bus.on('combat:downed', (e) => this.thud(e.point));
+    bus.on('combat:armorHit', (e) => this.knock(e.point, e.broken ? 300 : 600, e.broken ? 0.6 : 0.3));
+    bus.on('ability:chargedEnd', (e) => {
+      if (e.cancelled) return;
+      if (e.charged.id === 'fireBreathCharged') this.boom(e.origin, 3 + e.charge * 3);
+      else if (e.charged.id === 'galeBurst') this.boom(e.origin, 5);
+    });
     bus.on('ability:chargedStart', (e) => this.chargeUp(e.ability.element, e.casterId === me));
     bus.on('round:phase', (e) => {
       if (e.phase === 'fight') {
@@ -251,12 +257,29 @@ export class SoundSystem {
         this.tone(o, { type: 'triangle', f0: 2850, f1: 3600, dur: 0.3, gain: 0.12, delay: 0.05 });
         this.noiseHit(o, { type: 'highpass', f0: 5000, f1: 3000, dur: 0.4, gain: 0.25 });
         return;
+      case 'earthArmor':
+        this.noiseHit(o, { type: 'lowpass', f0: 900, f1: 150, dur: 0.4, gain: 0.8 });
+        this.tone(o, { type: 'sine', f0: 110, f1: 70, dur: 0.35, gain: 0.5 });
+        return;
+      case 'fireBreath':
+        this.noiseHit(o, { type: 'bandpass', f0: 400, f1: 1800, dur: 0.6, gain: 0.9, q: 0.7, attack: 0.03 });
+        this.noiseHit(o, { type: 'lowpass', f0: 600, f1: 200, dur: 0.5, gain: 0.5 });
+        return;
+      case 'waterHeal':
+        this.tone(o, { type: 'sine', f0: 520, f1: 780, dur: 0.5, gain: 0.25, attack: 0.05 });
+        this.tone(o, { type: 'sine', f0: 780, f1: 1040, dur: 0.45, gain: 0.15, delay: 0.12, attack: 0.05 });
+        this.noiseHit(o, { type: 'bandpass', f0: 900, f1: 1600, dur: 0.6, gain: 0.25, q: 1.2, attack: 0.1 });
+        return;
       case 'iceWall':
         this.noiseHit(o, { type: 'highpass', f0: 4200, f1: 1800, dur: 0.3, gain: 0.55, attack: 0.02 });
         this.tone(o, { type: 'triangle', f0: 900, f1: 1800, dur: 0.18, gain: 0.25 });
         this.noiseHit(o, { type: 'bandpass', f0: 2400, f1: 1400, dur: 0.12, gain: 0.35, q: 4, delay: 0.06 });
         return;
       case 'airShockwave':
+        this.noiseHit(o, { type: 'bandpass', f0: 200, f1: 1400, dur: 0.6, gain: 1, q: 1, attack: 0.03 });
+        this.tone(o, { type: 'sine', f0: 80, f1: 40, dur: 0.4, gain: 0.6 });
+        return;
+      case 'airShockwaveOld':
         this.noiseHit(o, { type: 'bandpass', f0: 250, f1: 1600, dur: 0.45, gain: 0.9, q: 1.2, attack: 0.04 });
         this.tone(o, { type: 'sine', f0: 90, f1: 50, dur: 0.3, gain: 0.5 });
         return;

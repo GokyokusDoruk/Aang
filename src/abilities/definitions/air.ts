@@ -14,44 +14,31 @@ const center = new Vector3();
 const impulse = new Vector3();
 
 /**
- * Şok Dalgası (E): önündeki koni içindeki rakipleri iter (yakındakileri her yönde),
- * koni içindeki rakip mermilerini geri savurur. Duvar arkasındakiler korunur.
+ * Rüzgar Patlaması (E): etrafındaki herkesi senden dışarı savurur ve yere düşürür.
+ * Etraftaki rakip mermilerini de geri çevirir. Duvar arkasındakiler korunur.
  */
-function shockwave(ctx: AbilityContext): void {
-  const A = GameConfig.air.shockwave;
+function gust(ctx: AbilityContext, strong: boolean): void {
+  const G = strong ? GameConfig.air.gale : GameConfig.air.gust;
   const c = ctx.caster;
-  origin.copy(c.position).setY(c.position.y + c.controller.height * 0.55);
-  dir.copy(ctx.direction);
-  dir.y *= 0.5;
-  dir.normalize();
-  const cosHalf = Math.cos((A.coneHalfAngleDeg * Math.PI) / 180);
-
+  origin.copy(c.position).setY(c.position.y + c.controller.height * 0.5);
   for (const k of ctx.services.combatants) {
     if (!k.alive || k.id === c.id) continue;
     k.center(center);
     to.subVectors(center, origin);
     const d = to.length();
-    if (d > A.range) continue;
-    if (d > A.pointBlank && to.dot(dir) / d < cosHalf) continue;
+    if (d > G.radius + k.radius) continue;
     const blocker = ctx.world.raycast(origin, to.clone().divideScalar(d || 1), d);
     if (blocker && blocker.distance < d - k.radius) continue;
-    const falloff = 1 - 0.5 * (d / A.range);
+    const falloff = 1 - 0.4 * (d / G.radius);
     impulse.set(to.x, 0, to.z);
-    if (impulse.lengthSq() < 1e-4) impulse.set(dir.x, 0, dir.z);
-    impulse.normalize().multiplyScalar(A.knockback * falloff);
-    impulse.y = A.knockbackUp * falloff;
-    k.takeDamage(A.damage, impulse, c.id, center);
+    if (impulse.lengthSq() < 1e-4) impulse.set(1, 0, 0);
+    impulse.normalize().multiplyScalar(G.push * falloff);
+    k.knockDown(impulse, G.up, G.damage, G.downTime, c.id, center.clone());
   }
-
-  const deflected = ctx.services.projectiles.deflectInCone(origin, dir, A.range, cosHalf, A.pointBlank, c.id, A.deflectSpeedMult);
+  dir.set(0, 0, 1);
+  const deflected = ctx.services.projectiles.deflectInCone(origin, dir, G.radius, -1, G.radius, c.id, 1.15);
   if (deflected > 0) ctx.bus.emit('projectile:deflect', { ownerId: c.id, count: deflected });
-  ctx.bus.emit('fx:shockwave', {
-    origin: origin.clone(),
-    direction: dir.clone(),
-    range: A.range,
-    halfAngle: (A.coneHalfAngleDeg * Math.PI) / 180,
-    element: 'air',
-  });
+  ctx.bus.emit('fx:windBurst', { origin: c.position.clone(), radius: G.radius, strong });
 }
 
 /** Rüzgar küresi: nişan yönünde (yukarı / aşağı dahil) hızlı uçuş. */
@@ -113,9 +100,16 @@ export const airAbilities: AbilityDef[] = [
     id: 'airShockwave',
     element: 'air',
     slot: 'special',
-    name: 'Şok Dalgası',
-    description: 'Önündeki rakipleri iten, gelen mermileri sahibine geri savuran rüzgar dalgası.',
+    name: 'Rüzgar Patlaması',
+    description: 'Etrafındaki herkesi senden dışarı savurur ve 1 sn yere düşürür (hasarsız). Basılı tut: fırtına — hasar ve 3 sn yere düşürme.',
     tuning: T.airShockwave,
-    execute: shockwave,
+    execute: (ctx) => gust(ctx, false),
+    charged: {
+      id: 'galeBurst',
+      name: 'Fırtına Patlaması',
+      kind: 'instant',
+      ...C.galeBurst,
+      start: (ctx) => gust(ctx, true),
+    },
   },
 ];

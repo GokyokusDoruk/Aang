@@ -50,6 +50,15 @@ function throwBoulder(ctx: AbilityContext, charge: number): void {
   ctx.bus.emit('fx:burst', { point: new Vector3(c.position.x, c.position.y, c.position.z), element: 'earth', size: 1 });
 }
 
+/** Toprak Zırhı: hafif (kısa basış) ya da ağır (uzun basış) */
+function armorUp(ctx: AbilityContext, heavy: boolean): void {
+  const A = GameConfig.earth.armor;
+  const self = ctx.services.combatants.find((k) => k.id === ctx.caster.id);
+  self?.addArmor(heavy ? A.heavy : A.light, heavy ? A.heavyDuration : A.lightDuration);
+  const p = ctx.caster.position;
+  ctx.bus.emit('fx:burst', { point: new Vector3(p.x, p.y, p.z), element: 'earth', size: heavy ? 1.4 : 0.9 });
+}
+
 export const earthAbilities: AbilityDef[] = [
   {
     id: 'earthRock',
@@ -81,6 +90,22 @@ export const earthAbilities: AbilityDef[] = [
       kind: 'instant',
       ...C.earthWave,
       start: (ctx) => ctx.services.walls.startWave(ctx.caster.id, ctx.caster.position, ctx.target, ctx.direction),
+    },
+  },
+  {
+    id: 'earthArmor',
+    element: 'earth',
+    slot: 'special',
+    name: 'Toprak Zırhı',
+    description: 'Topraktan zırh giy: hasar önce zırhtan düşer, itme azalır; zırh varken yanmaz, yavaşlamaz, sersemlemezsin. Basılı tut: daha sağlam zırh.',
+    tuning: T.earthArmor,
+    execute: (ctx) => armorUp(ctx, false),
+    charged: {
+      id: 'earthArmorHeavy',
+      name: 'Kaya Zırh',
+      kind: 'instant',
+      ...C.earthArmorHeavy,
+      start: (ctx) => armorUp(ctx, true),
     },
   },
 ];
