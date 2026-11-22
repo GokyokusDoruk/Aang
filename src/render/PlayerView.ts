@@ -187,6 +187,19 @@ export class PlayerView {
     for (let i = 0; i < 4; i++) out[i].set(local[i][0] * s, local[i][1] * s, local[i][2] * s).applyMatrix4(this.root.matrixWorld);
   }
 
+  private headBone: THREE.Object3D | null = null;
+
+  /** Ağız / baş hizası (dünya): ateş nefesi için */
+  headPoint(out: THREE.Vector3): THREE.Vector3 {
+    if (this.headBone) {
+      this.headBone.getWorldPosition(out);
+      // Yüzün önüne doğru biraz
+      return out.add(new THREE.Vector3(-Math.sin(this.root.rotation.y) * 0.12, 0.02, -Math.cos(this.root.rotation.y) * 0.12));
+    }
+    const s = GameConfig.player.height / 1.8;
+    return out.set(0, 1.62 * s, -0.12).applyMatrix4(this.root.matrixWorld);
+  }
+
   /** Bir yetenek çıktığında çağrılır: kısa, sert bir itme/yumruk hamlesi. */
   triggerCast(): void {
     this.castPulse = 1;
@@ -204,6 +217,7 @@ export class PlayerView {
     this.tilt.add(inst.root);
     const bones = ['hand_l', 'hand_r', 'foot_l', 'foot_r'].map((n) => inst.root.getObjectByName(n));
     if (bones.every(Boolean)) this.limbBones = bones as THREE.Object3D[];
+    this.headBone = inst.head ?? inst.root.getObjectByName('head') ?? null;
     this.body.visible = false;
     for (const m of inst.materials) this.mats.push(m);
     inst.root.updateMatrixWorld(true);

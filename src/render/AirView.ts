@@ -86,13 +86,14 @@ export class AirView {
       }
       v.mesh.visible = true;
       this.tmp.lerpVectors(ctl.prevPosition, ctl.position, alpha);
-      this.tmp.y += ctl.height * 0.5;
-      v.mesh.position.copy(this.tmp);
       const r = S.radius * (ctl.sphereBig ? S.bigScale : 1) * (1 + Math.sin(performance.now() / 60) * 0.03);
+      // Karakter kürenin üstüne biner: küre ayakların altında
+      this.tmp.y -= r * 0.9;
+      v.mesh.position.copy(this.tmp);
       v.mesh.scale.setScalar(r);
       v.inner.rotation.x += dt * 9;
       v.inner.rotation.y += dt * 5;
-      v.mat.opacity = ctl.sphereBig ? 0.3 : 0.22;
+      v.mat.opacity = ctl.sphereBig ? 0.38 : 0.32;
     }
   }
 }

@@ -13,6 +13,8 @@ const ABILITY: Record<string, string> = {
   earthRock: ROCK + F('M5 6 l1.5-1.5 M3 10 l1-1'),
   earthWall: F('M2 21 L6 9 L9 21 Z M8 21 L12.5 3 L17 21 Z M15 21 L18.5 10 L22 21 Z'),
   waterShard: F('M12 2 L17 12 L12 22 L7 12 Z') + S('M12 6 V18', 1),
+  earthArmor: F('M12 2 L20 5 V11 C20 16 16.5 20 12 22 C7.5 20 4 16 4 11 V5 Z') + '<path d="M8 9 L11 12 L9 16 M16 8 L13 11 L15 15" fill="none" stroke="#2a2118" stroke-width="1.6" stroke-linecap="round"/>',
+  fireBreath: F('M3 12 L9 9 L9 15 Z') + F('M10 12 C13 7 17 6 21 5 C18 8 18 10 21 12 C18 14 18 16 21 19 C17 18 13 17 10 12 Z'),
   waterHeal: F('M12 3 C15 8 18 11 18 14.5 A6 6 0 0 1 6 14.5 C6 11 9 8 12 3 Z') + '<path d="M12 11 V18 M8.5 14.5 H15.5" fill="none" stroke="#0b2740" stroke-width="2.2" stroke-linecap="round"/>',
   iceWall: F('M3 21 L5 8 L8 5 L9 21 Z M10 21 L11 4 L13.5 2 L15 21 Z M16 21 L17 7 L20 9 L21 21 Z') + S('M5.5 12 L7 10.5 M12 9 L13 7.5 M17.5 13 L19 11.5', 1),
   iceGlide: S('M12 3 V21 M4.2 7.5 L19.8 16.5 M4.2 16.5 L19.8 7.5 M9.5 4.5 L12 7 L14.5 4.5 M9.5 19.5 L12 17 L14.5 19.5'),

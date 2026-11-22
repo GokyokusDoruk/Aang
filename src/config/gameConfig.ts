@@ -109,8 +109,14 @@ export const GameConfig = {
       boulder: { cooldown: 20, moveMult: 0.5, maxDuration: 1 },
       /** Toprak sağ tık uzun: nişana doğru sırayla yükselen duvarlar */
       earthWave: { cooldown: 30, moveMult: 1, maxDuration: 0 },
-      /** Su E basılı tut: Buz Duvarı (eskiden E'nin kısa basışıydı) */
-      iceWallHold: { cooldown: 7, moveMult: 1, maxDuration: 0 },
+      /** Su E basılı tut: su küresi, 5 sn'de canı doldurur */
+      waterSphere: { cooldown: 30, moveMult: 1, maxDuration: 0 },
+      /** Hava E basılı tut: hasarlı, 3 sn yere düşüren güçlü rüzgar patlaması */
+      galeBurst: { cooldown: 20, moveMult: 1, maxDuration: 0 },
+      /** Toprak E basılı tut: sağlam zırh */
+      earthArmorHeavy: { cooldown: 20, moveMult: 1, maxDuration: 0 },
+      /** Ateş E basılı tut: şarjlı nefes (1.5 sn'ye kadar) */
+      fireBreathCharged: { cooldown: 15, moveMult: 0.5, maxDuration: 1.5 },
       /** Hava sol tık uzun: yönlendirilebilir hortum */
       tornado: { cooldown: 20, moveMult: 0.5, maxDuration: 4, tickInterval: 1 / 30 },
       /** Hava sağ tık uzun: iki kat büyük, çarpan rüzgar küresi */
@@ -125,7 +131,11 @@ export const GameConfig = {
       waterShard: { cooldown: 0.45, castTime: 0.1, castMoveMult: 0.85 },
       iceGlide: { cooldown: 6.0, castTime: 0.15, castMoveMult: 1.0 },
       /** E: Şifa Suyu (etrafında dönen su, zamanla can) */
-      waterHeal: { cooldown: 14.0, castTime: 0.1, castMoveMult: 0.8 },
+      waterHeal: { cooldown: 5.0, castTime: 0.05, castMoveMult: 1.0 },
+      /** E: Toprak Zırhı */
+      earthArmor: { cooldown: 5.0, castTime: 0.1, castMoveMult: 0.8 },
+      /** E: Ateş Nefesi (yakın koni) */
+      fireBreath: { cooldown: 5.0, castTime: 0.1, castMoveMult: 0.7 },
       iceWall: { cooldown: 7.0, castTime: 0.1, castMoveMult: 0.5 },
       // Ateş / Yıldırım
       fireBall: { cooldown: 0.6, castTime: 0.15, castMoveMult: 0.8 },
@@ -134,7 +144,7 @@ export const GameConfig = {
       airBall: { cooldown: 0.8, castTime: 0.12, castMoveMult: 0.8 },
       airSphere: { cooldown: 4.0, castTime: 0.05, castMoveMult: 1.0 },
       /** E: Şok Dalgası (rakipleri iter, mermileri geri savurur) */
-      airShockwave: { cooldown: 5.0, castTime: 0.2, castMoveMult: 0.7 },
+      airShockwave: { cooldown: 6.0, castTime: 0.15, castMoveMult: 0.7 },
     },
   },
 
@@ -182,6 +192,18 @@ export const GameConfig = {
       selfDamageMult: 0.25,
       /** İsabet / patlamada yanma ihtimali */
       burnChance: 0.5,
+    },
+    /** Ateş Nefesi (E): ağızdan kısa menzilli ateş konisi, değdiği herkesi yakar */
+    breath: {
+      range: 4.5,
+      halfAngleDeg: 24,
+      damage: 10,
+      knockback: 4,
+      /** Tam şarjda (E uzun basış) */
+      chargedRange: 10,
+      chargedHalfAngleDeg: 40,
+      chargedDamage: 24,
+      chargedKnockback: 9,
     },
     /** Yanma: süre boyunca her saniye küçük hasar (yeniden yanınca süre yenilenir) */
     burn: {
@@ -241,6 +263,18 @@ export const GameConfig = {
       groundSpawnForward: 0.9,
       /** Zemine çarpınca orada toprak tepeciği yükselir */
       bumpOnImpact: true,
+    },
+    /**
+     * Toprak Zırhı (E): hasar önce zırhtan düşer. Zırh varken yanmazsın, yavaşlamazsın, sersemlemezsin.
+     * İtme, zırh miktarıyla azalır: çarpan = 1 - min(maxReduction, zırh / fullReductionAt).
+     */
+    armor: {
+      light: 30,
+      lightDuration: 8,
+      heavy: 75,
+      heavyDuration: 12,
+      fullReductionAt: 75,
+      maxReduction: 0.85,
     },
     /** Kaya zemine çarpınca yükselen tepecik: 5 sn durur, sonra geri iner. Üstünde durulabilir. */
     bump: {
@@ -394,13 +428,18 @@ export const GameConfig = {
       /** Tam yığında donma süresi (s); sonra yığınlar sıfırlanır */
       freezeTime: 0.7,
     },
-    /** Şifa Suyu (E): etrafında dönen su, süre boyunca canı doldurur */
+    /** Şifa Suyu (E kısa): anında can + kısa su girdabı görseli */
     heal: {
-      duration: 3,
-      /** Toplam yenilenen can */
-      amount: 30,
+      amount: 15,
+      /** Girdap görselinin süresi (s) */
+      swirlTime: 0.8,
       /** Ekranda yeşil sayı gösterme aralığı (s) */
       popInterval: 0.5,
+    },
+    /** Su Küresi (E uzun): içinde hareketsiz kalırsın, süre sonunda can tam dolar; itilemezsin */
+    sphere: {
+      duration: 5,
+      radius: 1.3,
     },
     /**
      * Buz Duvarı (E basılı tut): hemen önünde anında yükselen, toprak duvardan hızlı ama kırılgan siper.
@@ -491,6 +530,22 @@ export const GameConfig = {
       /** Bu mesafeden yakındakiler koni dışında da itilir */
       pointBlank: 1.3,
     },
+    /** Rüzgar Patlaması (E): etrafındaki herkesi senden dışarı savurur, yere düşürür; mermileri geri çevirir */
+    gust: {
+      radius: 6,
+      push: 16,
+      up: 5,
+      damage: 0,
+      downTime: 1,
+    },
+    /** Fırtına Patlaması (E uzun): daha geniş, hasarlı, 3 sn yere düşürür */
+    gale: {
+      radius: 8.5,
+      push: 22,
+      up: 7,
+      damage: 12,
+      downTime: 3,
+    },
     /** Hava topu (sol tık): çarptığı yerde küçük fırtına; az hasar, çarpma noktasından güçlü savurma */
     ball: {
       radius: 0.32,
@@ -537,6 +592,8 @@ export const GameConfig = {
       maxPitchDeg: 60,
       /** Kürenin yarıçapı (görsel ve çarpma) */
       radius: 1.1,
+      /** Karakter kürenin üstüne biner: ayaklar zeminden en az yarıçap × bu kadar yukarıda */
+      rideHeight: 1.9,
       /** Uzun basış: küre bu kat büyük ve çarpar */
       bigScale: 2,
       ramDamage: 10,

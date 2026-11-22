@@ -71,6 +71,38 @@ function lightningLine(ctx: AbilityContext, charge = 0): void {
   for (let i = 0; i < bolts; i++) ctx.bus.emit('fx:lightning', { from: ctx.origin.clone(), to: end.clone(), element: 'fire' });
 }
 
+const mouth = new Vector3();
+const toT = new Vector3();
+
+/** Ateş Nefesi: baş hizasından nişan yönünde koni; içindeki herkes hasar alır ve tutuşur. */
+function breath(ctx: AbilityContext, charge: number): void {
+  const B = GameConfig.fire.breath;
+  const lerp = (a: number, b: number) => a + (b - a) * charge;
+  const range = lerp(B.range, B.chargedRange);
+  const half = (lerp(B.halfAngleDeg, B.chargedHalfAngleDeg) * Math.PI) / 180;
+  const damage = lerp(B.damage, B.chargedDamage);
+  const kb = lerp(B.knockback, B.chargedKnockback);
+  const c = ctx.caster;
+  mouth.copy(c.position).setY(c.position.y + c.controller.height * 0.88);
+  dir.copy(ctx.direction);
+  dir.y *= 0.6;
+  dir.normalize();
+  const cosHalf = Math.cos(half);
+  for (const k of ctx.services.combatants) {
+    if (!k.alive || k.id === c.id) continue;
+    k.center(toT).sub(mouth);
+    const d = toT.length();
+    if (d > range + k.radius) continue;
+    if (d > k.radius * 1.5 && toT.dot(dir) / d < cosHalf) continue;
+    const block = ctx.world.raycast(mouth, toT.clone().divideScalar(d || 1), d);
+    if (block && block.distance < d - k.radius) continue;
+    impulse.set(dir.x, 0, dir.z).normalize().multiplyScalar(kb);
+    impulse.y = 1.5;
+    k.takeDamage(damage * (1 - 0.3 * (d / range)), impulse, c.id, k.center(new Vector3()), { burn: true });
+  }
+  ctx.bus.emit('fx:breath', { origin: mouth.clone(), direction: dir.clone(), range, halfAngle: half, charge });
+}
+
 export const fireAbilities: AbilityDef[] = [
   {
     id: 'fireBall',
@@ -102,6 +134,22 @@ export const fireAbilities: AbilityDef[] = [
       kind: 'charge',
       ...C.lightningCharged,
       release: (ctx, charge) => lightningLine(ctx, charge),
+    },
+  },
+  {
+    id: 'fireBreath',
+    element: 'fire',
+    slot: 'special',
+    name: 'Ateş Nefesi',
+    description: 'Ağzından kısa menzilli ateş konisi: yakındakileri yakar. Basılı tut: şarj et, menzil ve koni büyür.',
+    tuning: T.fireBreath,
+    execute: (ctx) => breath(ctx, 0),
+    charged: {
+      id: 'fireBreathCharged',
+      name: 'Ejder Nefesi',
+      kind: 'charge',
+      ...C.fireBreathCharged,
+      release: (ctx, charge) => breath(ctx, Math.max(0.25, charge)),
     },
   },
 ];

@@ -142,7 +142,8 @@ export class AirSystem {
         this.rammed.set(c.id, hit);
       }
       const r = S.radius * S.bigScale;
-      c.center(tmp);
+      // Küre karakterin altında
+      tmp.copy(ctl.position).setY(ctl.position.y - r * 0.9);
       for (const k of this.combatants) {
         if (!k.alive || k === c || hit.has(k.id)) continue;
         k.center(imp);

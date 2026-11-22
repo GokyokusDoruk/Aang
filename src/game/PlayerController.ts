@@ -297,6 +297,13 @@ export class PlayerController {
     }
     const speed = GameConfig.player.runSpeed * S.speedMult * this.statusSpeedMultiplier;
     this.velocity.copy(d).multiplyScalar(speed);
+    // Kürenin üstünde: ayaklar zeminden en az küre boyu kadar yukarıda kalır
+    const r = S.radius * (this.sphereBig ? S.bigScale : 1);
+    const ride = r * S.rideHeight;
+    const ground = this.world.groundHeight(this.position.x, this.position.z, GameConfig.player.radius, this.position.y + 0.3);
+    if (Number.isFinite(ground) && this.position.y < ground + ride) {
+      this.velocity.y = Math.max(this.velocity.y, Math.min(12, (ground + ride - this.position.y) * 8));
+    }
     if (d.y > 0.05) {
       this.grounded = false;
       this.coyoteTimer = 0;

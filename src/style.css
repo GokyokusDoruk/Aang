@@ -520,6 +520,20 @@ body {
   color: #ffb36b;
   text-shadow: 0 0 6px #ff5a1a;
 }
+.player-hp .chill.armor {
+  background: rgba(60, 52, 44, 0.85);
+  border-color: #c9b79a;
+  color: #f0e2c8;
+  text-shadow: 0 0 6px #6b5a40;
+}
+.hpbar.armored {
+  border-color: #c9b79a;
+  box-shadow: 0 0 6px #a08a68;
+}
+.dmg.armor {
+  color: #c9b79a;
+  font-size: 14px;
+}
 .player-hp .chill.daze {
   background: rgba(70, 55, 30, 0.8);
   border-color: #e0b86a;

@@ -67,21 +67,22 @@ export const waterAbilities: AbilityDef[] = [
     element: 'water',
     slot: 'special',
     name: 'Şifa Suyu',
-    description: 'Etrafında su döner ve 3 sn boyunca canını doldurur. Basılı tut: önünde Buz Duvarı yükselt.',
+    description: 'Etrafında su döner, anında can verir. Basılı tut: su küresine gir, 5 sn sonra canın tam dolar (hareket edemezsin, itilemezsin).',
     tuning: T.waterHeal,
     execute: (ctx) => {
-      const H = GameConfig.water.heal;
-      ctx.services.combatants.find((k) => k.id === ctx.caster.id)?.startHeal(H.amount, H.duration);
+      ctx.services.combatants.find((k) => k.id === ctx.caster.id)?.healNow(GameConfig.water.heal.amount);
       const p = ctx.caster.position;
       ctx.bus.emit('fx:burst', { point: new Vector3(p.x, p.y + 0.1, p.z), element: 'water', size: 1 });
     },
     charged: {
-      id: 'iceWallHold',
-      name: 'Buz Duvarı',
+      id: 'waterSphere',
+      name: 'Su Küresi',
       kind: 'instant',
-      ...C.iceWallHold,
+      ...C.waterSphere,
       start: (ctx) => {
-        ctx.services.walls.placeIceWall(ctx.caster.id, ctx.caster.position, ctx.target, ctx.direction);
+        ctx.services.combatants.find((k) => k.id === ctx.caster.id)?.enterWaterSphere();
+        const p = ctx.caster.position;
+        ctx.bus.emit('fx:burst', { point: new Vector3(p.x, p.y + 0.5, p.z), element: 'water', size: 1.6 });
       },
     },
   },
