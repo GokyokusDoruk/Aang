@@ -1,4 +1,7 @@
 import * as THREE from 'three';
+import { BendingPose } from './BendingPose';
+import type { ElementId } from '../abilities/elements';
+import type { AbilitySlot } from '../abilities/types';
 import { GameConfig } from '../config/gameConfig';
 import type { MoveState } from '../game/PlayerController';
 import { CharacterInstance, type AnimKey, type CharacterAsset } from './CharacterAsset';
@@ -201,10 +204,29 @@ export class PlayerView {
   }
 
   /** Bir yetenek çıktığında çağrılır: kısa, sert bir itme/yumruk hamlesi. */
-  triggerCast(): void {
+  triggerCast(info?: { element: ElementId; slot: AbilitySlot; id: string }): void {
     this.castPulse = 1;
     this.castSide = -this.castSide;
-    if (this.model) this.model.playOnce(this.castSide > 0 && this.model.has('punch') ? 'punch' : 'cast');
+    if (!this.model) return;
+    if (this.bend && info) {
+      // Dövüş sanatı hareketi kemik pozlarıyla; yalnızca ateş yumruğunda hazır yumruk klibi de oynar
+      this.bend.cast(info.element, info.slot, info.id);
+      if (info.element === 'fire' && info.slot === 'primary' && this.model.has('punch')) this.model.playOnce('punch', 1.8);
+      return;
+    }
+    this.model.playOnce(this.castSide > 0 && this.model.has('punch') ? 'punch' : 'cast');
+  }
+
+  /** Büküm pozu: elementin duruşu ve süren şarj */
+  private bend: BendingPose | null = null;
+  private bendElement: ElementId | null = null;
+  private bendCharge: string | null = null;
+  private bendProgress = 0;
+
+  setBend(element: ElementId | null, chargeId: string | null, progress: number): void {
+    this.bendElement = element;
+    this.bendCharge = chargeId;
+    this.bendProgress = progress;
   }
 
   /**
@@ -215,6 +237,8 @@ export class PlayerView {
     const inst = new CharacterInstance(asset, this.clothMat.color.getHex(), this.accentMat);
     this.model = inst;
     this.tilt.add(inst.root);
+    const bend = new BendingPose(inst.root);
+    this.bend = bend.ok ? bend : null;
     const bones = ['hand_l', 'hand_r', 'foot_l', 'foot_r'].map((n) => inst.root.getObjectByName(n));
     if (bones.every(Boolean)) this.limbBones = bones as THREE.Object3D[];
     this.headBone = inst.head ?? inst.root.getObjectByName('head') ?? null;
@@ -334,6 +358,13 @@ export class PlayerView {
         ts = Math.max(0.6, Math.min(1.6, speed / run));
       } else if (castProgress > 0 && this.model.has('charge')) key = 'charge';
       this.animateModel(dt, key, ts);
+      if (this.bend) {
+        // Dururken elemente göre savaş duruşu; koşarken / havada / kayarken / dash'te kapalı
+        const stance = grounded && speed < 1.5 && !sliding && !dashing && state !== 'crouching' && chill < 1 && downed <= 0 ? 1 : 0;
+        this.bend.apply(dt, { element: this.bendElement, stance, chargeId: this.bendCharge, chargeProgress: this.bendProgress }, this.root);
+        this.tilt.position.y = 0.22 * downed - this.bend.drop * (1 - downed);
+        this.tilt.rotation.y = this.bend.spin;
+      }
     }
 
     const sw = Math.sin(this.phase);

@@ -89,8 +89,16 @@ const feel = new GameFeel(
 );
 // Yetenek çıktığı an karakter vuruş hamlesi yapar
 bus.on('ability:cast', (e) => {
-  if (e.casterId === 'player') playerView.triggerCast();
-  else if (e.casterId === 'bot') botView.triggerCast();
+  const info = { element: e.ability.element, slot: e.ability.slot, id: e.ability.id };
+  if (e.casterId === 'player') playerView.triggerCast(info);
+  else if (e.casterId === 'bot') botView.triggerCast(info);
+});
+// Uzun basış bırakıldı / anlık uzun basış: aynı elementin hareketi
+bus.on('ability:chargedEnd', (e) => {
+  if (e.cancelled || e.charged.kind === 'channel') return;
+  const info = { element: e.ability.element, slot: e.ability.slot, id: e.charged.id };
+  if (e.casterId === 'player') playerView.triggerCast(info);
+  else if (e.casterId === 'bot') botView.triggerCast(info);
 });
 
 const aimMarker = new THREE.Mesh(
@@ -286,6 +294,10 @@ function frame(now: number): void {
   // Oyuncu (kendi görünümü kamera mesafesine göre saydamlaşır)
   const blink = player.spawnProtected && Math.floor(now / 90) % 2 === 0;
   playerView.root.visible = session.running && player.alive && !blink;
+  {
+    const ch = abilities.chargedActive;
+    playerView.setBend(abilities.activeElement, ch?.charged.id ?? null, ch?.progress ?? 0);
+  }
   playerView.update(
     renderPos,
     lerpAngle(playerCtl.prevFacingYaw, playerCtl.facingYaw, alpha),
@@ -306,6 +318,8 @@ function frame(now: number): void {
   const inTraining = session.running && session.mode === 'training';
   if (inMatch) {
     const ba = session.botAbilities;
+    const bch = ba.chargedActive;
+    botView.setBend(ba.activeElement, bch?.charged.id ?? null, bch?.progress ?? 0);
     drawFighter(botView, bot, alpha, now, ELEMENTS[ba.activeElement].color, castVisual(ba));
   } else botView.root.visible = false;
   session.dummies.forEach((d, i) => {
