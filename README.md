@@ -73,6 +73,7 @@ npm run build      # typecheck + production build
 - **Hortum** (Hava, sol tık basılı tut, 20 sn): 4 sn'ye kadar nişanını izleyen hortum; içindekileri dışa ve yukarı savurur, girdapla döndürür, az hasar verir. Bırakınca söner. Ayar: `air.tornado`
 - **Rüzgar Küresi** (Hava, sağ tık): kürenin üstüne binip baktığın yöne (yukarı / aşağı dahil, A/D ile yana) 1.5 sn hızlı uçuş (koşu hızının ~1.9 katı); hep hareket eder. Bitince zıplamayı basılı tut = süzül. Ayar: `air.sphere`
 - **Dev Küre** (Hava, sağ tık basılı tut, 30 sn): iki kat büyük, 3 sn süren küre; değdiği rakibe 10 hasar ve güçlü itme
+- **Karakter çarpışması** (`src/combat/BodyCollision.ts`): oyuncu, bot ve kuklalar birbirinin içinden geçemez; iç içe girince eşit itilerek ayrılır, birbirine doğru giden hız kesilir. Su Küresi içindeki karakter yerinden oynamaz (diğeri itilir).
 - **Elemente göre dash görseli** (`src/render/DashView.ts`, yalnızca görsel): Toprak'ta seni taşıyan taş plaka (bitince düşüp ufalanır), Su'da altında kayan buz levhası (bitince erir), Hava'da ellerden ve ayaklardan geriye savrulan rüzgar, Ateş'te ellerden ve ayaklardan geriye püsküren alev.
 - **Rüzgar Patlaması** (Hava, E, 6 sn): etrafındaki herkesi senden dışarı savurur ve 1 sn yere düşürür, hasarsız; etraftaki mermileri geri çevirir. Ayar: `air.gust`.
 - **Fırtına Patlaması** (Hava, E basılı tut, 20 sn): daha geniş, 12 hasar, 3 sn yere düşürür; dönen rüzgar halkaları + toz. Ayar: `air.gale`.

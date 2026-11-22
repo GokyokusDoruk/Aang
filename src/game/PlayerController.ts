@@ -519,6 +519,24 @@ export class PlayerController {
 
   // ---------------------------------------------------------------- çarpışma
 
+  /**
+   * Dışarıdan yatay kaydır (karakter-karakter çarpışması); duvara girmez.
+   * (nx, nz) yönündeki, o yöne karşı giden hız bileşeni silinir.
+   */
+  nudge(dx: number, dz: number, nx: number, nz: number): void {
+    const P = GameConfig.player;
+    const pos = this.position;
+    pos.x += dx;
+    pos.z += dz;
+    tmpPush.set(0, 0, 0);
+    this.world.pushOut(pos, P.radius, pos.y, pos.y + this.height, pos.y + (this.grounded ? P.stepHeight : P.airStepHeight), tmpPush);
+    const vn = this.velocity.x * nx + this.velocity.z * nz;
+    if (vn < 0) {
+      this.velocity.x -= nx * vn;
+      this.velocity.z -= nz * vn;
+    }
+  }
+
   private moveHorizontal(dt: number): void {
     const P = GameConfig.player;
     const r = P.radius;
