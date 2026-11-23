@@ -132,7 +132,7 @@ export class ProjectileSystem {
         const self = (s.splashDamage ?? 0) * falloff * (s.selfDamageMult ?? 0);
         if (self > 0) c.takeDamage(self, null, c.id, probe, { ignoreInvuln: true, kind: 'self' });
       } else {
-        c.takeDamage((s.splashDamage ?? 0) * falloff, impulse, p.ownerId, probe, { burn: rollBurn(s) });
+        c.takeDamage((s.splashDamage ?? 0) * falloff, impulse, p.ownerId, probe, { burn: rollBurn(s), element: p.element });
       }
     }
     this.bus.emit('fx:explosion', { point: at.clone(), radius, element: p.element });
@@ -220,7 +220,7 @@ export class ProjectileSystem {
         p.position.addScaledVector(dir, Math.min(targetDist, maxS));
         impulse.set(dir.x, 0, dir.z).normalize().multiplyScalar(p.spec.knockback);
         impulse.y = p.spec.knockbackUp;
-        target.takeDamage(p.spec.damage, impulse, p.ownerId, p.position, { chill: p.spec.chill, burn: rollBurn(p.spec) });
+        target.takeDamage(p.spec.damage, impulse, p.ownerId, p.position, { chill: p.spec.chill, burn: rollBurn(p.spec), element: p.element });
         this.bus.emit('projectile:impact', { kind: p.kind, element: p.element, point: p.position.clone(), normal: null, hitCombatant: true });
         this.explode(p, p.position, target.id);
         this.list.splice(i, 1);

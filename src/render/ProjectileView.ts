@@ -2,6 +2,24 @@ import * as THREE from 'three';
 import { ELEMENTS } from '../abilities/elements';
 import type { Projectile, ProjectileSystem } from '../combat/ProjectileSystem';
 import { boulderGeometry } from './rockGeometry';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import type { Vfx } from './Vfx';
+
+/** Buz saçağı: uzun, çok yüzlü sivri ana kristal + köküne yakın iki küçük yan saçak (ucu +Z) */
+function icicleGeometry(): THREE.BufferGeometry {
+  const main = new THREE.ConeGeometry(1, 7, 6, 1);
+  main.rotateX(Math.PI / 2);
+  main.translate(0, 0, 0.5);
+  const a = new THREE.ConeGeometry(0.45, 2.6, 5, 1);
+  a.rotateX(Math.PI / 2 - 0.35);
+  a.translate(0.55, 0.15, -1.6);
+  const b = new THREE.ConeGeometry(0.4, 2.2, 5, 1);
+  b.rotateX(Math.PI / 2 + 0.3);
+  b.translate(-0.5, -0.2, -1.9);
+  const g = mergeGeometries([main.toNonIndexed(), a.toNonIndexed(), b.toNonIndexed()])!;
+  g.computeVertexNormals();
+  return g;
+}
 
 /** ProjectileSystem durumunu her karede mesh'lerle eşler (interpolasyonlu). */
 export class ProjectileView {
@@ -9,16 +27,16 @@ export class ProjectileView {
   private readonly rockGeos = [1, 2, 3, 4, 5].map((i) => boulderGeometry(i));
   private readonly rockMat = new THREE.MeshStandardMaterial({ color: 0x8a8279, roughness: 0.95, flatShading: true });
   private readonly orbGeo = new THREE.SphereGeometry(1, 12, 10);
-  private readonly shardGeo = new THREE.OctahedronGeometry(1, 0);
+  private readonly shardGeo = icicleGeometry();
   private readonly shardMat = new THREE.MeshStandardMaterial({
-    color: 0xbfefff,
-    emissive: 0x2a9fd6,
-    emissiveIntensity: 0.6,
-    roughness: 0.15,
-    metalness: 0.1,
+    color: 0xd4f3ff,
+    emissive: 0x4cc4ff,
+    emissiveIntensity: 1.0,
+    roughness: 0.05,
+    metalness: 0.35,
     flatShading: true,
     transparent: true,
-    opacity: 0.9,
+    opacity: 0.88,
   });
   private readonly look = new THREE.Vector3();
   private readonly fireCore = new THREE.MeshBasicMaterial({ color: 0xfff1a8 });
@@ -41,6 +59,7 @@ export class ProjectileView {
   constructor(
     private readonly scene: THREE.Scene,
     private readonly system: ProjectileSystem,
+    private readonly vfx: Vfx | null = null,
   ) {}
 
   private create(p: Projectile): THREE.Mesh {
@@ -51,16 +70,18 @@ export class ProjectileView {
     } else if (p.kind === 'shard') {
       // Uzun buz kıymığı: hız yönüne bakar (lookAt ile +Z ekseni)
       mesh = new THREE.Mesh(this.shardGeo, this.shardMat);
-      mesh.scale.set(p.spec.radius, p.spec.radius, p.spec.radius * 3.2);
+      mesh.scale.set(p.spec.radius * 1.1, p.spec.radius * 1.1, p.spec.radius * 0.85);
       mesh.userData.aligned = true;
     } else if (p.kind === 'fireball') {
-      // Sarı çekirdek + titreyen turuncu kabuk (toplamalı karışım: ışık gibi parlar)
+      // Kızgın çekirdek; alevler parçacık katmanından (Vfx) gelir
       mesh = new THREE.Mesh(this.orbGeo, this.fireCore);
-      mesh.scale.setScalar(p.spec.radius * 0.7);
-      const shell = new THREE.Mesh(this.orbGeo, this.fireShell);
-      shell.scale.setScalar(1.7);
-      shell.name = 'shell';
-      mesh.add(shell);
+      mesh.scale.setScalar(p.spec.radius * (this.vfx ? 0.55 : 0.7));
+      if (!this.vfx) {
+        const shell = new THREE.Mesh(this.orbGeo, this.fireShell);
+        shell.scale.setScalar(1.7);
+        shell.name = 'shell';
+        mesh.add(shell);
+      }
       mesh.userData.flicker = true;
     } else if (p.kind === 'airball') {
       // Beyaz çekirdek + dönen, titreyen saydam rüzgar kabuğu
@@ -93,12 +114,36 @@ export class ProjectileView {
     return mesh;
   }
 
+  /** Parçacık izi: ateş topu alevi, alev dili, buz kristali, kaya tozu, rüzgar girdabı */
+  private trail(p: Projectile, at: THREE.Vector3, dt: number, m: THREE.Mesh): void {
+    const v = this.vfx!;
+    switch (p.kind) {
+      case 'fireball':
+        v.fireballTrail(at, p.velocity, p.spec.radius, dt);
+        break;
+      case 'flame':
+        m.visible = false;
+        v.flameTrail(at, p.velocity, p.spec.radius, p.age, dt);
+        break;
+      case 'shard':
+        v.icicleTrail(at, p.velocity, dt);
+        break;
+      case 'rock':
+        v.rockTrail(at, p.spec.radius, dt);
+        break;
+      case 'airball':
+        v.airTrail(at, p.velocity, p.spec.radius, p.age, dt);
+        break;
+    }
+  }
+
   update(dt: number, alpha: number): void {
     const seen = new Set<number>();
     for (const p of this.system.list) {
       seen.add(p.id);
       const m = this.meshes.get(p.id) ?? this.create(p);
       m.position.lerpVectors(p.prevPosition, p.position, alpha);
+      if (this.vfx) this.trail(p, m.position, dt, m);
       if (m.userData.flame) {
         const t = Math.min(1, p.age / p.spec.lifetime);
         m.scale.setScalar(p.spec.radius * (0.5 + t * 1.6) * (0.9 + Math.random() * 0.2));

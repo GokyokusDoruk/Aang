@@ -158,6 +158,11 @@ export class EffectsView {
   private explosion(e: GameEvents['fx:explosion']): void {
     const air = e.element === 'air';
     if (air) this.storm(e.point, e.radius);
+    // Ateş patlamasının alevi ve dumanı parçacık katmanında (Vfx); burada yalnızca yer halkası
+    if (e.element === 'fire') {
+      this.groundRing(e.point, e.radius, 0xff7a2a);
+      return;
+    }
     const core = new THREE.MeshBasicMaterial({ color: air ? 0xffffff : 0xfff3b0, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
     const shell = new THREE.MeshBasicMaterial({ color: air ? 0xa9dcff : 0xff5a1a, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
     const a = new THREE.Mesh(this.sphere, core);
@@ -200,6 +205,23 @@ export class EffectsView {
     });
     if (air) this.dust(e.point, 0xe6f7ff, e.radius * 0.8);
     else this.debris(e.point, UP, 0xff7a2a, 7, 0.07, 6);
+  }
+
+  private groundRing(at: THREE.Vector3, radius: number, color: number): void {
+    const ringMat = new THREE.MeshBasicMaterial({ color, transparent: true, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending });
+    const ring = new THREE.Mesh(this.ring, ringMat);
+    ring.position.copy(at);
+    ring.rotation.x = -Math.PI / 2;
+    this.add({
+      obj: ring,
+      mats: [ringMat],
+      life: 0,
+      max: 0.45,
+      tick: (t) => {
+        ring.scale.setScalar(radius * (0.3 + 0.9 * t));
+        ringMat.opacity = 0.6 * (1 - t);
+      },
+    });
   }
 
   /** Küçük fırtına: çarpma noktasında yükselip dağılan dönen rüzgar halkaları */

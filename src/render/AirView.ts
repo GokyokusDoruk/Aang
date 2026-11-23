@@ -2,98 +2,137 @@ import * as THREE from 'three';
 import { GameConfig } from '../config/gameConfig';
 import type { AirSystem } from '../combat/AirSystem';
 import type { Combatant } from '../combat/Combatant';
+import type { Vfx } from './Vfx';
+import { funnelGeometry, funnelMaterial, windBallMaterial } from './WindMaterial';
 
-const WIND = 0xe6f7ff;
+const DUST_0 = new THREE.Color(0x8f8170);
+const DUST_1 = new THREE.Color(0xbcae98);
+const WIND_0 = new THREE.Color(0xffffff);
+const WIND_1 = new THREE.Color(0xbfe6ff);
 
-/** Hortumlar (dönen, yukarı genişleyen halka yığını) ve rüzgar küreleri (karakteri saran saydam küre). */
+/**
+ * Hortum: kıvrılan, sarmal akan toz + hava hunisi (iki katman), çevresinde yükselen toz sarmalı ve tabanda toz.
+ * Rüzgar küresi: yumuşak kenarlı, içinde fırtına bulutları dönen top + içinde dolaşan rüzgar parçacıkları. Çizgi yok.
+ */
 export class AirView {
-  private readonly tornados = new Map<number, { group: THREE.Group; rings: THREE.Mesh[]; mat: THREE.MeshBasicMaterial }>();
-  private readonly spheres = new Map<string, { mesh: THREE.Mesh; mat: THREE.MeshBasicMaterial; inner: THREE.Mesh }>();
-  private readonly ringGeo = new THREE.TorusGeometry(1, 0.07, 6, 28);
-  private readonly sphereGeo = new THREE.SphereGeometry(1, 24, 16);
+  private readonly tornados = new Map<number, { group: THREE.Group; mats: THREE.ShaderMaterial[] }>();
+  private readonly spheres = new Map<string, { group: THREE.Group; mats: THREE.ShaderMaterial[] }>();
+  private readonly funnelOuter: THREE.BufferGeometry;
+  private readonly funnelInner: THREE.BufferGeometry;
+  private readonly ballGeo = new THREE.SphereGeometry(1, 40, 28);
   private readonly tmp = new THREE.Vector3();
 
   constructor(
     private readonly scene: THREE.Scene,
     private readonly system: AirSystem,
-  ) {}
-
-  update(dt: number, alpha: number, combatants: Combatant[]): void {
-    this.updateTornados(alpha);
-    this.updateSpheres(dt, alpha, combatants);
+    private readonly vfx: Vfx | null = null,
+  ) {
+    const T = GameConfig.air.tornado;
+    this.funnelOuter = funnelGeometry(0.35, T.radius * 1.5, T.height * 1.5);
+    this.funnelInner = funnelGeometry(0.2, T.radius * 1.05, T.height * 1.45);
   }
 
-  private updateTornados(alpha: number): void {
-    const T = GameConfig.air.tornado;
-    const seen = new Set<number>();
+  update(dt: number, alpha: number, combatants: Combatant[]): void {
     const time = performance.now() / 1000;
+    this.updateTornados(dt, alpha, time);
+    this.updateSpheres(dt, alpha, combatants, time);
+  }
+
+  private updateTornados(dt: number, alpha: number, time: number): void {
+    const T = GameConfig.air.tornado;
+    const H = T.height * 1.5;
+    const seen = new Set<number>();
     for (const t of this.system.tornados) {
       seen.add(t.id);
       let v = this.tornados.get(t.id);
       if (!v) {
         const group = new THREE.Group();
-        const mat = new THREE.MeshBasicMaterial({ color: WIND, transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
-        const rings: THREE.Mesh[] = [];
-        const n = 11;
-        for (let i = 0; i < n; i++) {
-          const r = new THREE.Mesh(this.ringGeo, mat);
-          r.userData.k = i / (n - 1);
-          group.add(r);
-          rings.push(r);
-        }
+        const mo = funnelMaterial(true);
+        const mi = funnelMaterial(false);
+        mo.uniforms.uHeight.value = H;
+        mi.uniforms.uHeight.value = H;
+        group.add(new THREE.Mesh(this.funnelOuter, mo), new THREE.Mesh(this.funnelInner, mi));
         this.scene.add(group);
-        v = { group, rings, mat };
+        v = { group, mats: [mo, mi] };
         this.tornados.set(t.id, v);
       }
       v.group.position.lerpVectors(t.prevPosition, t.position, alpha);
-      v.mat.opacity = 0.5 * Math.max(0, t.strength);
-      const grow = Math.min(1, t.age / 0.25);
-      for (const r of v.rings) {
-        const k = r.userData.k as number;
-        // Huni: alt dar, üst geniş; halkalar dalgalanarak döner
-        const rad = (0.35 + k * T.radius * 1.1) * grow;
-        r.scale.set(rad, rad, rad * 0.9);
-        r.position.set(Math.sin(time * 6 + k * 5) * 0.25 * k, k * T.height * grow, Math.cos(time * 6 + k * 5) * 0.25 * k);
-        r.rotation.set(Math.PI / 2 + Math.sin(time * 3 + k * 4) * 0.15, 0, time * (8 - k * 3));
+      const grow = Math.min(1, t.age / 0.4);
+      const s = Math.max(0, t.strength) * grow;
+      v.group.scale.set(0.4 + 0.6 * grow, grow, 0.4 + 0.6 * grow);
+      for (const m of v.mats) {
+        m.uniforms.uTime.value = time;
+        m.uniforms.uOpacity.value = s;
+      }
+      if (this.vfx && s > 0.05) {
+        const p = v.group.position;
+        const n = Math.round(dt * 90 * s + Math.random());
+        for (let i = 0; i < n; i++) {
+          const h = Math.random() * H * 0.9;
+          const r = 0.35 + (T.radius * 1.4 - 0.35) * Math.pow(h / H, 1.7) + Math.random() * 0.3;
+          const a = Math.random() * Math.PI * 2;
+          const tang = 6 + h * 1.2;
+          this.vfx.dust.emit(p.x + Math.cos(a) * r, p.y + h, p.z + Math.sin(a) * r, -Math.sin(a) * tang, 2.5 + Math.random() * 2, Math.cos(a) * tang, {
+            life: 0.6 + Math.random() * 0.5, size0: 0.35, size1: 0.9, color0: DUST_0, color1: DUST_1, alpha: 0.4, drag: 1.2, lift: 1,
+          });
+        }
+        const nb = Math.round(dt * 40 * s + Math.random());
+        for (let i = 0; i < nb; i++) {
+          const a = Math.random() * Math.PI * 2;
+          const r = 0.6 + Math.random() * 1.2;
+          this.vfx.dust.emit(p.x + Math.cos(a) * r, p.y + 0.1, p.z + Math.sin(a) * r, -Math.sin(a) * 7, 0.8, Math.cos(a) * 7, {
+            life: 0.8 + Math.random() * 0.5, size0: 0.6, size1: 1.6, color0: DUST_0, color1: DUST_1, alpha: 0.35, drag: 1.5,
+          });
+        }
       }
     }
     for (const [id, v] of this.tornados) {
       if (seen.has(id)) continue;
       this.scene.remove(v.group);
-      v.mat.dispose();
+      for (const m of v.mats) m.dispose();
       this.tornados.delete(id);
     }
   }
 
-  private updateSpheres(dt: number, alpha: number, combatants: Combatant[]): void {
+  private updateSpheres(dt: number, alpha: number, combatants: Combatant[], time: number): void {
     const S = GameConfig.air.sphere;
     for (const c of combatants) {
       const ctl = c.controller;
-      const on = c.alive && ctl.sphereTimer > 0;
       let v = this.spheres.get(c.id);
-      if (!on) {
-        if (v) v.mesh.visible = false;
+      if (!(c.alive && ctl.sphereTimer > 0)) {
+        if (v) v.group.visible = false;
         continue;
       }
       if (!v) {
-        const mat = new THREE.MeshBasicMaterial({ color: WIND, transparent: true, opacity: 0.22, depthWrite: false, blending: THREE.AdditiveBlending });
-        const mesh = new THREE.Mesh(this.sphereGeo, mat);
-        const inner = new THREE.Mesh(this.ringGeo, mat);
-        mesh.add(inner);
-        this.scene.add(mesh);
-        v = { mesh, mat, inner };
+        const group = new THREE.Group();
+        const ms = windBallMaterial();
+        const mc = windBallMaterial();
+        mc.uniforms.uSpeed.value = -1.6;
+        const core = new THREE.Mesh(this.ballGeo, mc);
+        core.scale.setScalar(0.62);
+        group.add(new THREE.Mesh(this.ballGeo, ms), core);
+        this.scene.add(group);
+        v = { group, mats: [ms, mc] };
         this.spheres.set(c.id, v);
       }
-      v.mesh.visible = true;
+      v.group.visible = true;
       this.tmp.lerpVectors(ctl.prevPosition, ctl.position, alpha);
-      const r = S.radius * (ctl.sphereBig ? S.bigScale : 1) * (1 + Math.sin(performance.now() / 60) * 0.03);
-      // Karakter kürenin üstüne biner: küre ayakların altında
+      const r = S.radius * (ctl.sphereBig ? S.bigScale : 1);
       this.tmp.y -= r * 0.9;
-      v.mesh.position.copy(this.tmp);
-      v.mesh.scale.setScalar(r);
-      v.inner.rotation.x += dt * 9;
-      v.inner.rotation.y += dt * 5;
-      v.mat.opacity = ctl.sphereBig ? 0.38 : 0.32;
+      v.group.position.copy(this.tmp);
+      v.group.scale.setScalar(r);
+      for (const m of v.mats) m.uniforms.uTime.value = time;
+      if (this.vfx) {
+        const n = Math.round(dt * (ctl.sphereBig ? 80 : 45) + Math.random());
+        for (let i = 0; i < n; i++) {
+          const a = Math.random() * Math.PI * 2;
+          const rr = r * (0.3 + Math.random() * 0.55);
+          const sp = r * 6;
+          this.vfx.wind.emit(this.tmp.x + Math.cos(a) * rr, this.tmp.y + (Math.random() - 0.5) * 1.4 * r, this.tmp.z + Math.sin(a) * rr, -Math.sin(a) * sp + ctl.velocity.x, 0, Math.cos(a) * sp + ctl.velocity.z, {
+            life: 0.25 + Math.random() * 0.2, size0: r * 0.35, size1: r * 0.6, color0: WIND_0, color1: WIND_1, alpha: 0.22, drag: 2,
+          });
+        }
+      }
     }
   }
 }

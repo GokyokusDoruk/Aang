@@ -164,6 +164,11 @@ export const GameConfig = {
     /** Doğunca dokunulmazlık (s) — karakter yanıp söner. */
     spawnInvuln: 1.5,
     playerRespawnDelay: 3,
+    /** Tüm büyü hasarı çarpanı (Hava hariç: Hava büyüleri tam hasar verir) */
+    damageMult: 0.75,
+    /** Tüm büyü itmeleri: yatay çarpan ve dikey çarpan (kendi patlamanın roket zıplaması etkilenmez) */
+    knockbackMult: 0.5,
+    knockbackUpMult: 0.75,
     /** Can azaldıkça itme artar: itme × (1 + eksikCanOranı × bonus). Arena dışına atmayı ödüllendirir. */
     lowHpKnockbackBonus: 0.8,
   },
@@ -196,12 +201,12 @@ export const GameConfig = {
     /** Ateş Nefesi (E): ağızdan kısa menzilli ateş konisi, değdiği herkesi yakar */
     breath: {
       range: 4.5,
-      halfAngleDeg: 24,
+      halfAngleDeg: 34,
       damage: 10,
       knockback: 4,
       /** Tam şarjda (E uzun basış) */
       chargedRange: 10,
-      chargedHalfAngleDeg: 40,
+      chargedHalfAngleDeg: 55,
       chargedDamage: 24,
       chargedKnockback: 9,
     },
