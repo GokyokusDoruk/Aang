@@ -53,6 +53,7 @@ export interface FighterAnimState {
   downedProgress: number;
 }
 import { GameConfig } from '../config/gameConfig';
+import { wrapAngle } from '../core/math';
 import type { MoveState } from '../game/PlayerController';
 import { CharacterInstance, type AnimKey, type CharacterAsset } from './CharacterAsset';
 
@@ -317,6 +318,60 @@ export class PlayerView {
     turn(s3, -this.legYaw * 0.3);
   }
 
+  /** Kemiğin bağlama pozunda karakterin ilerisine bakan yerel ekseni (yön sabitleyici için) */
+  private fwdLocal = new Map<THREE.Object3D, THREE.Vector3>();
+  /** Büyü / darbe klibi ağırlığı (sabitleyici yumuşak girip çıkar) */
+  private shotW = 0;
+  private readonly yq = new THREE.Quaternion();
+  private readonly yv = new THREE.Vector3();
+
+  private captureForward(bones: THREE.Object3D[]): void {
+    this.root.updateMatrixWorld(true);
+    const yaw = this.root.rotation.y;
+    for (const b of bones) {
+      const fwd = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
+      this.fwdLocal.set(b, fwd.applyQuaternion(b.getWorldQuaternion(new THREE.Quaternion()).invert()));
+    }
+  }
+
+  /** Kemiğin dünya XZ düzlemindeki bakış açısı (oyun yaw kuralıyla); dik bakıyorsa null */
+  private boneYaw(bone: THREE.Object3D): number | null {
+    const f = this.fwdLocal.get(bone);
+    if (!f) return null;
+    this.yv.copy(f).applyQuaternion(bone.getWorldQuaternion(this.yq));
+    if (Math.hypot(this.yv.x, this.yv.z) < 0.3) return null;
+    return Math.atan2(-this.yv.x, -this.yv.z);
+  }
+
+  private yawBone(bone: THREE.Object3D, ang: number): void {
+    bone.parent!.updateWorldMatrix(true, false);
+    bone.parent!.getWorldQuaternion(this.pq2);
+    this.sq.setFromAxisAngle(UP_AXIS, ang);
+    bone.quaternion.premultiply(this.pq2.clone().invert().multiply(this.sq).multiply(this.pq2));
+    bone.updateMatrixWorld(true);
+  }
+
+  /**
+   * Yön sabitleyici: hareket yakalama büyü / darbe kliplerinin çoğu kalçayı ve gövdeyi 50–90° (kılıç kombolarında
+   * neredeyse tam tur) döndürür. Koşarken bu dönüş bacakların üstüne binince karakter kendi etrafında dönüyormuş
+   * gibi görünür. Klip oynarken kalça (yürüme yönü) ve göğüs (nişan yönü) belirli bir sapmanın ötesine geçemez;
+   * kollar ve kısa gövde hareketleri korunur.
+   */
+  private stabilizeYaw(dt: number): void {
+    const m = this.model!;
+    // Klip başlar başlamaz tam etki (kısa kliplerde ilk kareler de dönmesin), bitince yumuşak bırak
+    this.shotW = m.shotActive ? 1 : this.shotW * (1 - damp(12, dt));
+    if (this.shotW < 0.01 || this.strafeBones?.length !== 4) return;
+    const [pelvis, , s2, s3] = this.strafeBones;
+    const aim = this.root.rotation.y;
+    const S = GameConfig.anim.castYaw;
+    const clampExcess = (err: number, limit: number) => Math.sign(err) * Math.max(0, Math.abs(err) - limit);
+    const py = this.boneYaw(pelvis);
+    if (py !== null) this.yawBone(pelvis, -clampExcess(wrapAngle(py - aim - this.legYaw), S.pelvisMax) * this.shotW);
+    const cy = this.boneYaw(s3);
+    if (cy !== null) this.yawBone(s2, -clampExcess(wrapAngle(cy - aim), S.chestMax) * this.shotW);
+  }
+
   /** Dururken elemente göre savaş duruşu (yalnızca duruş; büyü hareketlerini klipler yapar) */
   private bend: BendingPose | null = null;
   private castIndex = 0;
@@ -353,6 +408,8 @@ export class PlayerView {
     this.tilt.add(inst.root);
     const bend = new BendingPose(inst.root);
     this.bend = bend.ok ? bend : null;
+    // Bağlama pozunda kalça / göğüs ileri ekseni (büyü kliplerinde yön sabitleyici)
+    this.captureForward(['pelvis', 'spine_03'].map((n) => inst.root.getObjectByName(n)).filter(Boolean) as THREE.Object3D[]);
     const bones = ['hand_l', 'hand_r', 'foot_l', 'foot_r'].map((n) => inst.root.getObjectByName(n));
     if (bones.every(Boolean)) this.limbBones = bones as THREE.Object3D[];
     this.headBone = inst.head ?? inst.root.getObjectByName('head') ?? null;
@@ -487,6 +544,7 @@ export class PlayerView {
       } else if (castProgress > 0 && this.model.has('charge')) key = 'charge';
       this.animateModel(dt, key, ts);
       this.strafeTwist(dt, legTarget);
+      this.stabilizeYaw(dt);
       if (this.bend) {
         // Dururken elemente göre savaş duruşu (kemik pozu). Büyü / darbe / şarj klipleri oynarken,
         // koşarken, havada, kayarken, dash'te, donukken ve yerdeyken söner; hareketleri klipler yapar.

@@ -126,7 +126,7 @@ export class Combatant {
     if (this.invulnTimer > 0 && !opts.ignoreInvuln && !opts.dot) return false;
     if (opts.dot && this.spawnProtected) return false;
     const C = GameConfig.combat;
-    if (opts.element !== 'air' && opts.kind !== 'self') amount *= C.damageMult;
+    if (opts.kind !== 'self') amount *= opts.element === 'air' ? C.airDamageMult : C.damageMult;
 
     const missing = 1 - this.hp / this.opts.maxHp;
     // Zırh hasarı emer ve itmeyi azaltır

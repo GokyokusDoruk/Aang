@@ -174,6 +174,13 @@ export class CharacterInstance {
     return !!(this.namedShot || this.override || this.oneShot);
   }
 
+  /** Büyü / darbe klibi oynuyor mu */
+  get shotActive(): boolean {
+    return !!this.namedShot || this.shotTail > 0;
+  }
+  /** Klip bittikten sonra sönerken de etkisi sürer (fadeOut süresi) */
+  private shotTail = 0;
+
   hasClip(name: string): boolean {
     return this.clipByName.has(name);
   }
@@ -262,8 +269,10 @@ export class CharacterInstance {
       if (this.namedShot.time >= clip.duration * 0.9 || !this.namedShot.isRunning()) {
         this.namedShot.fadeOut(0.18);
         this.namedShot = null;
+        this.shotTail = 0.2;
       }
     }
+    this.shotTail = Math.max(0, this.shotTail - dt);
     if (this.oneShot) {
       const clip = this.oneShot.getClip();
       if (this.oneShot.time >= clip.duration * 0.85 || !this.oneShot.isRunning()) {

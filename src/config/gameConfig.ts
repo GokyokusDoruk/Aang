@@ -164,11 +164,13 @@ export const GameConfig = {
     /** Doğunca dokunulmazlık (s) — karakter yanıp söner. */
     spawnInvuln: 1.5,
     playerRespawnDelay: 3,
-    /** Tüm büyü hasarı çarpanı (Hava hariç: Hava büyüleri tam hasar verir) */
-    damageMult: 0.75,
-    /** Tüm büyü itmeleri: yatay çarpan ve dikey çarpan (kendi patlamanın roket zıplaması etkilenmez) */
-    knockbackMult: 0.5,
-    knockbackUpMult: 0.75,
+    /** Tüm büyü hasarı çarpanı (Hava hariç). 1. tur −%25, 2. tur bir −%25 daha: 0.75 × 0.75 */
+    damageMult: 0.5625,
+    /** Hava büyülerinin hasar çarpanı (yalnızca 2. turdaki genel −%25) */
+    airDamageMult: 0.75,
+    /** Tüm büyü itmeleri: yatay ve dikey çarpan (kendi patlamanın roket zıplaması etkilenmez). 2. turda ikisi de −%50 */
+    knockbackMult: 0.25,
+    knockbackUpMult: 0.375,
     /** Can azaldıkça itme artar: itme × (1 + eksikCanOranı × bonus). Arena dışına atmayı ödüllendirir. */
     lowHpKnockbackBonus: 0.8,
   },
@@ -200,12 +202,12 @@ export const GameConfig = {
     },
     /** Ateş Nefesi (E): ağızdan kısa menzilli ateş konisi, değdiği herkesi yakar */
     breath: {
-      range: 4.5,
+      range: 6.75,
       halfAngleDeg: 34,
       damage: 10,
       knockback: 4,
       /** Tam şarjda (E uzun basış) */
-      chargedRange: 10,
+      chargedRange: 15,
       chargedHalfAngleDeg: 55,
       chargedDamage: 24,
       chargedKnockback: 9,
@@ -696,6 +698,15 @@ export const GameConfig = {
     hp: 40,
     /** Yapı hasarı (wallDamage) bu oranla uygulanır */
     damageMult: 1,
+  },
+
+  /** Karakter animasyonu (yalnızca görsel) */
+  anim: {
+    /**
+     * Büyü / darbe klibi oynarken izin verilen en fazla dönüş (radyan): kalça yürüme yönünden, göğüs nişan
+     * yönünden bu kadar sapabilir. Küçültmek daha sabit, büyütmek daha hareketli yapar.
+     */
+    castYaw: { pelvisMax: 0.35, chestMax: 0.3 },
   },
 
   render: {
