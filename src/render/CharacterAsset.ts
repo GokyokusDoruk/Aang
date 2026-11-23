@@ -169,6 +169,11 @@ export class CharacterInstance {
     return this.actions.has(key);
   }
 
+  /** Büyü / darbe klibi ya da baskın klip oynuyor mu (savaş duruşu bu sırada söner) */
+  get busy(): boolean {
+    return !!(this.namedShot || this.override || this.oneShot);
+  }
+
   hasClip(name: string): boolean {
     return this.clipByName.has(name);
   }

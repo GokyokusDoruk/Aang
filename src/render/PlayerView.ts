@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { ElementId } from '../abilities/elements';
 import type { AbilitySlot } from '../abilities/types';
+import { BendingPose } from './BendingPose';
 
 /**
  * Büyü → hareket yakalama klibi (Quaternius UAL1/UAL2, CC0). Dizi: sırayla değişen sağ / sol hamleler.
@@ -42,6 +43,8 @@ const HOLD_CLIPS: Record<string, string> = {
 /** Animasyonu etkileyen dövüşçü durumu (main her karede verir) */
 export interface FighterAnimState {
   chargeId: string | null;
+  /** Aktif element (dururken savaş duruşu için; kuklalarda null) */
+  element: ElementId | null;
   /** Su Küresi içinde */
   waterSphere: boolean;
   /** Rüzgar küresine binmiş */
@@ -314,10 +317,12 @@ export class PlayerView {
     turn(s3, -this.legYaw * 0.3);
   }
 
+  /** Dururken elemente göre savaş duruşu (yalnızca duruş; büyü hareketlerini klipler yapar) */
+  private bend: BendingPose | null = null;
   private castIndex = 0;
   private floatLift = 0;
   private moving = false;
-  private anim: FighterAnimState = { chargeId: null, waterSphere: false, riding: false, downedProgress: 0 };
+  private anim: FighterAnimState = { chargeId: null, element: null, waterSphere: false, riding: false, downedProgress: 0 };
 
   setAnimState(s: FighterAnimState): void {
     this.anim = s;
@@ -346,6 +351,8 @@ export class PlayerView {
     const inst = new CharacterInstance(asset, this.clothMat.color.getHex(), this.accentMat);
     this.model = inst;
     this.tilt.add(inst.root);
+    const bend = new BendingPose(inst.root);
+    this.bend = bend.ok ? bend : null;
     const bones = ['hand_l', 'hand_r', 'foot_l', 'foot_r'].map((n) => inst.root.getObjectByName(n));
     if (bones.every(Boolean)) this.limbBones = bones as THREE.Object3D[];
     this.headBone = inst.head ?? inst.root.getObjectByName('head') ?? null;
@@ -480,6 +487,14 @@ export class PlayerView {
       } else if (castProgress > 0 && this.model.has('charge')) key = 'charge';
       this.animateModel(dt, key, ts);
       this.strafeTwist(dt, legTarget);
+      if (this.bend) {
+        // Dururken elemente göre savaş duruşu (kemik pozu). Büyü / darbe / şarj klipleri oynarken,
+        // koşarken, havada, kayarken, dash'te, donukken ve yerdeyken söner; hareketleri klipler yapar.
+        const stance =
+          key === 'idle' && grounded && speed < 1.5 && !this.model.busy && chill < 1 && downed <= 0 && !this.anim.waterSphere ? 1 : 0;
+        this.bend.apply(dt, { element: this.anim.element, stance, chargeId: null, chargeProgress: 0 }, this.root);
+        this.tilt.position.y -= this.bend.drop * (1 - downed);
+      }
     }
 
     const sw = Math.sin(this.phase);

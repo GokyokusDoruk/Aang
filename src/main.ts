@@ -247,6 +247,7 @@ const tmpPos = new THREE.Vector3();
 function animStateOf(c: Combatant, a: AbilitySystem | null): FighterAnimState {
   return {
     chargeId: a?.chargedActive?.charged.id ?? null,
+    element: a?.activeElement ?? null,
     waterSphere: c.sphereTimer > 0,
     riding: c.controller.sphereTimer > 0,
     downedProgress: c.downedProgress,
