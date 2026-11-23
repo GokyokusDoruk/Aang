@@ -33,7 +33,7 @@ const imp = new Vector3();
 export class AirSystem {
   readonly tornados: Tornado[] = [];
   /** Dev küreyle uçarken bu uçuşta çarpılanlar (aynı rakip bir kez) */
-  private readonly rammed = new Map<string, Set<string>>();
+  private readonly rammed = new Map<string, Map<string, number>>();
   private nextId = 1;
 
   constructor(
@@ -69,7 +69,7 @@ export class AirSystem {
 
   update(dt: number): void {
     this.updateTornados(dt);
-    this.updateRams();
+    this.updateRams(dt);
   }
 
   private updateTornados(dt: number): void {
@@ -186,8 +186,11 @@ export class AirSystem {
     }
   }
 
-  /** Dev rüzgar küresi: uçarken değdiği rakibe hasar + güçlü itme (uçuş başına bir kez). */
-  private updateRams(): void {
+  /**
+   * Dev rüzgar küresi: uçarken değdiği rakibi uçuş yönünde iter ve 2 (sabit) hasar verir.
+   * Aynı rakip `ramRehit` saniye geçmeden yeniden çarpılmaz.
+   */
+  private updateRams(dt: number): void {
     const S = GameConfig.air.sphere;
     for (const c of this.combatants) {
       const ctl = c.controller;
@@ -197,8 +200,12 @@ export class AirSystem {
       }
       let hit = this.rammed.get(c.id);
       if (!hit) {
-        hit = new Set();
+        hit = new Map();
         this.rammed.set(c.id, hit);
+      }
+      for (const [id, t] of hit) {
+        if (t - dt <= 0) hit.delete(id);
+        else hit.set(id, t - dt);
       }
       const r = S.radius * S.bigScale;
       // Küre karakterin altında
@@ -209,12 +216,18 @@ export class AirSystem {
         const off = imp.sub(tmp);
         const d = off.length();
         if (d > r + k.radius) continue;
-        hit.add(k.id);
+        hit.set(k.id, S.ramRehit);
+        // İtme yönü: küreden dışarı + uçuş yönü (önüne çıkanı sürükler, yandan değeni yana atar)
         off.y = 0;
-        if (off.lengthSq() < 1e-4) off.set(ctl.velocity.x, 0, ctl.velocity.z);
+        if (off.lengthSq() > 1e-4) off.normalize();
+        const vx = ctl.velocity.x;
+        const vz = ctl.velocity.z;
+        const vl = Math.hypot(vx, vz);
+        if (vl > 0.5) off.add(new Vector3(vx / vl, 0, vz / vl));
+        if (off.lengthSq() < 1e-4) off.set(1, 0, 0);
         off.normalize().multiplyScalar(S.ramKnockback);
         off.y = S.ramKnockbackUp;
-        k.takeDamage(S.ramDamage, off, c.id, k.center(new Vector3()), { element: 'air' });
+        k.takeDamage(S.ramDamage, off, c.id, k.center(new Vector3()), { element: 'air', flat: true, ignoreInvuln: true });
         this.bus.emit('fx:burst', { point: k.center(new Vector3()), element: 'air', size: 1.2 });
       }
     }

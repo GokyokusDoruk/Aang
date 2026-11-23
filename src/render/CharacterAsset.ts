@@ -149,6 +149,7 @@ export class CharacterInstance {
       if (!head && (o as THREE.Bone).isBone && /head/i.test(o.name) && !/end|top/i.test(o.name)) head = o;
     });
     this.head = head;
+    this.collectBones();
     this.mixer = new THREE.AnimationMixer(this.root);
     for (const c of asset.clips) if (!this.clipByName.has(c.name)) this.clipByName.set(c.name, c);
 
@@ -285,7 +286,26 @@ export class CharacterInstance {
         this.oneShot = null;
       }
     }
+    // Karıştırıcı bir kemiğin değeri önceki kareyle aynıysa kemiği yeniden yazmaz (three.js PropertyMixer).
+    // PlayerView klipten sonra kemiklere ek dönüş uygular (yana yürüme, yön sabitleyici, savaş duruşu);
+    // yazılmayan karelerde bu ekler birikir ve gövde kendi etrafında döner. Bu yüzden her karede önce
+    // kemikleri karıştırıcının son yazdığı temiz poza döndür, sonra karıştır, sonra temiz pozu sakla.
+    const bones = this.poseBones;
+    for (let i = 0; i < bones.length; i++) bones[i].quaternion.copy(this.cleanPose[i]);
     this.mixer.update(dt);
+    for (let i = 0; i < bones.length; i++) this.cleanPose[i].copy(bones[i].quaternion);
+  }
+
+  /** İskelet kemikleri ve karıştırıcının son yazdığı (eklemesiz) dönüşleri */
+  private readonly poseBones: THREE.Object3D[] = [];
+  private readonly cleanPose: THREE.Quaternion[] = [];
+
+  private collectBones(): void {
+    this.root.traverse((o) => {
+      if (!(o as THREE.Bone).isBone) return;
+      this.poseBones.push(o);
+      this.cleanPose.push(o.quaternion.clone());
+    });
   }
 }
 
