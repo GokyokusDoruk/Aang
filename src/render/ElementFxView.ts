@@ -43,15 +43,15 @@ interface Bubble {
   fade: number;
 }
 
-const FLAME_HOT = new THREE.Color(0xfff1a8);
-const FLAME_MID = new THREE.Color(0xff8a1a);
-const FLAME_COLD = new THREE.Color(0xc2280a);
+const FLAME_HOT = new THREE.Color(0xffa050);
+const FLAME_MID = new THREE.Color(0xff3a0e);
+const FLAME_COLD = new THREE.Color(0xa00c04);
 const SMOKE = new THREE.Color(0x3a2a24);
 
 /**
  * E yeteneklerinin görselleri:
  * - Su Küresi: karakteri saran dalgalanan su küresi
- * - Toprak Zırhı: gövdeyi saran taş plakalar (zırh azaldıkça dökülür)
+ * - Toprak Zırhı: tüm vücudu saran taş pullar (PlayerView / EarthArmorSuit); model yoksa taş plakalar
  * - Ateş Nefesi: ağızdan yayılan alev konisi; şarj ederken ağızda büyüyen ateş topu ve içe çekilen kıvılcımlar
  * - Rüzgar Patlaması: dışa açılan rüzgar halkaları ve savrulan çizgiler (güçlüsünde girdap + toz)
  */
@@ -89,7 +89,13 @@ export class ElementFxView {
   update(dt: number, alpha: number, combatants: Combatant[], fighters: FxFighter[]): void {
     for (const c of combatants) {
       this.updateBubble(dt, alpha, c);
-      this.updateArmor(alpha, c);
+      // Modelli dövüşçüde tüm vücudu saran taş kaplama; yoksa eski plakalar
+      const view = fighters.find((f) => f.c === c)?.view;
+      const frac = c.alive && c.armor > 0 ? c.armor / Math.max(1, c.armorMax) : 0;
+      if (view?.setEarthArmor(frac, c.armorMax >= GameConfig.earth.armor.heavy, dt)) {
+        const old = this.armors.get(c.id);
+        if (old) old.group.visible = false;
+      } else this.updateArmor(alpha, c);
     }
     const seen = new Set<string>();
     for (const f of fighters) {
@@ -222,9 +228,9 @@ export class ElementFxView {
     f.view.headPoint(this.mouth);
     let o = this.orbs.get(f.c.id);
     if (!o) {
-      const mat = new THREE.MeshBasicMaterial({ color: 0xffb347, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
+      const mat = new THREE.MeshBasicMaterial({ color: 0xff6a20, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
       const mesh = new THREE.Mesh(this.orb, mat);
-      const glow = new THREE.Mesh(this.orb, new THREE.MeshBasicMaterial({ color: 0xff5a1a, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false }));
+      const glow = new THREE.Mesh(this.orb, new THREE.MeshBasicMaterial({ color: 0xff2008, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false }));
       glow.scale.setScalar(1.8);
       mesh.add(glow);
       this.scene.add(mesh);

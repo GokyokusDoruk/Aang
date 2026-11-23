@@ -8,7 +8,7 @@ const ROCK_COLOR = 0x857d74;
 const DUST_COLOR = 0xb89a74;
 const WOOD_COLOR = 0xb07a3e;
 const ICE_COLOR = 0xbfeaff;
-const FIRE_COLOR = 0xff7a2a;
+const FIRE_COLOR = 0xff3010;
 const WOOD_DARK = 0x7a4f24;
 const UP = new THREE.Vector3(0, 1, 0);
 
@@ -160,11 +160,11 @@ export class EffectsView {
     if (air) this.storm(e.point, e.radius);
     // Ateş patlamasının alevi ve dumanı parçacık katmanında (Vfx); burada yalnızca yer halkası
     if (e.element === 'fire') {
-      this.groundRing(e.point, e.radius, 0xff7a2a);
+      this.groundRing(e.point, e.radius, 0xff3010);
       return;
     }
     const core = new THREE.MeshBasicMaterial({ color: air ? 0xffffff : 0xfff3b0, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
-    const shell = new THREE.MeshBasicMaterial({ color: air ? 0xa9dcff : 0xff5a1a, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+    const shell = new THREE.MeshBasicMaterial({ color: air ? 0xa9dcff : 0xff2a08, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
     const a = new THREE.Mesh(this.sphere, core);
     const b = new THREE.Mesh(this.sphere, shell);
     a.position.copy(e.point);
@@ -189,7 +189,7 @@ export class EffectsView {
         shell.opacity = 0.75 * (1 - t);
       },
     });
-    const ringMat = new THREE.MeshBasicMaterial({ color: air ? 0xe6f7ff : 0xff8a3d, transparent: true, side: THREE.DoubleSide, depthWrite: false });
+    const ringMat = new THREE.MeshBasicMaterial({ color: air ? 0xe6f7ff : 0xff3a14, transparent: true, side: THREE.DoubleSide, depthWrite: false });
     const ring = new THREE.Mesh(this.ring, ringMat);
     ring.position.copy(e.point);
     ring.rotation.x = -Math.PI / 2;
@@ -204,7 +204,7 @@ export class EffectsView {
       },
     });
     if (air) this.dust(e.point, 0xe6f7ff, e.radius * 0.8);
-    else this.debris(e.point, UP, 0xff7a2a, 7, 0.07, 6);
+    else this.debris(e.point, UP, 0xff3010, 7, 0.07, 6);
   }
 
   private groundRing(at: THREE.Vector3, radius: number, color: number): void {
@@ -326,7 +326,7 @@ export class EffectsView {
     for (let i = 0; i < n; i++) {
       const hot = fire && i % 3 === 0;
       const mat = new THREE.MeshBasicMaterial({
-        color: fire ? (hot ? 0xfff1a8 : i % 2 ? 0xff7a1a : 0xffb03a) : element === 'air' ? 0xffffff : ELEMENTS[element].color,
+        color: fire ? (hot ? 0xffa050 : i % 2 ? 0xff2a08 : 0xff5018) : element === 'air' ? 0xffffff : ELEMENTS[element].color,
         transparent: true,
         depthWrite: false,
         blending: fire ? THREE.AdditiveBlending : THREE.NormalBlending,

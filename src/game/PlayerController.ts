@@ -310,6 +310,13 @@ export class PlayerController {
     }
   }
 
+  /** Rüzgar Küresi sürüyorsa erken bitir (oyuncu tekrar sağ tıkladı). Bittiyse true. */
+  stopSphere(): boolean {
+    if (this.sphereTimer <= 0) return false;
+    this.endSphere();
+    return true;
+  }
+
   /** Uçuş bitti: hız yumuşar, zıplama basılıyken süzülerek inilir. */
   private endSphere(): void {
     this.sphereTimer = 0;
