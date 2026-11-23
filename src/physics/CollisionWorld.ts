@@ -143,6 +143,19 @@ export class CollisionWorld {
    * Tepesi stepTop'un altÄ±nda kalan kutular engel sayÄ±lmaz (basamak Ã§Ä±kÄ±labilir).
    * Toplam itme vektÃ¶rÃ¼nÃ¼ outPush'a yazar; Ã§arpÄ±ÅŸma varsa true dÃ¶ner.
    */
+  /** Silindir herhangi bir engel kutusuyla kesişiyor mu (pushOut ile aynı kurallar, konumu değiştirmez) */
+  overlaps(x: number, z: number, r: number, feetY: number, headY: number, stepTop: number): boolean {
+    for (const b of this.boxes) {
+      if (b.maxY <= stepTop || b.minY >= headY || b.maxY <= feetY) continue;
+      const px = x < b.minX ? b.minX : x > b.maxX ? b.maxX : x;
+      const pz = z < b.minZ ? b.minZ : z > b.maxZ ? b.maxZ : z;
+      const dx = x - px;
+      const dz = z - pz;
+      if (dx * dx + dz * dz < r * r - 1e-6) return true;
+    }
+    return false;
+  }
+
   pushOut(pos: Vector3, r: number, feetY: number, headY: number, stepTop: number, outPush: Vector3): boolean {
     let hit = false;
     for (const b of this.boxes) {

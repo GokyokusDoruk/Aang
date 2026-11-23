@@ -1,4 +1,9 @@
+import { GameConfig } from '../config/gameConfig';
 import type { Combatant } from './Combatant';
+
+function bodyTop(c: Combatant): number {
+  return c.sphereTimer > 0 ? Math.max(c.height, GameConfig.water.sphere.radius * 2) : c.height;
+}
 
 /**
  * Karakterler birbirinin içinden geçemez: yatayda iç içe giren her çift ayrılır
@@ -15,11 +20,11 @@ export function resolveBodies(list: Combatant[]): void {
         if (!b.alive) continue;
         const pa = a.position;
         const pb = b.position;
-        // Dikey örtüşme (gövde silindirleri)
-        if (pa.y >= pb.y + b.height * 0.9 || pb.y >= pa.y + a.height * 0.9) continue;
+        // Dikey örtüşme (gövde silindirleri; Su Küresi zeminden çapı kadar yükselir)
+        if (pa.y >= pb.y + bodyTop(b) * 0.9 || pb.y >= pa.y + bodyTop(a) * 0.9) continue;
         let dx = pb.x - pa.x;
         let dz = pb.z - pa.z;
-        const min = a.radius + b.radius;
+        const min = a.bodyRadius + b.bodyRadius;
         let d = Math.hypot(dx, dz);
         if (d >= min) continue;
         if (d < 1e-4) {

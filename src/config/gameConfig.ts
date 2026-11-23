@@ -587,12 +587,26 @@ export const GameConfig = {
       maxLifetime: 6,
       /** Bırakınca sönme süresi (s) */
       fadeTime: 0.5,
+      /** Yakalananlar: hortumun etrafında bu yarıçapta, bu açısal hızla (rad/s) döner */
+      orbitRadius: 1.4,
+      orbitSpeed: 5.5,
+      /** Yukarı çıkma hızı (m/s) ve en fazla yükseklik (hortum tabanından, m) */
+      riseSpeed: 1.6,
+      riseHeight: 3.6,
+      /** Yörüngeye çekme kazancı ve hız sınırı */
+      orbitPull: 10,
+      orbitMaxSpeed: 22,
+      /** Hortum bitince savrulma (teğetsel ve yukarı, m/s) */
+      releaseFling: 4,
+      releaseUp: 2,
+      /** Düşenler yere değince bu kadar (s) kalkamaz */
+      downTime: 2,
     },
     /** Rüzgar küresi (sağ tık): her yöne hızlı, kısa uçuş; hep hareket eder */
     sphere: {
-      duration: 1.5,
+      duration: 6.5,
       /** Dev küre (uzun basış) uçuş süresi (s) */
-      bigDuration: 3,
+      bigDuration: 8,
       /** Koşu hızına göre çarpan (1.5 × 1.25) */
       speedMult: 1.875,
       /** Nişanın yukarı / aşağı açısı sınırı (derece) */

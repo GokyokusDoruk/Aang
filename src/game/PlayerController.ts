@@ -537,6 +537,49 @@ export class PlayerController {
     }
   }
 
+  /**
+   * Bu yarıçapta (ör. Su Küresi) yer aç: küre bir engelle (duvar, kutu, merdiven) kesişiyorsa
+   * çevrede kürenin sığdığı ve altında aynı seviyede zemin olan en yakın noktaya kaydır.
+   * Hiç yer yoksa (çok dar köşe) olduğu yerde kalır; engelin içine asla itmez.
+   */
+  makeRoom(r: number, top: number): void {
+    const P = GameConfig.player;
+    const pos = this.position;
+    const y = pos.y;
+    const fits = (x: number, z: number) => {
+      if (this.world.overlaps(x, z, r, y, y + top, y + P.stepHeight)) return false;
+      // Kenardan boşluğa itme: altında aynı seviyede zemin olmalı
+      const g = this.world.groundHeight(x, z, P.radius, y + P.stepHeight);
+      return Number.isFinite(g) && Math.abs(g - y) <= P.stepHeight;
+    };
+    if (fits(pos.x, pos.z)) return;
+    const DIRS = 24;
+    for (let d = 0.1; d <= r * 2 + 0.05; d += 0.1) {
+      let best = -1;
+      let bestDot = -Infinity;
+      for (let i = 0; i < DIRS; i++) {
+        const a = (i / DIRS) * Math.PI * 2;
+        const x = pos.x + Math.cos(a) * d;
+        const z = pos.z + Math.sin(a) * d;
+        if (!fits(x, z)) continue;
+        // Aynı uzaklıktakilerden baktığı yönün tersine (geriye) yakın olanı seç: rakibe doğru kaymasın
+        const dot = -(Math.cos(a) * -Math.sin(this.facingYaw) + Math.sin(a) * -Math.cos(this.facingYaw));
+        if (dot > bestDot) {
+          bestDot = dot;
+          best = i;
+        }
+      }
+      if (best >= 0) {
+        const a = (best / DIRS) * Math.PI * 2;
+        pos.x += Math.cos(a) * d;
+        pos.z += Math.sin(a) * d;
+        this.prevPosition.x = pos.x;
+        this.prevPosition.z = pos.z;
+        return;
+      }
+    }
+  }
+
   private moveHorizontal(dt: number): void {
     const P = GameConfig.player;
     const r = P.radius;

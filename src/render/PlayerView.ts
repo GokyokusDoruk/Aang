@@ -31,6 +31,9 @@ const CAST_CLIPS: Record<string, { clips: string[]; speed: number }> = {
 };
 
 /** Süren uzun basış → tutulan üst gövde klibi */
+/** Tek elle tutulanlar: klibin yalnızca sağ kolu oynar (Alev Akımı: sağ el öne uzanır, ateş elden çıkar) */
+const ONE_HAND_HOLDS = new Set(['flameStream']);
+
 const HOLD_CLIPS: Record<string, string> = {
   lightningCharged: 'Pistol_Aim_Up',
   boulder: 'Spell_Simple_Idle_Loop',
@@ -243,6 +246,18 @@ export class PlayerView {
 
   private headBone: THREE.Object3D | null = null;
 
+  /** Sağ avuç (dünya): Alev Akımı bu elden çıkar */
+  handPoint(out: THREE.Vector3): THREE.Vector3 {
+    const yaw = this.root.rotation.y;
+    if (this.limbBones.length === 4) {
+      this.limbBones[1].getWorldPosition(out);
+      // Avucun önüne doğru biraz
+      return out.add(new THREE.Vector3(-Math.sin(yaw) * 0.12, 0, -Math.cos(yaw) * 0.12));
+    }
+    const s = GameConfig.player.height / 1.8;
+    return out.set(0.3 * s, 1.35 * s, -0.5 * s).applyMatrix4(this.root.matrixWorld);
+  }
+
   /** Ağız / baş hizası (dünya): ateş nefesi için */
   headPoint(out: THREE.Vector3): THREE.Vector3 {
     if (this.headBone) {
@@ -394,7 +409,8 @@ export class PlayerView {
       m.setOverride('LayToIdle', false, 1, p < 0.45 ? 0 : ((p - 0.45) / 0.55) * dur);
     } else if (a.waterSphere && m.hasClip('Swim_Idle_Loop')) m.setOverride('Swim_Idle_Loop');
     else if (a.riding && m.hasClip('NinjaJump_Idle_Loop')) m.setOverride('NinjaJump_Idle_Loop');
-    else if (a.chargeId && HOLD_CLIPS[a.chargeId] && m.hasClip(HOLD_CLIPS[a.chargeId])) m.setOverride(HOLD_CLIPS[a.chargeId], true);
+    else if (a.chargeId && HOLD_CLIPS[a.chargeId] && m.hasClip(HOLD_CLIPS[a.chargeId]))
+      m.setOverride(HOLD_CLIPS[a.chargeId], ONE_HAND_HOLDS.has(a.chargeId) ? 'rightArm' : true);
     else m.setOverride(null);
   }
 
@@ -488,7 +504,10 @@ export class PlayerView {
     this.tilt.rotation.x = (Math.PI / 2) * tiltDown;
     this.tilt.position.y = 0.22 * tiltDown;
     // Su küresinde: yüzme pozunda kürenin ortasında süzülür
-    this.floatLift += ((this.anim.waterSphere && this.model ? 0.75 : 0) - this.floatLift) * damp(6, dt);
+    // Karakterin ortası kürenin ortasına (küre zemine oturur: merkez = yarıçap). Yüzme klibinde gövde
+    // kökten ~0.15 m yukarıda durur; model yoksa prosedürel gövdenin ortası boy / 2.
+    const sphereLift = GameConfig.water.sphere.radius * 1.02 - (this.model ? 0.15 : GameConfig.player.height * 0.5);
+    this.floatLift += ((this.anim.waterSphere && this.model ? sphereLift : 0) - this.floatLift) * damp(6, dt);
     this.tilt.position.y += this.floatLift + Math.sin(this.idleTime * 2) * 0.05 * this.floatLift;
     if (chill >= 1) dt = 0; // donmuşken animasyon durur
     this.root.position.copy(position);

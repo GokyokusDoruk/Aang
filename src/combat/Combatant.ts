@@ -223,7 +223,19 @@ export class Combatant {
     this.controller.velocity.set(0, Math.min(0, this.controller.velocity.y), 0);
     this.controller.glideTimer = 0;
     this.controller.sphereTimer = 0;
+    this.makeSphereRoom();
     this.clearBurnAndChill();
+  }
+
+  /** Su Küresi açıkken gövde yarıçapı küreninki (diğer karakterler ve engeller içine giremez) */
+  get bodyRadius(): number {
+    return this.sphereTimer > 0 ? GameConfig.water.sphere.radius : this.radius;
+  }
+
+  /** Küre zemine oturur (çapı kadar yükseklik); duvar / kutu içine girmesin diye karakter dışarı itilir */
+  private makeSphereRoom(): void {
+    const R = GameConfig.water.sphere.radius;
+    this.controller.makeRoom(R, R * 2);
   }
 
   /** Toprak zırhı: var olan zırhtan büyükse yeniler. */
@@ -253,6 +265,34 @@ export class Combatant {
     this.launchAir = 0;
     this.downDuration = downTime;
     return true;
+  }
+
+  /** Hortumun içinde döndürülüyor (sahibi AirSystem; konum / hız oradan sürülür) */
+  heldByTornado = false;
+
+  /**
+   * Hortum yakaladı: yerçekimi kapanır, kontrol gider. Bırakılınca düşer, yere değince downTime kadar kalkamaz.
+   * Zırhlı / Su Küresi içindeki / zaten yerde ya da havada savrulan karakter yakalanmaz.
+   */
+  captureByTornado(downTime: number): boolean {
+    if (!this.alive || this.launched || this.downedTimer > 0 || this.armor > 0 || this.sphereTimer > 0 || this.heldByTornado) return false;
+    this.heldByTornado = true;
+    this.launched = true;
+    this.launchAir = 0;
+    this.downDuration = downTime;
+    this.controller.gravityMult = 0;
+    this.controller.glideTimer = 0;
+    this.controller.sphereTimer = 0;
+    return true;
+  }
+
+  /** Hortum bıraktı: yerçekimi geri gelir, düşer; yere değince sersem kalır (launched akışı). */
+  releaseFromTornado(fling: Vector3): void {
+    if (!this.heldByTornado) return;
+    this.heldByTornado = false;
+    this.controller.gravityMult = 1;
+    this.launchAir = 0;
+    this.controller.velocity.copy(fling);
   }
 
   /** Hareket ve yetenek kilitli mi (donmuş, havaya fırlatılmış ya da yerde sersem) */
@@ -321,6 +361,7 @@ export class Combatant {
     this.burnTicks = 0;
     this.burnTimer = 0;
     this.launched = false;
+    this.heldByTornado = false;
     this.downedTimer = 0;
     this.controller.gravityMult = 1;
     this.clearChill();
@@ -388,6 +429,8 @@ export class Combatant {
       ctl.velocity.x = 0;
       ctl.velocity.z = 0;
       ctl.knockbackTimer = Math.max(ctl.knockbackTimer, 0.05);
+      // Sonradan yükselen duvar / buz duvarı da kürenin içine girmesin
+      this.makeSphereRoom();
       const step = Math.min(dt, this.sphereTimer);
       const rate = (this.opts.maxHp - this.hp) / Math.max(dt, this.sphereTimer);
       this.sphereTimer -= dt;
@@ -406,7 +449,7 @@ export class Combatant {
       const ctl = this.controller;
       this.launchAir += dt;
       ctl.knockbackTimer = Math.max(ctl.knockbackTimer, 0.1);
-      if (this.launchAir > 0.2 && ctl.grounded && ctl.velocity.y <= 0) {
+      if (!this.heldByTornado && this.launchAir > 0.2 && ctl.grounded && ctl.velocity.y <= 0) {
         const D = this.downDuration;
         this.launched = false;
         ctl.gravityMult = 1;
