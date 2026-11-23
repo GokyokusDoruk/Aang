@@ -176,11 +176,14 @@ export class AbilitySystem {
     const A = GameConfig.abilities;
 
     for (const [def, t] of this.cooldowns) {
+      // Etki sürüyorsa (örn. küre uçuşu) bekleme süresi bekler: etki bitince işlemeye başlar
+      if (def.activeWhile?.(this.caster)) continue;
       const n = t - dt;
       if (n <= 0) this.cooldowns.delete(def);
       else this.cooldowns.set(def, n);
     }
     for (const [ch, t] of this.chargedCooldowns) {
+      if (ch.activeWhile?.(this.caster)) continue;
       const n = t - dt;
       if (n <= 0) this.chargedCooldowns.delete(ch);
       else this.chargedCooldowns.set(ch, n);
@@ -209,13 +212,19 @@ export class AbilitySystem {
     }
 
     // Input buffer
-    const pressedSlot: AbilitySlot | null = intent.primaryPressed
+    let pressedSlot: AbilitySlot | null = intent.primaryPressed
       ? 'primary'
       : intent.secondaryPressed
         ? 'secondary'
         : intent.specialPressed
           ? 'special'
           : null;
+    // Süren etkiyi aynı tuşla durdur (örn. küre uçuşunda tekrar sağ tık)
+    if (pressedSlot && this.slot(pressedSlot)?.stopActive?.(this.caster)) {
+      if (this.hold?.slot === pressedSlot) this.hold = null;
+      if (this.buffered?.slot === pressedSlot) this.buffered = null;
+      pressedSlot = null;
+    }
     if (pressedSlot) {
       const def = this.slot(pressedSlot);
       if (def?.charged) {

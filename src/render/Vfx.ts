@@ -6,10 +6,13 @@ import { ParticleField, glowTexture, puffTexture, type EmitOptions } from './Par
 
 const C = (hex: number) => new THREE.Color(hex);
 
-// Ateş: beyaz-sarı çekirdek → turuncu → koyu kırmızı (toplamalı karışımda üst üste binince parlar)
-const FIRE_HOT = C(0xffc25a);
-const FIRE_MID = C(0xff6a12);
-const FIRE_END = C(0x5a0e02);
+// Ateş: turuncu-kızıl çekirdek → kırmızı → koyu kor (toplamalı parıltı katmanı)
+const FIRE_HOT = C(0xff8a2a);
+const FIRE_MID = C(0xff2a08);
+const FIRE_END = C(0x6a0400);
+// Alevin gövdesi (normal karışım): açık zeminde de kaybolmayan doygun kırmızı
+const FIRE_BODY_0 = C(0xf0300a);
+const FIRE_BODY_1 = C(0x5a0600);
 const SMOKE_0 = C(0x4a403a);
 const SMOKE_1 = C(0x8a8580);
 const DUST_0 = C(0x9a8a74);
@@ -31,6 +34,8 @@ const rnd = (a: number) => (Math.random() - 0.5) * 2 * a;
  */
 export class Vfx {
   readonly fire: ParticleField;
+  /** Alevin altında çizilen opak kırmızı gövde: ateşi her zeminde belirgin kılar */
+  private readonly fireBody: ParticleField;
   readonly smoke: ParticleField;
   readonly dust: ParticleField;
   readonly frost: ParticleField;
@@ -46,11 +51,12 @@ export class Vfx {
     const glow = glowTexture();
     const puff = puffTexture();
     this.fire = new ParticleField(scene, Math.round(6000 * scale), glow, true);
+    this.fireBody = new ParticleField(scene, Math.round(4000 * scale), glow, false);
     this.frost = new ParticleField(scene, Math.round(2000 * scale), glow, true);
     this.wind = new ParticleField(scene, Math.round(2000 * scale), puff, true);
     this.smoke = new ParticleField(scene, Math.round(2000 * scale), puff, false);
     this.dust = new ParticleField(scene, Math.round(2000 * scale), puff, false);
-    this.fields = [this.smoke, this.dust, this.frost, this.wind, this.fire];
+    this.fields = [this.smoke, this.dust, this.frost, this.wind, this.fireBody, this.fire];
 
     bus.on('fx:explosion', (e) => {
       if (e.element === 'fire') this.fireExplosion(e.point, e.radius);
@@ -157,7 +163,7 @@ export class Vfx {
         c0 = roll < 0.5 ? FIRE_HOT : FIRE_MID;
         c1 = FIRE_END;
       }
-      this.fire.emit(p.x + ox, p.y + oy, p.z + oz, vx, vy, vz, {
+      this.emitFire(p.x + ox, p.y + oy, p.z + oz, vx, vy, vz, {
         life: 0.22 + Math.random() * 0.2 + k * 0.15,
         size0: r * (c0 === BLUE_HOT ? 0.6 : 0.9 + k * 1.6),
         size1: r * (c0 === BLUE_HOT ? 1.2 : (2.4 + k * 3.2) * (0.8 + Math.random() * 0.5)),
@@ -171,7 +177,7 @@ export class Vfx {
     }
     // Saçılan kıvılcımlar ve korlar (yerçekimiyle düşer)
     if (Math.random() < dt * 22) {
-      this.fire.emit(p.x, p.y, p.z, fwd.x * speed * 0.3 + rnd(4), rnd(3) + 1.5, fwd.z * speed * 0.3 + rnd(4), {
+      this.emitFire(p.x, p.y, p.z, fwd.x * speed * 0.3 + rnd(4), rnd(3) + 1.5, fwd.z * speed * 0.3 + rnd(4), {
         life: 0.5 + Math.random() * 0.4,
         size0: 0.09,
         size1: 0.03,
@@ -195,7 +201,7 @@ export class Vfx {
     const n = this.count(dt, 120);
     for (let i = 0; i < n; i++) {
       const blue = Math.random() < 0.6;
-      this.fire.emit(at.x + rnd(0.04), at.y + rnd(0.04), at.z + rnd(0.04), d.x * 3 + rnd(0.8), d.y * 3 + rnd(0.8) + 0.5, d.z * 3 + rnd(0.8), {
+      this.emitFire(at.x + rnd(0.04), at.y + rnd(0.04), at.z + rnd(0.04), d.x * 3 + rnd(0.8), d.y * 3 + rnd(0.8) + 0.5, d.z * 3 + rnd(0.8), {
         life: 0.1 + Math.random() * 0.08,
         size0: 0.22,
         size1: 0.08,
@@ -280,7 +286,7 @@ export class Vfx {
       this.flameParticle(at.x, at.y + 0.2, at.z, d.x * sp, d.y * sp + 1, d.z * sp, 0.6 + Math.random() * 0.7, 0.4 + Math.random() * 0.4, 3.5);
     }
     // Çekirdek parlaması
-    for (let i = 0; i < 2; i++) this.fire.emit(at.x, at.y + 0.3, at.z, 0, 1, 0, { life: 0.2, size0: radius * 1.0, size1: radius * 1.8, color0: FIRE_HOT, color1: FIRE_MID, alpha: 0.6, drag: 0 });
+    for (let i = 0; i < 2; i++) this.emitFire(at.x, at.y + 0.3, at.z, 0, 1, 0, { life: 0.2, size0: radius * 1.0, size1: radius * 1.8, color0: FIRE_HOT, color1: FIRE_MID, alpha: 0.6, drag: 0 });
     // Mantar duman
     for (let i = 0; i < 30 * this.scale; i++) {
       const d = new THREE.Vector3(rnd(1), Math.random(), rnd(1)).normalize();
@@ -426,7 +432,7 @@ export class Vfx {
         const sp = speed * (0.75 + Math.random() * 0.4);
         const hot = Math.random() < 0.4;
         // Ağızda küçük ve sıcak, ilerledikçe büyüyen ve kızıllaşan alev
-        this.fire.emit(o.x + rnd(0.04), o.y + rnd(0.04), o.z + rnd(0.04), d.x * sp, d.y * sp + 0.4, d.z * sp, {
+        this.emitFire(o.x + rnd(0.04), o.y + rnd(0.04), o.z + rnd(0.04), d.x * sp, d.y * sp + 0.4, d.z * sp, {
           life: 0.38 + Math.random() * 0.22,
           size0: 0.1,
           size1: (0.9 + Math.random() * 0.7) * (1 + e.charge * 0.8),
@@ -439,11 +445,27 @@ export class Vfx {
         });
       }
       // Ağızda parlayan çekirdek
-      if (Math.random() < dt * 40) this.fire.emit(o.x, o.y, o.z, b.dir.x * 2, b.dir.y * 2, b.dir.z * 2, { life: 0.12, size0: 0.35, size1: 0.2, color0: FIRE_HOT, color1: FIRE_MID, alpha: 0.9, drag: 0 });
+      if (Math.random() < dt * 40) this.emitFire(o.x, o.y, o.z, b.dir.x * 2, b.dir.y * 2, b.dir.z * 2, { life: 0.12, size0: 0.35, size1: 0.2, color0: FIRE_HOT, color1: FIRE_MID, alpha: 0.9, drag: 0 });
     }
   }
 
   // ================================================================ yardımcılar
+
+  /** Ateş parçacığı: toplamalı parıltı + (mavi çekirdek ve minik kıvılcımlar hariç) altında kırmızı gövde */
+  private emitFire(x: number, y: number, z: number, vx: number, vy: number, vz: number, o: EmitOptions): void {
+    this.fire.emit(x, y, z, vx, vy, vz, o);
+    if (o.color0 === BLUE_HOT || (o.size0 < 0.1 && o.size1 < 0.15)) return;
+    if (Math.random() > 0.7) return;
+    this.fireBody.emit(x, y, z, vx, vy, vz, {
+      ...o,
+      life: o.life * 0.85,
+      size0: o.size0 * 0.75,
+      size1: o.size1 * 0.7,
+      color0: FIRE_BODY_0,
+      color1: FIRE_BODY_1,
+      alpha: Math.min(1, (o.alpha ?? 1) * 1.1 + 0.15),
+    });
+  }
 
   private flameParticle(x: number, y: number, z: number, vx: number, vy: number, vz: number, size: number, life: number, drag = 1.5, grow = 0.45): void {
     const hot = Math.random() < 0.35;
@@ -458,7 +480,7 @@ export class Vfx {
       lift: 3.5,
       turbulence: 4,
     };
-    this.fire.emit(x, y, z, vx, vy, vz, o);
+    this.emitFire(x, y, z, vx, vy, vz, o);
   }
 
   private smokeParticle(x: number, y: number, z: number, size: number): void {

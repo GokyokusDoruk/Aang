@@ -83,6 +83,7 @@ import { GameConfig } from '../config/gameConfig';
 import { wrapAngle } from '../core/math';
 import type { MoveState } from '../game/PlayerController';
 import { CharacterInstance, type AnimKey, type CharacterAsset } from './CharacterAsset';
+import { EarthArmorSuit } from './EarthArmorSuit';
 
 /** Animasyonu süren hareket bilgisi (mantıktan salt okunur). */
 export interface FighterMotion {
@@ -141,6 +142,8 @@ export class PlayerView {
   private idleTime = Math.random() * 10;
   /** Hazır 3D model yüklendiyse onun örneği (yoksa prosedürel iskelet çizilir). */
   private model: CharacterInstance | null = null;
+  /** Toprak Zırhı kaplaması (model varsa) */
+  private earthSuit: EarthArmorSuit | null = null;
   private readonly fwd = new THREE.Vector3();
 
   constructor(scene: THREE.Scene, color = 0x3fa7ff) {
@@ -468,6 +471,8 @@ export class PlayerView {
     this.body.visible = false;
     for (const m of inst.materials) this.mats.push(m);
     inst.root.updateMatrixWorld(true);
+    const suit = new EarthArmorSuit(inst.root);
+    this.earthSuit = suit.ok ? suit : null;
     if (inst.head) {
       const g = this.boneSpace(inst, inst.head);
       // g modelin kök eksenlerinde (model +Z'ye bakar, arka -Z), birim = metre
@@ -495,6 +500,16 @@ export class PlayerView {
       tail.rotation.z = 0.12;
       g.add(tail);
     }
+  }
+
+  /**
+   * Toprak Zırhı görseli: tüm vücut taş pullarla kaplanır. frac = kalan zırh oranı (0 = yok).
+   * Model yoksa false döner (çağıran eski plaka görseline düşer).
+   */
+  setEarthArmor(frac: number, heavy: boolean, dt: number): boolean {
+    if (!this.earthSuit) return false;
+    this.earthSuit.update(frac, heavy, dt);
+    return true;
   }
 
   /** Kemiğe, modelin kök eksenleriyle hizalı ve metre ölçekli bir bağlama grubu ekler. */

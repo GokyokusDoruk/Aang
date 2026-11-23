@@ -42,7 +42,7 @@ export class ProjectileView {
   /** Sahibin sağ avucu (dünya); Alev Akımı görseli oradan başlar */
   handOf: ((ownerId: string, out: THREE.Vector3) => boolean) | null = null;
   private readonly hand = new THREE.Vector3();
-  private readonly fireCore = new THREE.MeshBasicMaterial({ color: 0xfff1a8 });
+  private readonly fireCore = new THREE.MeshBasicMaterial({ color: 0xffa050 });
   private readonly airCore = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9 });
   private readonly airShell = new THREE.MeshBasicMaterial({
     color: 0xbfe9ff,
@@ -52,9 +52,9 @@ export class ProjectileView {
     depthWrite: false,
   });
   private readonly fireShell = new THREE.MeshBasicMaterial({
-    color: 0xff6b1a,
+    color: 0xff2a0a,
     transparent: true,
-    opacity: 0.55,
+    opacity: 0.7,
     blending: THREE.AdditiveBlending,
     depthWrite: false,
   });
@@ -100,7 +100,7 @@ export class ProjectileView {
       // Yaşlandıkça büyüyen, sarıdan kırmızıya dönen, sönen alev topağı (toplamalı)
       mesh = new THREE.Mesh(
         this.orbGeo,
-        new THREE.MeshBasicMaterial({ color: 0xffd36b, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false }),
+        new THREE.MeshBasicMaterial({ color: 0xff7a30, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }),
       );
       mesh.scale.setScalar(p.spec.radius * 0.5);
       mesh.userData.flame = true;
@@ -158,7 +158,7 @@ export class ProjectileView {
         const t = Math.min(1, p.age / p.spec.lifetime);
         m.scale.setScalar(p.spec.radius * (0.5 + t * 1.6) * (0.9 + Math.random() * 0.2));
         const mat = m.material as THREE.MeshBasicMaterial;
-        mat.color.setRGB(1, 0.85 - t * 0.6, 0.45 - t * 0.4);
+        mat.color.setRGB(1, 0.45 - t * 0.37, 0.18 - t * 0.16);
         mat.opacity = 0.85 * (1 - t * t);
       } else if (m.userData.flicker) {
         const shell = m.getObjectByName('shell');

@@ -67,6 +67,8 @@ export interface ChargedAbility {
   tick?(ctx: AbilityContext, elapsed: number): void;
   end?(ctx: AbilityContext): void;
   release?(ctx: AbilityContext, charge: number): boolean | void;
+  /** true döndükçe (örn. uçuş sürerken) bu uzun basışın bekleme süresi işlemez: süre etki bitince başlar */
+  activeWhile?(caster: AbilityCaster): boolean;
 }
 
 export interface AbilityDef {
@@ -85,4 +87,11 @@ export interface AbilityDef {
   execute?(ctx: AbilityContext): boolean | void;
   /** Uzun basış versiyonu (isteğe bağlı) */
   charged?: ChargedAbility;
+  /** true döndükçe (örn. uçuş sürerken) bekleme süresi işlemez: süre etki bitince başlar */
+  activeWhile?(caster: AbilityCaster): boolean;
+  /**
+   * Etki sürerken aynı tuşa yeniden basılınca çağrılır; true dönerse etki durdurulmuştur
+   * ve bu basış yeni bir kullanım sayılmaz.
+   */
+  stopActive?(caster: AbilityCaster): boolean;
 }

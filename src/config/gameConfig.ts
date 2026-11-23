@@ -99,8 +99,8 @@ export const GameConfig = {
     charged: {
       /** Su sol tık uzun: yönlendirilebilir seri buz sarkacı akımı */
       icicleStream: { cooldown: 20, moveMult: 0.6, maxDuration: 3, tickInterval: 0.09 },
-      /** Ateş sağ tık uzun: 5 sn'ye kadar şarj, bırakınca güçlü yıldırım */
-      lightningCharged: { cooldown: 30, moveMult: 0.4, maxDuration: 5 },
+      /** Ateş sağ tık uzun: 2.5 sn'ye kadar şarj, bırakınca güçlü yıldırım */
+      lightningCharged: { cooldown: 30, moveMult: 0.4, maxDuration: 2.5 },
       /** Ateş sol tık uzun: yönlendirilebilir alev püskürtme */
       flameStream: { cooldown: 20, moveMult: 0.55, maxDuration: 3, tickInterval: 0.06 },
       /** Su sağ tık uzun: kar izi bırakan buz yolu */
@@ -119,7 +119,7 @@ export const GameConfig = {
       fireBreathCharged: { cooldown: 15, moveMult: 0.5, maxDuration: 1.5 },
       /** Hava sol tık uzun: yönlendirilebilir hortum */
       tornado: { cooldown: 20, moveMult: 0.5, maxDuration: 4, tickInterval: 1 / 30 },
-      /** Hava sağ tık uzun: iki kat büyük, çarpan rüzgar küresi */
+      /** Hava sağ tık uzun: iki kat büyük, çarpan rüzgar küresi (bekleme uçuş bitince başlar) */
       bigSphere: { cooldown: 30, moveMult: 1, maxDuration: 0 },
     },
 
@@ -142,6 +142,7 @@ export const GameConfig = {
       lightningLine: { cooldown: 3.5, castTime: 0.45, castMoveMult: 0.4 },
       // Hava
       airBall: { cooldown: 0.8, castTime: 0.12, castMoveMult: 0.8 },
+      /** Bekleme uçuş bitince başlar; uçarken sağ tık küreyi durdurur */
       airSphere: { cooldown: 4.0, castTime: 0.05, castMoveMult: 1.0 },
       /** E: Şok Dalgası (rakipleri iter, mermileri geri savurur) */
       airShockwave: { cooldown: 6.0, castTime: 0.15, castMoveMult: 0.7 },
@@ -244,10 +245,10 @@ export const GameConfig = {
       wallDamage: 40,
       /** Ek sersemletme süresi (s) */
       stun: 0.35,
-      /** Tam şarjda çarpanlar (şarj oranıyla doğrusal artar) */
-      chargedDamageMult: 3,
-      chargedKnockbackMult: 2.5,
-      chargedStunBonus: 0.8,
+      /** Tam şarjda çarpanlar (şarj oranıyla doğrusal artar; eski 3 / 2.5 / 0.8'in %75'i) */
+      chargedDamageMult: 2.25,
+      chargedKnockbackMult: 1.875,
+      chargedStunBonus: 0.6,
       chargedWidthMult: 1.7,
     },
   },
