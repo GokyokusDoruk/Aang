@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import type { ElementId } from '../abilities/elements';
 import type { AbilitySlot } from '../abilities/types';
-import { BendingPose } from './BendingPose';
+import { BendingPose, type Pose } from './BendingPose';
 
 /**
  * Büyü → hareket yakalama klibi (Quaternius UAL1/UAL2, CC0). Dizi: sırayla değişen sağ / sol hamleler.
@@ -31,6 +31,28 @@ const CAST_CLIPS: Record<string, { clips: string[]; speed: number }> = {
 };
 
 /** Süren uzun basış → tutulan üst gövde klibi */
+/**
+ * Rüzgar küresinin üstünde bağdaş (karakter ekseninde: x öne kaldır, y dön, z yana aç; radyan).
+ * Uyluklar öne ve yana açılıp yataylaşır, baldırlar içe katlanıp önde çaprazlanır, eller dizlerde.
+ */
+// Ölçüm (kalçaya göre, sağ/yukarı/ileri m): dizler ±0.4 yanda ~kalça hizasında, ayak bilekleri önde ortada
+// çaprazlanır (sol önde), eller dizlerin üstünde. Boşta klibi sağ bacağı biraz aşağıda tuttuğu için sağ uyluk daha çok kalkar.
+const SIT_POSE: Pose = {
+  thigh_l: [1.3, 0, -0.75],
+  thigh_r: [1.72, 0, 0.75],
+  calf_l: [0, -2.35, 0],
+  calf_r: [0, 2.35, 0],
+  foot_l: [0, 0.4, 0],
+  foot_r: [0, -0.4, 0],
+  spine_01: [0.08, 0, 0],
+  upperarm_l: [0.55, 0, -0.12],
+  upperarm_r: [0.55, 0, 0.12],
+  lowerarm_l: [0.15, 0, 0],
+  lowerarm_r: [0.15, 0, 0],
+};
+/** Kalça kemiğinin oturma yüzeyinden yüksekliği (kalça kası kalınlığı, m) */
+const SEAT_THICKNESS = 0.16;
+
 /** Tek elle tutulanlar: klibin yalnızca sağ kolu oynar (Alev Akımı: sağ el öne uzanır, ateş elden çıkar) */
 const ONE_HAND_HOLDS = new Set(['flameStream']);
 
@@ -52,6 +74,8 @@ export interface FighterAnimState {
   waterSphere: boolean;
   /** Rüzgar küresine binmiş */
   riding: boolean;
+  /** Bindiği rüzgar küresinin yarıçapı (m); binmiyorsa 0 */
+  rideRadius: number;
   /** 0 = ayakta; yere düşmüşse 0→1 ilerleme */
   downedProgress: number;
 }
@@ -389,10 +413,16 @@ export class PlayerView {
 
   /** Dururken elemente göre savaş duruşu (yalnızca duruş; büyü hareketlerini klipler yapar) */
   private bend: BendingPose | null = null;
+  /** Bağdaş ağırlığı, son bindiği kürenin yarıçapı, bağlama pozunda kalçanın kökten yüksekliği */
+  private sitW = 0;
+  private lastRideR = 1;
+  private pelvisHeight = 0.86;
+  /** Hata ayıklama / ayar: bağdaş pozu (konsoldan değiştirilebilir) */
+  readonly sitPose = SIT_POSE;
   private castIndex = 0;
   private floatLift = 0;
   private moving = false;
-  private anim: FighterAnimState = { chargeId: null, element: null, waterSphere: false, riding: false, downedProgress: 0 };
+  private anim: FighterAnimState = { chargeId: null, element: null, waterSphere: false, riding: false, rideRadius: 0, downedProgress: 0 };
 
   setAnimState(s: FighterAnimState): void {
     this.anim = s;
@@ -408,7 +438,8 @@ export class PlayerView {
       const p = a.downedProgress;
       m.setOverride('LayToIdle', false, 1, p < 0.45 ? 0 : ((p - 0.45) / 0.55) * dur);
     } else if (a.waterSphere && m.hasClip('Swim_Idle_Loop')) m.setOverride('Swim_Idle_Loop');
-    else if (a.riding && m.hasClip('NinjaJump_Idle_Loop')) m.setOverride('NinjaJump_Idle_Loop');
+    // Küre üstünde: sakin boşta klibi (üst gövde nefes alır), bacaklar SIT_POSE ile bağdaş kurar
+    else if (a.riding && m.hasClip('Idle_Loop')) m.setOverride('Idle_Loop');
     else if (a.chargeId && HOLD_CLIPS[a.chargeId] && m.hasClip(HOLD_CLIPS[a.chargeId]))
       m.setOverride(HOLD_CLIPS[a.chargeId], ONE_HAND_HOLDS.has(a.chargeId) ? 'rightArm' : true);
     else m.setOverride(null);
@@ -424,6 +455,11 @@ export class PlayerView {
     this.tilt.add(inst.root);
     const bend = new BendingPose(inst.root);
     this.bend = bend.ok ? bend : null;
+    const pelvisBone = inst.root.getObjectByName('pelvis');
+    if (pelvisBone) {
+      inst.root.updateMatrixWorld(true);
+      this.pelvisHeight = pelvisBone.getWorldPosition(new THREE.Vector3()).y - inst.root.getWorldPosition(new THREE.Vector3()).y;
+    }
     // Bağlama pozunda kalça / göğüs ileri ekseni (büyü kliplerinde yön sabitleyici)
     this.captureForward(['pelvis', 'spine_03'].map((n) => inst.root.getObjectByName(n)).filter(Boolean) as THREE.Object3D[]);
     const bones = ['hand_l', 'hand_r', 'foot_l', 'foot_r'].map((n) => inst.root.getObjectByName(n));
@@ -571,6 +607,14 @@ export class PlayerView {
           key === 'idle' && grounded && speed < 1.5 && !this.model.busy && chill < 1 && downed <= 0 && !this.anim.waterSphere ? 1 : 0;
         this.bend.apply(dt, { element: this.anim.element, stance, chargeId: null, chargeProgress: 0 }, this.root);
         this.tilt.position.y -= this.bend.drop * (1 - downed);
+      }
+      // Rüzgar küresinin üstünde bağdaş kurup oturur
+      if (this.anim.rideRadius > 0) this.lastRideR = this.anim.rideRadius;
+      this.sitW += ((this.anim.riding ? 1 : 0) - this.sitW) * damp(12, dt);
+      if (this.sitW > 0.01 && this.bend) {
+        this.bend.applyStatic(SIT_POSE, this.sitW, this.root);
+        // Kalça kürenin tepesine: küre merkezi ayak − 0.9r → tepe ayak + 0.1r; model kökü kalça yüksekliği kadar iner
+        this.tilt.position.y += (0.1 * this.lastRideR + SEAT_THICKNESS - this.pelvisHeight) * this.sitW;
       }
     }
 

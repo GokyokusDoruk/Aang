@@ -259,6 +259,7 @@ function animStateOf(c: Combatant, a: AbilitySystem | null): FighterAnimState {
     element: a?.activeElement ?? null,
     waterSphere: c.sphereTimer > 0,
     riding: c.controller.sphereTimer > 0,
+    rideRadius: c.controller.sphereTimer > 0 ? GameConfig.air.sphere.radius * (c.controller.sphereBig ? GameConfig.air.sphere.bigScale : 1) : 0,
     downedProgress: c.downedProgress,
   };
 }
