@@ -59,7 +59,7 @@ const ORDER: BoneName[] = [
 ];
 
 /** Kemik başına karakter ekseninde (x: öne kaldır / eğ, y: dön, z: yana aç) açı (radyan) */
-type Pose = Partial<Record<BoneName, [number, number, number]>>;
+export type Pose = Partial<Record<BoneName, [number, number, number]>>;
 
 export interface BendState {
   element: ElementId | null;
@@ -162,8 +162,19 @@ export class BendingPose {
 
     this.drop = drop;
     this.spin = spin;
+    this.commit(frameObj);
+  }
 
-    // --- Uygula (ebeveynden çocuğa; karakter ekseni → kemik yereli)
+  /** Sabit poz (ör. rüzgar küresinin üstünde bağdaş): mixer güncellemesinden sonra, 0..1 ağırlıkla */
+  applyStatic(pose: Pose, w: number, frameObj: THREE.Object3D): void {
+    if (!this.ok || w <= 0.001) return;
+    for (const v of this.acc.values()) v.set(0, 0, 0);
+    this.add(pose, w);
+    this.commit(frameObj);
+  }
+
+  /** Biriken dönüşleri uygula (ebeveynden çocuğa; karakter ekseni → kemik yereli) */
+  private commit(frameObj: THREE.Object3D): void {
     frameObj.updateMatrixWorld(true);
     frameObj.getWorldQuaternion(this.frame);
     this.frameInv.copy(this.frame).invert();

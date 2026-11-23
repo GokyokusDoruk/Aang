@@ -29,6 +29,8 @@ export interface DamageOptions {
   kind?: 'burn' | 'self';
   /** Hasarın elementi (Hava genel hasar azaltmasından muaf) */
   element?: string;
+  /** Sabit hasar: genel hasar çarpanları uygulanmaz (ayarda yazan değer aynen verilir) */
+  flat?: boolean;
 }
 
 const IDLE_INPUT: StepInput = { moveX: 0, moveY: 0, held: emptyFlags(), pressed: emptyFlags() };
@@ -126,7 +128,7 @@ export class Combatant {
     if (this.invulnTimer > 0 && !opts.ignoreInvuln && !opts.dot) return false;
     if (opts.dot && this.spawnProtected) return false;
     const C = GameConfig.combat;
-    if (opts.kind !== 'self') amount *= opts.element === 'air' ? C.airDamageMult : C.damageMult;
+    if (opts.kind !== 'self' && !opts.flat) amount *=opts.element === 'air' ? C.airDamageMult : C.damageMult;
 
     const missing = 1 - this.hp / this.opts.maxHp;
     // Zırh hasarı emer ve itmeyi azaltır

@@ -617,9 +617,13 @@ export const GameConfig = {
       rideHeight: 1.9,
       /** Uzun basış: küre bu kat büyük ve çarpar */
       bigScale: 2,
-      ramDamage: 10,
-      ramKnockback: 16,
-      ramKnockbackUp: 6,
+      /** Dev Küre çarpması: sabit 2 hasar (genel hasar çarpanları uygulanmaz) */
+      ramDamage: 2,
+      /** İtme (genel itme çarpanından önce; ×0.25 → ~11 m/s yatay, ~3.75 m/s yukarı) */
+      ramKnockback: 44,
+      ramKnockbackUp: 10,
+      /** Aynı rakibe yeniden çarpma aralığı (s) */
+      ramRehit: 1,
       /** Bu güçte bir itme uçuşu bozar */
       knockOffImpulse: 6,
     },
