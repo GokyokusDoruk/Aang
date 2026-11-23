@@ -27,6 +27,8 @@ export interface DamageOptions {
   dot?: boolean;
   /** Olayda hasar türü */
   kind?: 'burn' | 'self';
+  /** Hasarın elementi (Hava genel hasar azaltmasından muaf) */
+  element?: string;
 }
 
 const IDLE_INPUT: StepInput = { moveX: 0, moveY: 0, held: emptyFlags(), pressed: emptyFlags() };
@@ -124,6 +126,7 @@ export class Combatant {
     if (this.invulnTimer > 0 && !opts.ignoreInvuln && !opts.dot) return false;
     if (opts.dot && this.spawnProtected) return false;
     const C = GameConfig.combat;
+    if (opts.element !== 'air' && opts.kind !== 'self') amount *= C.damageMult;
 
     const missing = 1 - this.hp / this.opts.maxHp;
     // Zırh hasarı emer ve itmeyi azaltır
@@ -138,7 +141,15 @@ export class Combatant {
       if (absorbed > 0) this.bus.emit('combat:armorHit', { targetId: this.id, amount: absorbed, point: point.clone(), broken: this.armor <= 0 });
       if (this.armor <= 0) this.armorMax = 0;
     }
-    if (this.sphereTimer > 0) kbMult = 0;
+    if (this.sphereTimer > 0) {
+      kbMult = 0;
+      // Su Küresi hasar alınca patlar: iyileşme biter
+      if (amount > 0) {
+        this.sphereTimer = 0;
+        this.bus.emit('fx:burst', { point: this.center(new Vector3()), element: 'water', size: 1.8 });
+        this.bus.emit('combat:sphereBreak', { targetId: this.id, point: this.center(new Vector3()) });
+      }
+    }
     this.hp = Math.max(0, this.hp - amount);
     this.hitFlash = opts.dot ? 0.06 : 0.15;
     if (!opts.dot) {
@@ -152,6 +163,11 @@ export class Combatant {
 
     if (impulse && kbMult > 0) {
       this.scaled.copy(impulse).multiplyScalar((1 + missing * C.lowHpKnockbackBonus) * kbMult);
+      if (sourceId !== this.id) {
+        this.scaled.x *= C.knockbackMult;
+        this.scaled.z *= C.knockbackMult;
+        this.scaled.y *= C.knockbackUpMult;
+      }
       this.controller.applyKnockback(this.scaled);
     }
     if (!opts.dot && sourceId !== this.id && !armored) {
@@ -230,7 +246,7 @@ export class Combatant {
   knockDown(push: Vector3, up: number, amount: number, downTime: number, sourceId: string, point: Vector3): boolean {
     if (this.launched || this.downedTimer > 0) return false;
     this.tmp.set(push.x, up, push.z);
-    if (!this.takeDamage(amount, this.tmp, sourceId, point, { ignoreInvuln: amount <= 0 })) return false;
+    if (!this.takeDamage(amount, this.tmp, sourceId, point, { ignoreInvuln: amount <= 0, element: 'air' })) return false;
     if (!this.alive || this.armor > 0 || this.sphereTimer > 0) return true; // zırh / küre: sersemlemez
     this.controller.glideTimer = 0;
     this.launched = true;
@@ -245,6 +261,11 @@ export class Combatant {
   }
 
   /** Görsel: 0 = ayakta, 1 = yerde yatıyor (düşüş hızlı, kalkış son 0.35 sn) */
+  /** Yere düşme ilerlemesi: 0 = ayakta, 0→1 yerde geçen süre oranı */
+  get downedProgress(): number {
+    return this.downedTimer > 0 ? Math.min(1, 1 - this.downedTimer / Math.max(0.01, this.downDuration)) : 0;
+  }
+
   get downedPose(): number {
     if (this.downedTimer <= 0) return 0;
     const D = this.downDuration;

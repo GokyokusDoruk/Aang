@@ -39,9 +39,9 @@ export function loadCharacterAsset(targetHeight: number): Promise<CharacterAsset
   const base = import.meta.env.BASE_URL ?? './';
   const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
   const get = (file: string) => loader.loadAsync(`${base}models/${file}`).catch(() => null);
-  pending = Promise.all([get('character.glb'), get('animations.glb')]).then(([model, anims]) => {
+  pending = Promise.all([get('character.glb'), get('animations.glb'), get('animations2.glb')]).then(([model, anims, anims2]) => {
     if (!model) return null;
-    const clips = [...model.animations, ...(anims?.animations ?? [])];
+    const clips = [...model.animations, ...(anims?.animations ?? []), ...(anims2?.animations ?? [])];
     const box = new THREE.Box3().setFromObject(model.scene);
     const h = Math.max(0.01, box.max.y - box.min.y);
     model.scene.traverse((o) => {
@@ -107,6 +107,12 @@ export class CharacterInstance {
   private readonly actions = new Map<AnimKey, THREE.AnimationAction>();
   private current: THREE.AnimationAction | null = null;
   private oneShot: THREE.AnimationAction | null = null;
+  private readonly clipByName = new Map<string, THREE.AnimationClip>();
+  private readonly named = new Map<string, THREE.AnimationAction>();
+  /** Durum animasyonunun üstüne baskın tutulan klip (şarj, nişan, su küresi, yerde yatma...) */
+  private override: THREE.AnimationAction | null = null;
+  /** İsimli tek seferlik hamle (büyü atma, darbe) */
+  private namedShot: THREE.AnimationAction | null = null;
 
   constructor(asset: CharacterAsset, teamColor: number, accent: THREE.Material) {
     this.root = cloneSkinned(asset.scene);
@@ -144,6 +150,7 @@ export class CharacterInstance {
     });
     this.head = head;
     this.mixer = new THREE.AnimationMixer(this.root);
+    for (const c of asset.clips) if (!this.clipByName.has(c.name)) this.clipByName.set(c.name, c);
 
     const used = new Set<THREE.AnimationClip>();
     for (const key of Object.keys(CLIP_HINTS) as AnimKey[]) {
@@ -161,6 +168,65 @@ export class CharacterInstance {
   has(key: AnimKey): boolean {
     return this.actions.has(key);
   }
+
+  hasClip(name: string): boolean {
+    return this.clipByName.has(name);
+  }
+
+  clipDuration(name: string): number {
+    return this.clipByName.get(name)?.duration ?? 1;
+  }
+
+  /** İsimli klip aksiyonu; upper = yalnızca üst gövde kemikleri (bacaklar koşuya devam eder) */
+  private namedAction(name: string, upper: boolean): THREE.AnimationAction | null {
+    const key = upper ? `${name}#u` : name;
+    const cached = this.named.get(key);
+    if (cached) return cached;
+    const src = this.clipByName.get(name);
+    if (!src) return null;
+    const clip = upper ? new THREE.AnimationClip(key, src.duration, src.tracks.filter((t) => UPPER_BODY.test(t.name))) : inPlace(src);
+    const a = this.mixer.clipAction(clip);
+    this.named.set(key, a);
+    return a;
+  }
+
+  /**
+   * Tek seferlik isimli hamle (büyü atma, darbe). Durum animasyonunun üstüne baskın ağırlıkla biner,
+   * bitince kendiliğinden söner. upper: koşarken yalnızca üst gövde.
+   */
+  playNamedOnce(name: string, speed = 1, upper = false): boolean {
+    const a = this.namedAction(name, upper);
+    if (!a) return false;
+    if (this.namedShot && this.namedShot !== a) this.namedShot.fadeOut(0.08);
+    a.reset();
+    a.setLoop(THREE.LoopOnce, 1);
+    a.clampWhenFinished = true;
+    a.timeScale = speed;
+    a.setEffectiveWeight(upper ? 6 : 10).fadeIn(0.08).play();
+    this.namedShot = a;
+    return true;
+  }
+
+  /**
+   * Sürekli baskın klip (null = kapat). time verilirse klip o saniyede dondurulur (yerden kalkma gibi elle sürülen klipler).
+   */
+  setOverride(name: string | null, upper = false, timeScale = 1, time?: number): void {
+    const a = name ? this.namedAction(name, upper) : null;
+    if (a !== this.override) {
+      this.override?.fadeOut(0.2);
+      if (a) {
+        a.reset();
+        a.setLoop(THREE.LoopRepeat, Infinity);
+        a.setEffectiveWeight(upper ? 6 : 10).fadeIn(0.2).play();
+      }
+      this.override = a;
+    }
+    if (a) {
+      a.timeScale = time === undefined ? timeScale : 0;
+      if (time !== undefined) a.time = Math.min(time, a.getClip().duration - 1e-3);
+    }
+  }
+
 
   /** Sürekli durum animasyonu (koşu, boşta, düşüş...) — yumuşak geçişle. */
   play(key: AnimKey, timeScale = 1): void {
@@ -186,6 +252,13 @@ export class CharacterInstance {
   }
 
   update(dt: number): void {
+    if (this.namedShot) {
+      const clip = this.namedShot.getClip();
+      if (this.namedShot.time >= clip.duration * 0.9 || !this.namedShot.isRunning()) {
+        this.namedShot.fadeOut(0.18);
+        this.namedShot = null;
+      }
+    }
     if (this.oneShot) {
       const clip = this.oneShot.getClip();
       if (this.oneShot.time >= clip.duration * 0.85 || !this.oneShot.isRunning()) {
@@ -196,6 +269,31 @@ export class CharacterInstance {
     }
     this.mixer.update(dt);
   }
+}
+
+/** Üst gövde kemikleri (kalça dönüşü ve bacaklar durum animasyonunda kalır) */
+const UPPER_BODY = /^(spine_02|spine_03|neck_01|Head|head|clavicle_[lr]|upperarm_[lr]|lowerarm_[lr]|hand_[lr])\./;
+
+/**
+ * Klibi yerinde oynat: kök hareketi atılır, kalçanın yatay kayması ilk kareye sabitlenir
+ * (darbe / fırlatma kliplerinde karakter başka yere kaymasın; yükseklik değişimi korunur).
+ */
+function inPlace(src: THREE.AnimationClip): THREE.AnimationClip {
+  const tracks = src.tracks
+    .filter((t) => !/^root\.position$/.test(t.name))
+    .map((t) => {
+      if (!/^pelvis\.position$/.test(t.name)) return t;
+      const c = t.clone();
+      const v = c.values;
+      const x0 = v[0];
+      const z0 = v[2];
+      for (let i = 0; i < v.length; i += 3) {
+        v[i] = x0;
+        v[i + 2] = z0;
+      }
+      return c;
+    });
+  return new THREE.AnimationClip(src.name + '#ip', src.duration, tracks);
 }
 
 function pickClip(clips: THREE.AnimationClip[], hints: RegExp[], used: Set<THREE.AnimationClip>): THREE.AnimationClip | null {

@@ -75,7 +75,7 @@ export class ElementFxView {
     bus: EventBus<GameEvents>,
     private readonly scale = 1,
   ) {
-    bus.on('fx:breath', (e) => this.breath(e));
+    // Nefes alevi ve dumanı Vfx parçacık katmanında
     bus.on('fx:windBurst', (e) => this.windBurst(e));
     bus.on('combat:armorHit', (e) => {
       const n = e.broken ? 14 : 4;
@@ -249,8 +249,8 @@ export class ElementFxView {
     }
   }
 
-  /** Nefes: koni içinde ileri püsküren, yayılan, kırmızıya dönen alev dilleri */
-  private breath(e: GameEvents['fx:breath']): void {
+  /** (eski) Nefes: koni içinde ileri püsküren, yayılan, kırmızıya dönen alev dilleri */
+  breathMeshes(e: GameEvents['fx:breath']): void {
     const n = Math.round((28 + e.charge * 55) * this.scale);
     const dir = e.direction.clone().normalize();
     const side = new THREE.Vector3().crossVectors(dir, this.up).normalize();

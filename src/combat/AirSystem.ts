@@ -123,7 +123,7 @@ export class AirSystem {
       const nz = d > 1e-3 ? rz / d : 0;
       // Dışa itme + teğetsel girdap + kaldırma
       imp.set(nx * T.push - nz * T.swirl, T.lift, nz * T.push + nx * T.swirl).multiplyScalar(t.strength);
-      c.takeDamage(T.damage * t.strength, imp, t.ownerId, c.center(tmp));
+      c.takeDamage(T.damage * t.strength, imp, t.ownerId, c.center(tmp), { element: 'air' });
     }
   }
 
@@ -155,7 +155,7 @@ export class AirSystem {
         if (off.lengthSq() < 1e-4) off.set(ctl.velocity.x, 0, ctl.velocity.z);
         off.normalize().multiplyScalar(S.ramKnockback);
         off.y = S.ramKnockbackUp;
-        k.takeDamage(S.ramDamage, off, c.id, k.center(new Vector3()));
+        k.takeDamage(S.ramDamage, off, c.id, k.center(new Vector3()), { element: 'air' });
         this.bus.emit('fx:burst', { point: k.center(new Vector3()), element: 'air', size: 1.2 });
       }
     }

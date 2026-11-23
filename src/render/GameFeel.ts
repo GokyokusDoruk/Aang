@@ -26,6 +26,9 @@ interface JetState {
 export class GameFeel {
   private trauma = 0;
   private hitStop = 0;
+  /** Final vuruşu ağır çekimi: kalan süre (gerçek zaman, s) */
+  private slowmo = 0;
+  private static readonly SLOWMO_TIME = 1.3;
   private fovExtra = 0;
   private readonly lines: HTMLDivElement;
   private readonly jets = new Map<Combatant, JetState>();
@@ -33,7 +36,7 @@ export class GameFeel {
   private readonly dir = new THREE.Vector3();
 
   constructor(
-    app: HTMLElement,
+    private readonly app: HTMLElement,
     bus: EventBus<GameEvents>,
     private readonly effects: EffectsView,
     private readonly fighters: () => FeelFighter[],
@@ -51,6 +54,16 @@ export class GameFeel {
       } else if (e.sourceId === 'player') {
         this.addTrauma(0.12 + Math.min(0.2, e.amount / 120));
         this.hitStop = Math.max(this.hitStop, e.killed ? 0.1 : 0.045);
+      }
+    });
+    // Final vuruşu: oyuncunun ya da botun yenildiği (veya oyuncunun birini yendiği) an ağır çekim
+    bus.on('combat:death', (e) => {
+      if (e.targetId === 'player' || e.targetId === 'bot' || e.killerId === 'player') {
+        this.slowmo = GameFeel.SLOWMO_TIME;
+        this.addTrauma(0.35);
+        this.app.classList.remove('finisher');
+        void this.app.offsetWidth;
+        this.app.classList.add('finisher');
       }
     });
     bus.on('fx:explosion', (e) => this.nearby(e.point, 0.45, 14));
@@ -71,9 +84,18 @@ export class GameFeel {
 
   /** Simülasyon zaman çarpanı (hit-stop sırasında çok küçük). */
   simScale(dt: number): number {
-    if (this.hitStop <= 0) return 1;
-    this.hitStop -= dt;
-    return 0.06;
+    let s = 1;
+    if (this.slowmo > 0) {
+      this.slowmo -= dt;
+      // İlk %70 çok yavaş (0.22), sonra yumuşakça normale döner
+      const k = 1 - Math.max(0, this.slowmo) / GameFeel.SLOWMO_TIME;
+      s = k < 0.7 ? 0.22 : 0.22 + ((k - 0.7) / 0.3) * 0.78;
+    }
+    if (this.hitStop > 0) {
+      this.hitStop -= dt;
+      s = Math.min(s, 0.06);
+    }
+    return s;
   }
 
   /** Kamera pozu ayarlandıktan sonra, render'dan önce çağrılır. */
