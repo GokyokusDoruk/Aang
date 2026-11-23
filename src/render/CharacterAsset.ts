@@ -174,6 +174,13 @@ export class CharacterInstance {
     return !!(this.namedShot || this.override || this.oneShot);
   }
 
+  /** Büyü / darbe klibi oynuyor mu */
+  get shotActive(): boolean {
+    return !!this.namedShot || this.shotTail > 0;
+  }
+  /** Klip bittikten sonra sönerken de etkisi sürer (fadeOut süresi) */
+  private shotTail = 0;
+
   hasClip(name: string): boolean {
     return this.clipByName.has(name);
   }
@@ -182,14 +189,18 @@ export class CharacterInstance {
     return this.clipByName.get(name)?.duration ?? 1;
   }
 
-  /** İsimli klip aksiyonu; upper = yalnızca üst gövde kemikleri (bacaklar koşuya devam eder) */
-  private namedAction(name: string, upper: boolean): THREE.AnimationAction | null {
-    const key = upper ? `${name}#u` : name;
+  /**
+   * İsimli klip aksiyonu. upper = yalnızca üst gövde kemikleri (bacaklar koşuya devam eder);
+   * 'rightArm' = yalnızca sağ kol ve el (tek elle nişan: sol kol ve gövde durum animasyonunda kalır).
+   */
+  private namedAction(name: string, upper: BodyMask): THREE.AnimationAction | null {
+    const key = upper === 'rightArm' ? `${name}#r` : upper ? `${name}#u` : name;
     const cached = this.named.get(key);
     if (cached) return cached;
     const src = this.clipByName.get(name);
     if (!src) return null;
-    const clip = upper ? new THREE.AnimationClip(key, src.duration, src.tracks.filter((t) => UPPER_BODY.test(t.name))) : inPlace(src);
+    const mask = upper === 'rightArm' ? RIGHT_ARM : upper ? UPPER_BODY : null;
+    const clip = mask ? new THREE.AnimationClip(key, src.duration, src.tracks.filter((t) => mask.test(t.name))) : inPlace(src);
     const a = this.mixer.clipAction(clip);
     this.named.set(key, a);
     return a;
@@ -215,7 +226,7 @@ export class CharacterInstance {
   /**
    * Sürekli baskın klip (null = kapat). time verilirse klip o saniyede dondurulur (yerden kalkma gibi elle sürülen klipler).
    */
-  setOverride(name: string | null, upper = false, timeScale = 1, time?: number): void {
+  setOverride(name: string | null, upper: BodyMask = false, timeScale = 1, time?: number): void {
     const a = name ? this.namedAction(name, upper) : null;
     if (a !== this.override) {
       this.override?.fadeOut(0.2);
@@ -262,8 +273,10 @@ export class CharacterInstance {
       if (this.namedShot.time >= clip.duration * 0.9 || !this.namedShot.isRunning()) {
         this.namedShot.fadeOut(0.18);
         this.namedShot = null;
+        this.shotTail = 0.2;
       }
     }
+    this.shotTail = Math.max(0, this.shotTail - dt);
     if (this.oneShot) {
       const clip = this.oneShot.getClip();
       if (this.oneShot.time >= clip.duration * 0.85 || !this.oneShot.isRunning()) {
@@ -277,6 +290,12 @@ export class CharacterInstance {
 }
 
 /** Üst gövde kemikleri (kalça dönüşü ve bacaklar durum animasyonunda kalır) */
+/** Sağ kol, el ve parmaklar (tek elle büyü pozları) */
+const RIGHT_ARM = /^((clavicle|upperarm|lowerarm|hand|thumb_\d+|index_\d+|middle_\d+|ring_\d+|pinky_\d+)_r)\./;
+
+/** Klip maskesi: false = tüm vücut, true = üst gövde, 'rightArm' = yalnızca sağ kol */
+export type BodyMask = boolean | 'rightArm';
+
 const UPPER_BODY = /^(spine_02|spine_03|neck_01|Head|head|clavicle_[lr]|upperarm_[lr]|lowerarm_[lr]|hand_[lr])\./;
 
 /**

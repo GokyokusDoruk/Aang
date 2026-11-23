@@ -19,6 +19,8 @@ export interface Tornado {
   /** 1 → 0 sönme */
   strength: number;
   hitTimers: Map<string, number>;
+  /** Yakalanıp etrafında döndürülenler: açı ve yükselme */
+  held: Map<string, { angle: number; rise: number }>;
 }
 
 const tmp = new Vector3();
@@ -52,7 +54,7 @@ export class AirSystem {
     const z = from.z + (dirZ / l) * T.spawnDistance;
     const g = this.world.groundHeight(x, z, 0.2, from.y + 1.5);
     const p = new Vector3(x, Number.isFinite(g) ? g : from.y, z);
-    const t: Tornado = { id: this.nextId++, ownerId, position: p, prevPosition: p.clone(), target: p.clone(), age: 0, active: true, strength: 1, hitTimers: new Map() };
+    const t: Tornado = { id: this.nextId++, ownerId, position: p, prevPosition: p.clone(), target: p.clone(), age: 0, active: true, strength: 1, hitTimers: new Map(), held: new Map() };
     this.tornados.push(t);
     return t;
   }
@@ -77,6 +79,8 @@ export class AirSystem {
       t.prevPosition.copy(t.position);
       t.age += dt;
       if (!t.active || t.age > T.maxLifetime) {
+        // Hortum bitti: yakaladıklarını bırakır, düşerler
+        if (t.held.size) this.releaseAll(t);
         t.strength -= dt / T.fadeTime;
         if (t.strength <= 0) {
           this.tornados.splice(i, 1);
@@ -103,7 +107,42 @@ export class AirSystem {
     }
   }
 
-  /** Hortumun içindekiler: dışa ve yukarı savrulur, girdapla döner, az hasar alır. */
+  /** Yakalananları teğetsel savurarak bırak (yere düşünce sersem kalırlar). */
+  private releaseAll(t: Tornado): void {
+    const T = GameConfig.air.tornado;
+    for (const [id, h] of t.held) {
+      const c = this.combatants.find((k) => k.id === id);
+      if (!c) continue;
+      // Teğet yönünde (dönüş yönü) hafif savrulma
+      imp.set(-Math.sin(h.angle) * T.releaseFling, T.releaseUp, Math.cos(h.angle) * T.releaseFling);
+      c.releaseFromTornado(imp);
+    }
+    t.held.clear();
+  }
+
+  /** Yakalananı hortumun etrafında döndür ve yukarı taşı (hız ile; çarpışma kontrolcüde çözülür). */
+  private orbit(t: Tornado, c: Combatant, h: { angle: number; rise: number }, dt: number): void {
+    const T = GameConfig.air.tornado;
+    h.angle += T.orbitSpeed * dt;
+    h.rise = Math.min(T.riseHeight, h.rise + T.riseSpeed * dt);
+    const R = T.orbitRadius;
+    const tx = t.position.x + Math.cos(h.angle) * R;
+    const tz = t.position.z + Math.sin(h.angle) * R;
+    const ty = t.position.y + h.rise;
+    const ctl = c.controller;
+    const v = ctl.velocity;
+    // Hedef noktaya yaklaş + dönüşün teğet hızı (gecikmesiz, düzgün daire)
+    v.set((tx - ctl.position.x) * T.orbitPull - Math.sin(h.angle) * T.orbitSpeed * R, (ty - ctl.position.y) * T.orbitPull, (tz - ctl.position.z) * T.orbitPull + Math.cos(h.angle) * T.orbitSpeed * R);
+    const max = T.orbitMaxSpeed;
+    const s = v.length();
+    if (s > max) v.multiplyScalar(max / s);
+    ctl.knockbackTimer = Math.max(ctl.knockbackTimer, 0.1);
+  }
+
+  /**
+   * Hortumun içindekiler: yakalanır, etrafında döner ve yukarı çıkar, aralıklarla az hasar alır.
+   * Yakalanamayanlar (zırh, Su Küresi, zaten yerde) eskisi gibi dışa / yukarı savrulur.
+   */
   private affect(t: Tornado, dt: number): void {
     const T = GameConfig.air.tornado;
     for (const [id, v] of t.hitTimers) {
@@ -111,7 +150,22 @@ export class AirSystem {
       else t.hitTimers.set(id, v - dt);
     }
     for (const c of this.combatants) {
-      if (!c.alive || c.id === t.ownerId || t.hitTimers.has(c.id)) continue;
+      if (c.id === t.ownerId) continue;
+      const h = t.held.get(c.id);
+      if (h) {
+        if (!c.alive || !c.heldByTornado) {
+          t.held.delete(c.id);
+          c.releaseFromTornado(imp.set(0, 0, 0));
+          continue;
+        }
+        this.orbit(t, c, h, dt);
+        if (!t.hitTimers.has(c.id)) {
+          t.hitTimers.set(c.id, T.hitInterval);
+          c.takeDamage(T.damage * t.strength, null, t.ownerId, c.center(tmp), { element: 'air', ignoreInvuln: true });
+        }
+        continue;
+      }
+      if (!c.alive || t.hitTimers.has(c.id)) continue;
       const rx = c.position.x - t.position.x;
       const rz = c.position.z - t.position.z;
       const d = Math.hypot(rx, rz);
@@ -119,6 +173,11 @@ export class AirSystem {
       const dy = c.position.y - t.position.y;
       if (dy < -1 || dy > T.height) continue;
       t.hitTimers.set(c.id, T.hitInterval);
+      if (t.active && t.age <= T.maxLifetime && c.captureByTornado(T.downTime)) {
+        t.held.set(c.id, { angle: Math.atan2(rz, rx), rise: Math.max(0, dy) });
+        c.takeDamage(T.damage, null, t.ownerId, c.center(tmp), { element: 'air' });
+        continue;
+      }
       const nx = d > 1e-3 ? rx / d : 1;
       const nz = d > 1e-3 ? rz / d : 0;
       // Dışa itme + teğetsel girdap + kaldırma

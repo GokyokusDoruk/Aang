@@ -141,7 +141,8 @@ export class ElementFxView {
     this.tmp.lerpVectors(ctl.prevPosition, ctl.position, alpha);
     const R = GameConfig.water.sphere.radius;
     const t = performance.now() / 1000;
-    b.mesh.position.set(this.tmp.x, this.tmp.y + ctl.height * 0.5, this.tmp.z);
+    // Küre zemine oturur (alt ucu ayak hizasında), zeminin içine girmez
+    b.mesh.position.set(this.tmp.x, this.tmp.y + R * 1.02, this.tmp.z);
     // Dalgalanan su yüzeyi: eksenlerde farklı fazlarla nefes alır
     b.mesh.scale.set(R * (1 + Math.sin(t * 5) * 0.04), R * (1 + Math.sin(t * 4 + 1) * 0.05) * (0.6 + 0.4 * b.fade), R * (1 + Math.cos(t * 4.5) * 0.04));
     b.mesh.rotation.y += dt * 1.2;
@@ -277,20 +278,9 @@ export class ElementFxView {
   // ---------------------------------------------------------------- Rüzgar Patlaması
 
   private windBurst(e: GameEvents['fx:windBurst']): void {
+    // Rüzgarın kendisi Vfx'te yumuşak, bulanık parçacıklarla çizilir (keskin halka / çizgi yok).
+    // Burada yalnızca güçlüde yerden kalkan toz.
     const o = e.origin;
-    const count = e.strong ? 4 : 2;
-    for (let i = 0; i < count; i++) this.ring(new THREE.Vector3(o.x, o.y + 0.3 + i * 0.45, o.z), 0.6, e.radius * (1 - i * 0.08), 0xe6f7ff, 0.45 + i * 0.07, e.strong ? 6 : 0, i * 0.05);
-    const n = Math.round((e.strong ? 70 : 36) * this.scale);
-    for (let i = 0; i < n; i++) {
-      const a = (i / n) * Math.PI * 2 + Math.random() * 0.2;
-      const h = 0.2 + Math.random() * (e.strong ? 2.4 : 1.6);
-      const from = new THREE.Vector3(o.x + Math.cos(a) * 0.6, o.y + h, o.z + Math.sin(a) * 0.6);
-      const sp = e.radius / 0.35;
-      // Güçlüde teğetsel girdap bileşeni
-      const v = new THREE.Vector3(Math.cos(a) * sp, Math.random() * 2, Math.sin(a) * sp);
-      if (e.strong) v.add(new THREE.Vector3(-Math.sin(a) * sp * 0.35, 0, Math.cos(a) * sp * 0.35));
-      this.spawn(from, v, 0xffffff, 0.06, 0.4, 0, 0, 0.6, false, true, 3);
-    }
     if (e.strong) {
       for (let i = 0; i < 24 * this.scale; i++) {
         const a = Math.random() * Math.PI * 2;

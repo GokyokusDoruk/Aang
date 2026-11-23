@@ -164,11 +164,13 @@ export const GameConfig = {
     /** Doğunca dokunulmazlık (s) — karakter yanıp söner. */
     spawnInvuln: 1.5,
     playerRespawnDelay: 3,
-    /** Tüm büyü hasarı çarpanı (Hava hariç: Hava büyüleri tam hasar verir) */
-    damageMult: 0.75,
-    /** Tüm büyü itmeleri: yatay çarpan ve dikey çarpan (kendi patlamanın roket zıplaması etkilenmez) */
-    knockbackMult: 0.5,
-    knockbackUpMult: 0.75,
+    /** Tüm büyü hasarı çarpanı (Hava hariç). 1. tur −%25, 2. tur bir −%25 daha: 0.75 × 0.75 */
+    damageMult: 0.5625,
+    /** Hava büyülerinin hasar çarpanı (yalnızca 2. turdaki genel −%25) */
+    airDamageMult: 0.75,
+    /** Tüm büyü itmeleri: yatay ve dikey çarpan (kendi patlamanın roket zıplaması etkilenmez). 2. turda ikisi de −%50 */
+    knockbackMult: 0.25,
+    knockbackUpMult: 0.375,
     /** Can azaldıkça itme artar: itme × (1 + eksikCanOranı × bonus). Arena dışına atmayı ödüllendirir. */
     lowHpKnockbackBonus: 0.8,
   },
@@ -200,12 +202,12 @@ export const GameConfig = {
     },
     /** Ateş Nefesi (E): ağızdan kısa menzilli ateş konisi, değdiği herkesi yakar */
     breath: {
-      range: 4.5,
+      range: 6.75,
       halfAngleDeg: 34,
       damage: 10,
       knockback: 4,
       /** Tam şarjda (E uzun basış) */
-      chargedRange: 10,
+      chargedRange: 15,
       chargedHalfAngleDeg: 55,
       chargedDamage: 24,
       chargedKnockback: 9,
@@ -585,12 +587,26 @@ export const GameConfig = {
       maxLifetime: 6,
       /** Bırakınca sönme süresi (s) */
       fadeTime: 0.5,
+      /** Yakalananlar: hortumun etrafında bu yarıçapta, bu açısal hızla (rad/s) döner */
+      orbitRadius: 1.4,
+      orbitSpeed: 5.5,
+      /** Yukarı çıkma hızı (m/s) ve en fazla yükseklik (hortum tabanından, m) */
+      riseSpeed: 1.6,
+      riseHeight: 3.6,
+      /** Yörüngeye çekme kazancı ve hız sınırı */
+      orbitPull: 10,
+      orbitMaxSpeed: 22,
+      /** Hortum bitince savrulma (teğetsel ve yukarı, m/s) */
+      releaseFling: 4,
+      releaseUp: 2,
+      /** Düşenler yere değince bu kadar (s) kalkamaz */
+      downTime: 2,
     },
     /** Rüzgar küresi (sağ tık): her yöne hızlı, kısa uçuş; hep hareket eder */
     sphere: {
-      duration: 1.5,
+      duration: 6.5,
       /** Dev küre (uzun basış) uçuş süresi (s) */
-      bigDuration: 3,
+      bigDuration: 8,
       /** Koşu hızına göre çarpan (1.5 × 1.25) */
       speedMult: 1.875,
       /** Nişanın yukarı / aşağı açısı sınırı (derece) */
@@ -696,6 +712,15 @@ export const GameConfig = {
     hp: 40,
     /** Yapı hasarı (wallDamage) bu oranla uygulanır */
     damageMult: 1,
+  },
+
+  /** Karakter animasyonu (yalnızca görsel) */
+  anim: {
+    /**
+     * Büyü / darbe klibi oynarken izin verilen en fazla dönüş (radyan): kalça yürüme yönünden, göğüs nişan
+     * yönünden bu kadar sapabilir. Küçültmek daha sabit, büyütmek daha hareketli yapar.
+     */
+    castYaw: { pelvisMax: 0.35, chestMax: 0.3 },
   },
 
   render: {

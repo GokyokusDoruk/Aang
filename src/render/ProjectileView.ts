@@ -39,6 +39,9 @@ export class ProjectileView {
     opacity: 0.88,
   });
   private readonly look = new THREE.Vector3();
+  /** Sahibin sağ avucu (dünya); Alev Akımı görseli oradan başlar */
+  handOf: ((ownerId: string, out: THREE.Vector3) => boolean) | null = null;
+  private readonly hand = new THREE.Vector3();
   private readonly fireCore = new THREE.MeshBasicMaterial({ color: 0xfff1a8 });
   private readonly airCore = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9 });
   private readonly airShell = new THREE.MeshBasicMaterial({
@@ -102,6 +105,8 @@ export class ProjectileView {
       mesh.scale.setScalar(p.spec.radius * 0.5);
       mesh.userData.flame = true;
       mesh.castShadow = false;
+      // Görsel avuçtan çıkar: gerçek yolla aradaki fark ilk yarıda sıfıra iner
+      if (this.handOf?.(p.ownerId, this.hand)) mesh.userData.handOffset = this.hand.clone().sub(p.position);
     } else {
       const color = ELEMENTS[p.element].color;
       mesh = new THREE.Mesh(this.orbGeo, new THREE.MeshBasicMaterial({ color }));
@@ -123,7 +128,7 @@ export class ProjectileView {
         break;
       case 'flame':
         m.visible = false;
-        v.flameTrail(at, p.velocity, p.spec.radius, p.age, dt);
+        v.flameTrail(at, p.velocity, p.spec.radius, p.age, p.spec.lifetime, dt, p.id);
         break;
       case 'shard':
         v.icicleTrail(at, p.velocity, dt);
@@ -143,6 +148,11 @@ export class ProjectileView {
       seen.add(p.id);
       const m = this.meshes.get(p.id) ?? this.create(p);
       m.position.lerpVectors(p.prevPosition, p.position, alpha);
+      const off = m.userData.handOffset as THREE.Vector3 | undefined;
+      if (off) {
+        const k = Math.min(1, p.age / (p.spec.lifetime * 0.55));
+        m.position.addScaledVector(off, (1 - k) * (1 - k));
+      }
       if (this.vfx) this.trail(p, m.position, dt, m);
       if (m.userData.flame) {
         const t = Math.min(1, p.age / p.spec.lifetime);

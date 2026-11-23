@@ -76,6 +76,15 @@ vfx.mouthOf = (id, out) => {
   v.headPoint(out);
   return true;
 };
+// Alev Akımı görseli dövüşçünün sağ avucundan çıkar
+projectileView.handOf = (id, out) => {
+  const v = id === 'player' ? playerView : id === 'bot' ? botView : null;
+  if (!v || !v.root.visible) return false;
+  v.handPoint(out);
+  return true;
+};
+const handTmp = new THREE.Vector3();
+const aimTmp = new THREE.Vector3();
 const icePathView = new IcePathView(gfx.scene, session.icePaths);
 const airView = new AirView(gfx.scene, session.air, vfx);
 const wallView = new WallView(gfx.scene, session.walls, (pts, el) => el === 'earth' && effects.earthEruption(pts));
@@ -356,6 +365,11 @@ function frame(now: number): void {
   aimMarker.position.copy(camera.aimPoint);
   aimMarker.visible = active && camera.aimHit;
   effects.update(dt);
+  // Alev Akımı süren dövüşçülerin avucunda yanan mavi çekirdekli alev
+  if (active) {
+    if (player.alive && abilities.chargedActive?.charged.id === 'flameStream') vfx.handFlame(playerView.handPoint(handTmp), camera.aimPoint, dt);
+    if (inMatch && bot.alive && session.botAbilities.chargedActive?.charged.id === 'flameStream') vfx.handFlame(botView.handPoint(handTmp), player.center(aimTmp), dt);
+  }
   projectileView.update(dt, alpha);
   vfx.update(dt, session.combatants, (gfx.renderer.domElement.clientHeight || window.innerHeight) * gfx.renderer.getPixelRatio(), gfx.camera.fov);
   wallView.update();
