@@ -138,6 +138,16 @@ export class PlayerView {
   private lean = 0;
   private sideLean = 0;
   private castPulse = 0; // 1 → 0: yeteneğin çıktığı anki hamle
+  /** Esneme-sıkışma yayı (+ = basık / iniş, - = uzun / sıçrayış) */
+  private squash = 0;
+  private squashV = 0;
+  private wasGrounded = true;
+  private lastVy = 0;
+  /** Darbe parlaması: anında yanar, yumuşakça söner */
+  private flash = 0;
+  /** Koşarken dönüşe doğru yatma (motosiklet gibi, ayak ekseninde) */
+  private bank = 0;
+  private prevYaw: number | null = null;
   private castSide = 1;
   private idleTime = Math.random() * 10;
   /** Hazır 3D model yüklendiyse onun örneği (yoksa prosedürel iskelet çizilir). */
@@ -313,6 +323,11 @@ export class PlayerView {
       if (m.clips.length === 0) return;
     }
     this.model.playOnce(this.castSide > 0 && this.model.has('punch') ? 'punch' : 'cast');
+  }
+
+  /** Büyü / darbe hamlesi oynuyor mu (kollar gövdeden uzağa uzanır; görsel gövde payı genişler) */
+  get reaching(): boolean {
+    return this.castPulse > 0 || (this.model?.busy ?? false);
   }
 
   /** Darbe aldı: küçük darbede üst gövde sarsılır, büyükte geri savrulur */
@@ -579,6 +594,26 @@ export class PlayerView {
     const sliding = state === 'sliding' || heightRatio < 0.8;
     const gliding = state === 'gliding' || state === 'floating';
 
+    // Esneme-sıkışma: iniş basar, sıçrayış uzatır; yay ile birkaç kez esneyip oturur (canlı, "çizgi film" his)
+    const vy = v?.y ?? 0;
+    if (grounded && !this.wasGrounded && this.lastVy < -3) this.squashV += Math.min(2.6, 0.6 + (-this.lastVy - 3) * 0.16);
+    else if (!grounded && this.wasGrounded && vy > 3) this.squashV -= 1.5;
+    this.wasGrounded = grounded;
+    this.lastVy = vy;
+    {
+      const h = Math.min(dt, 1 / 30);
+      this.squashV += (-320 * this.squash - 20 * this.squashV) * h;
+      this.squash = Math.max(-0.16, Math.min(0.2, this.squash + this.squashV * h));
+    }
+    // Dönüşe yatma: hızlı koşarken yön değişimi gövdeyi ayaklardan içe doğru yatırır
+    const yawRate = this.prevYaw === null || dt <= 0 ? 0 : wrapAngle(yaw - this.prevYaw) / dt;
+    this.prevYaw = yaw;
+    const bankTarget = grounded && !sliding && !dashing ? Math.max(-0.1, Math.min(0.1, yawRate * 0.025 * Math.min(1, speed / run))) : 0;
+    this.bank += (bankTarget - this.bank) * damp(8, dt);
+    this.tilt.rotation.z = this.model && downed <= 0 && !this.anim.riding ? this.bank : 0;
+    const sq = this.anim.riding || downed > 0 ? 0 : this.squash;
+    this.tilt.scale.set(1 + sq * 0.55, 1 - sq, 1 + sq * 0.55);
+
     this.runBlend += ((grounded && !sliding ? Math.min(1, speed / run) : 0) - this.runBlend) * damp(12, dt);
     this.airBlend += ((grounded ? 0 : 1) - this.airBlend) * damp(10, dt);
     const dir = fwdSpeed < -0.5 ? -1 : 1;
@@ -731,6 +766,7 @@ export class PlayerView {
     this.armR.elbow.rotation.x = elR;
 
     // --- Renk / parlama
+    this.flash = hitFlash ? 1 : Math.max(0, this.flash - dt * 7);
     this.accentMat.color.setHex(elementColor);
     this.accentMat.emissive.setHex(elementColor);
     this.accentMat.emissiveIntensity = 0.35;
@@ -738,9 +774,10 @@ export class PlayerView {
     this.handMat.emissiveIntensity = Math.max(cp, p) * 1.2;
     for (const m of this.mats) {
       if (m === this.accentMat || m === this.handMat) continue;
-      if (hitFlash) {
-        m.emissive.setHex(0xffffff);
-        m.emissiveIntensity = 0.8;
+      if (this.flash > 0.02) {
+        // Beyazdan sıcak kırmızıya kayan, yumuşak sönen darbe parlaması
+        m.emissive.setRGB(1, 0.55 + 0.45 * this.flash, 0.45 + 0.55 * this.flash);
+        m.emissiveIntensity = 1.1 * this.flash;
       } else if (burning) {
         m.emissive.setHex(0xff5a1a);
         m.emissiveIntensity = 0.25 + Math.random() * 0.3;

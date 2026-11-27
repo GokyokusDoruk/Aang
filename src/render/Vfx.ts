@@ -50,10 +50,10 @@ export class Vfx {
   ) {
     const glow = glowTexture();
     const puff = puffTexture();
-    this.fire = new ParticleField(scene, Math.round(6000 * scale), glow, true);
-    this.fireBody = new ParticleField(scene, Math.round(4000 * scale), glow, false);
-    this.frost = new ParticleField(scene, Math.round(2000 * scale), glow, true);
-    this.wind = new ParticleField(scene, Math.round(2000 * scale), puff, true);
+    this.fire = new ParticleField(scene, Math.round(6000 * scale), glow, true, 2.8);
+    this.fireBody = new ParticleField(scene, Math.round(4000 * scale), glow, false, 1.8);
+    this.frost = new ParticleField(scene, Math.round(2000 * scale), glow, true, 1.8);
+    this.wind = new ParticleField(scene, Math.round(2000 * scale), puff, true, 1.3);
     this.smoke = new ParticleField(scene, Math.round(2000 * scale), puff, false);
     this.dust = new ParticleField(scene, Math.round(2000 * scale), puff, false);
     this.fields = [this.smoke, this.dust, this.frost, this.wind, this.fireBody, this.fire];

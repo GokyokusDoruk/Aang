@@ -4,6 +4,7 @@ import type { Projectile, ProjectileSystem } from '../combat/ProjectileSystem';
 import { boulderGeometry } from './rockGeometry';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { Vfx } from './Vfx';
+import { VFX_HDR } from './ParticleField';
 
 /** Buz saçağı: uzun, çok yüzlü sivri ana kristal + köküne yakın iki küçük yan saçak (ucu +Z) */
 function icicleGeometry(): THREE.BufferGeometry {
@@ -143,6 +144,10 @@ export class ProjectileView {
   }
 
   update(dt: number, alpha: number): void {
+    // Bloom açıkken ateş topu çekirdeği ve hava topu ışır
+    const k = VFX_HDR.value ? 1 : 0;
+    this.fireCore.color.setHex(0xffa050).multiplyScalar(1 + 1.6 * k);
+    this.airCore.color.setHex(0xffffff).multiplyScalar(1 + 0.4 * k);
     const seen = new Set<number>();
     for (const p of this.system.list) {
       seen.add(p.id);

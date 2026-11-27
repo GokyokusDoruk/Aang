@@ -23,6 +23,7 @@ import { DashView } from './render/DashView';
 import { HealView } from './render/HealView';
 import { ElementFxView } from './render/ElementFxView';
 import { TrailView } from './render/TrailView';
+import { BodyClearance } from './render/BodyClearance';
 import { Hud } from './ui/Hud';
 import { AbilityBar } from './ui/AbilityBar';
 import { WorldOverlay } from './ui/WorldOverlay';
@@ -55,13 +56,17 @@ camera.yaw = DefaultArena.spawnPoints[0].yaw;
 camera.aimProbe = (o, d, max) => raycastCombatants(o, d, max, session.combatants, 'player');
 
 // --- Render
-const gfx = new GameRenderer(app, isTouch);
+// Bloom + renk düzenleme: ?nofx ile kapatılır (düşük FPS'te kendiliğinden kapanır)
+const gfx = new GameRenderer(app, isTouch, !params.has('nofx'));
 gfx.scene.add(buildArenaView(DefaultArena));
 const decor = new ArenaDecor(DefaultArena, isTouch);
 gfx.scene.add(decor.group);
 const playerView = new PlayerView(gfx.scene);
 const botView = new PlayerView(gfx.scene, 0x9b5cff);
 const dummyViews = session.dummies.map(() => new PlayerView(gfx.scene, 0xe0603a));
+// Kol / bacaklar duvara, kasaya girmesin: çizilen model yakın engellerden hafifçe uzaklaşır (yalnızca görsel)
+const clearances = new Map<PlayerView, BodyClearance>([playerView, botView, ...dummyViews].map((v) => [v, new BodyClearance(session.world)]));
+const drawPos = new THREE.Vector3();
 // Hazır karakter modeli (public/models/character.glb) varsa prosedürel karakterin yerine geçer
 void loadCharacterAsset(GameConfig.player.height).then((asset) => {
   if (asset) for (const v of [playerView, botView, ...dummyViews]) v.attachModel(asset);
@@ -105,6 +110,8 @@ const feel = new GameFeel(
         ]
       : [],
   () => playerCtl.position,
+  player,
+  () => gfx.post,
 );
 // Yetenek çıktığı an karakter vuruş hamlesi yapar
 bus.on('ability:cast', (e) => {
@@ -229,6 +236,8 @@ bus.on('combat:damage', (e) => {
   if (e.targetId === 'player' && isTouch && e.kind !== 'burn') navigator.vibrate?.(35);
 });
 bus.on('combat:respawn', (e) => {
+  const v = e.targetId === 'player' ? playerView : e.targetId === 'bot' ? botView : dummyViews[session.dummies.findIndex((d) => d.id === e.targetId)];
+  if (v) clearances.get(v)?.reset();
   if (e.targetId === 'player') camera.snap();
 });
 bus.on('ability:denied', (e) => {
@@ -272,7 +281,9 @@ function drawFighter(view: PlayerView, c: Combatant, alpha: number, now: number,
   tmpPos.lerpVectors(ctl.prevPosition, ctl.position, alpha);
   const ratio = ctl.prevHeightRatio + (ctl.heightRatio - ctl.prevHeightRatio) * alpha;
   const flash = c.hitFlash > 0;
-  view.update(tmpPos, lerpAngle(ctl.prevFacingYaw, ctl.facingYaw, alpha), ratio, ctl.dashing, 10, elementColor, castProgress, motionOf(ctl), frameDt, flash, chillOf(c), c.burning, c.downedPose);
+  const yaw = lerpAngle(ctl.prevFacingYaw, ctl.facingYaw, alpha);
+  clearances.get(view)!.apply(tmpPos, yaw, GameConfig.player.height * ratio, frameDt, tmpPos, view.reaching || castProgress > 0);
+  view.update(tmpPos, yaw, ratio, ctl.dashing, 10, elementColor, castProgress, motionOf(ctl), frameDt, flash, chillOf(c), c.burning, c.downedPose);
 }
 
 /** El parlaması / hazırlık pozu: normal hazırlık ya da süren uzun basış (şarj dolarken artar). */
@@ -332,9 +343,11 @@ function frame(now: number): void {
   const blink = player.spawnProtected && Math.floor(now / 90) % 2 === 0;
   playerView.root.visible = session.running && player.alive && !blink;
   playerView.setAnimState(animStateOf(player, abilities));
+  const playerYaw = lerpAngle(playerCtl.prevFacingYaw, playerCtl.facingYaw, alpha);
+  clearances.get(playerView)!.apply(renderPos, playerYaw, GameConfig.player.height * ratio, dt, drawPos, playerView.reaching || castVisual(abilities) > 0);
   playerView.update(
-    renderPos,
-    lerpAngle(playerCtl.prevFacingYaw, playerCtl.facingYaw, alpha),
+    drawPos,
+    playerYaw,
     ratio,
     playerCtl.dashing,
     camera.currentDistance,
@@ -431,7 +444,7 @@ function frame(now: number): void {
     }
   }
 
-  gfx.render();
+  gfx.render(dt);
   requestAnimationFrame(frame);
 }
 
@@ -439,5 +452,5 @@ requestAnimationFrame(frame);
 
 // Tarayıcı konsolundan hata ayıklama / test için
 Object.assign(window as unknown as Record<string, unknown>, {
-  __game: { session, camera, input, menu, matchHud, config: GameConfig, startGame, playerView, effects },
+  __game: { session, camera, input, menu, matchHud, config: GameConfig, startGame, playerView, effects, clearances },
 });

@@ -19,6 +19,12 @@ export interface EmitOptions {
   turbulence?: number;
 }
 
+/**
+ * Paylaşılan HDR anahtarı: son işlem (bloom) açıkken 1. Parlayan alanlar (ateş, buz) o zaman 1'in
+ * üzerinde renk üretir ve bloom onları ışıtır; son işlem kapalıyken renkler eski hâlinde kalır.
+ */
+export const VFX_HDR = { value: 0 };
+
 const VERT = /* glsl */ `
 attribute float aSize;
 attribute float aAlpha;
@@ -39,6 +45,8 @@ void main() {
 
 const FRAG = /* glsl */ `
 uniform sampler2D uMap;
+uniform float uGlow;
+uniform float uHdr;
 varying float vAlpha;
 varying vec3 vColor;
 varying float vRot;
@@ -49,7 +57,9 @@ void main() {
   vec4 t = texture2D(uMap, p);
   float a = t.a * vAlpha;
   if (a < 0.003) discard;
-  gl_FragColor = vec4(vColor * t.rgb, a);
+  // Parçacığın sıcak çekirdeği (dokunun yoğun kısmı) HDR'de daha parlak
+  float boost = 1.0 + (uGlow - 1.0) * uHdr * t.a;
+  gl_FragColor = vec4(vColor * t.rgb * boost, a);
 }`;
 
 export class ParticleField {
@@ -79,6 +89,8 @@ export class ParticleField {
     private readonly max: number,
     map: THREE.Texture,
     additive: boolean,
+    /** HDR parlaklık çarpanı (bloom açıkken); 1 = parlamaz */
+    glow = 1,
   ) {
     const n = max;
     this.pos = new Float32Array(n * 3).fill(-1e4);
@@ -107,7 +119,7 @@ export class ParticleField {
     const mat = new THREE.ShaderMaterial({
       vertexShader: VERT,
       fragmentShader: FRAG,
-      uniforms: { uMap: { value: map }, uScale: { value: 600 } },
+      uniforms: { uMap: { value: map }, uScale: { value: 600 }, uGlow: { value: glow }, uHdr: VFX_HDR },
       transparent: true,
       depthWrite: false,
       blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending,
