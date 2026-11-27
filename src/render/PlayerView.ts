@@ -325,6 +325,11 @@ export class PlayerView {
     this.model.playOnce(this.castSide > 0 && this.model.has('punch') ? 'punch' : 'cast');
   }
 
+  /** Büyü / darbe hamlesi oynuyor mu (kollar gövdeden uzağa uzanır; görsel gövde payı genişler) */
+  get reaching(): boolean {
+    return this.castPulse > 0 || (this.model?.busy ?? false);
+  }
+
   /** Darbe aldı: küçük darbede üst gövde sarsılır, büyükte geri savrulur */
   triggerHit(amount: number): void {
     if (!this.model || this.anim.downedProgress > 0 || this.anim.waterSphere) return;
