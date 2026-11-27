@@ -55,7 +55,8 @@ camera.yaw = DefaultArena.spawnPoints[0].yaw;
 camera.aimProbe = (o, d, max) => raycastCombatants(o, d, max, session.combatants, 'player');
 
 // --- Render
-const gfx = new GameRenderer(app, isTouch);
+// Bloom + renk düzenleme: ?nofx ile kapatılır (düşük FPS'te kendiliğinden kapanır)
+const gfx = new GameRenderer(app, isTouch, !params.has('nofx'));
 gfx.scene.add(buildArenaView(DefaultArena));
 const decor = new ArenaDecor(DefaultArena, isTouch);
 gfx.scene.add(decor.group);
@@ -105,6 +106,8 @@ const feel = new GameFeel(
         ]
       : [],
   () => playerCtl.position,
+  player,
+  () => gfx.post,
 );
 // Yetenek çıktığı an karakter vuruş hamlesi yapar
 bus.on('ability:cast', (e) => {
@@ -431,7 +434,7 @@ function frame(now: number): void {
     }
   }
 
-  gfx.render();
+  gfx.render(dt);
   requestAnimationFrame(frame);
 }
 

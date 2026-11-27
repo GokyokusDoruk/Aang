@@ -3,6 +3,10 @@ import { ELEMENTS, type ElementId } from '../abilities/elements';
 import type { GameEvents } from '../abilities/types';
 import type { EventBus } from '../core/EventBus';
 import { boulderGeometry } from './rockGeometry';
+import { VFX_HDR } from './ParticleField';
+
+/** Bloom açıkken parlak efekt rengini 1'in üzerine taşır (ışıma); kapalıyken olduğu gibi. */
+const hdr = (color: number, k: number) => new THREE.Color(color).multiplyScalar(VFX_HDR.value ? k : 1);
 
 const ROCK_COLOR = 0x857d74;
 const DUST_COLOR = 0xb89a74;
@@ -82,6 +86,8 @@ export class EffectsView {
     // Yanma: her hasar anında gövdeden yükselen kıvılcım
     bus.on('combat:damage', (e) => e.kind === 'burn' && this.debris(e.point, UP, FIRE_COLOR, 4, 0.06, 3));
     bus.on('combat:burn', (e) => this.dust(e.point, FIRE_COLOR, 0.7));
+    // Nakavt: ışık sütunu + yerde genişleyen şok halkası + kıvılcım yağmuru
+    bus.on('combat:damage', (e) => e.killed && this.knockout(e.point));
     bus.on('combat:downed', (e) => this.dust(e.point, DUST_COLOR, 1.4));
     bus.on('fx:lightning', (e) => this.lightning(e));
     bus.on('fx:burst', (e) => {
@@ -163,8 +169,8 @@ export class EffectsView {
       this.groundRing(e.point, e.radius, 0xff3010);
       return;
     }
-    const core = new THREE.MeshBasicMaterial({ color: air ? 0xffffff : 0xfff3b0, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
-    const shell = new THREE.MeshBasicMaterial({ color: air ? 0xa9dcff : 0xff2a08, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+    const core = new THREE.MeshBasicMaterial({ color: hdr(air ? 0xffffff : 0xfff3b0, 2.4), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+    const shell = new THREE.MeshBasicMaterial({ color: hdr(air ? 0xa9dcff : 0xff2a08, 1.8), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
     const a = new THREE.Mesh(this.sphere, core);
     const b = new THREE.Mesh(this.sphere, shell);
     a.position.copy(e.point);
@@ -275,7 +281,7 @@ export class EffectsView {
       [0.03, 0xb88cff, 2.4, 0.6],
     ] as const) {
       const geo = new THREE.TubeGeometry(build(jag), 48, radius, 5, false);
-      const mat = new THREE.MeshBasicMaterial({ color, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+      const mat = new THREE.MeshBasicMaterial({ color: hdr(color, 2.6), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
       const mesh = new THREE.Mesh(geo, mat);
       this.add({
         obj: mesh,
@@ -296,7 +302,7 @@ export class EffectsView {
   /** Hızlı, kısa ömürlü parlak kıvılcımlar (toplamalı) */
   private sparks(at: THREE.Vector3, color: number, count: number): void {
     count = Math.max(2, Math.round(count * this.effectScale));
-    const mat = new THREE.MeshBasicMaterial({ color, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+    const mat = new THREE.MeshBasicMaterial({ color: hdr(color, 3), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
     for (let i = 0; i < count; i++) {
       const m = new THREE.Mesh(this.sphere, mat);
       m.position.copy(at);
@@ -420,6 +426,111 @@ export class EffectsView {
         },
       });
     }
+  }
+
+  /** İniş: zeminde yayılan toz halkası + yanlara savrulan puflar. strength ~0.6..1.7 */
+  landDust(at: THREE.Vector3, strength: number): void {
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0xe8dcc8, transparent: true, side: THREE.DoubleSide, depthWrite: false });
+    const ring = new THREE.Mesh(this.ring, ringMat);
+    ring.position.set(at.x, at.y + 0.04, at.z);
+    ring.rotation.x = -Math.PI / 2;
+    this.add({
+      obj: ring,
+      mats: [ringMat],
+      life: 0,
+      max: 0.42,
+      tick: (t) => {
+        const e = 1 - (1 - t) * (1 - t) * (1 - t); // easeOutCubic
+        ring.scale.setScalar(0.25 + strength * 1.1 * e);
+        ringMat.opacity = 0.55 * (1 - t) * Math.min(1, strength);
+      },
+    });
+    const n = Math.max(3, Math.round(6 * strength * this.effectScale));
+    const mat = new THREE.MeshBasicMaterial({ color: DUST_COLOR, transparent: true, depthWrite: false });
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2 + Math.random() * 0.5;
+      const v = new THREE.Vector3(Math.cos(a), 0.25 + Math.random() * 0.3, Math.sin(a)).multiplyScalar(2.2 + strength * 2.2);
+      const m = new THREE.Mesh(this.sphere, mat);
+      m.position.set(at.x, at.y + 0.1, at.z);
+      const size = 0.12 + Math.random() * 0.1 * strength;
+      this.add({
+        obj: m,
+        mats: i === 0 ? [mat] : [],
+        life: 0,
+        max: 0.5 + Math.random() * 0.2,
+        tick: (t, dt) => {
+          v.multiplyScalar(1 - Math.min(1, 5 * dt));
+          m.position.addScaledVector(v, dt);
+          m.scale.setScalar(size * (0.6 + t * 1.6));
+          mat.opacity = 0.5 * (1 - t);
+        },
+      });
+    }
+  }
+
+  /** Nakavt patlaması (final vuruşu ağır çekimiyle birlikte görülür) */
+  private knockout(at: THREE.Vector3): void {
+    const ground = new THREE.Vector3(at.x, Math.max(0, at.y - 0.9), at.z);
+    // Işık sütunu
+    const beamMat = new THREE.MeshBasicMaterial({ color: hdr(0xfff1c4, 2.2), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+    const beam = new THREE.Mesh(this.sphere, beamMat);
+    beam.position.copy(ground);
+    this.add({
+      obj: beam,
+      mats: [beamMat],
+      life: 0,
+      max: 0.7,
+      tick: (t) => {
+        const w = 0.55 * (1 - t) + 0.05;
+        beam.scale.set(w, 6 * Math.min(1, t * 5), w);
+        beamMat.opacity = (1 - t) * (1 - t);
+      },
+    });
+    // İki kademeli şok halkası
+    for (const [delay, size, color] of [
+      [0, 5, 0xffffff],
+      [0.08, 3.2, 0xffc060],
+    ] as const) {
+      const mat = new THREE.MeshBasicMaterial({ color: hdr(color, 1.8), transparent: true, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending });
+      const ring = new THREE.Mesh(this.ring, mat);
+      ring.position.set(ground.x, ground.y + 0.06, ground.z);
+      ring.rotation.x = -Math.PI / 2;
+      this.add({
+        obj: ring,
+        mats: [mat],
+        life: -delay,
+        max: 0.55,
+        tick: (t) => {
+          const k = Math.max(0, t);
+          const e = 1 - (1 - k) * (1 - k) * (1 - k);
+          ring.scale.setScalar(0.3 + size * e);
+          mat.opacity = k > 0 ? (1 - k) * 0.9 : 0;
+        },
+      });
+    }
+    this.sparks(at, 0xffd27a, 18);
+    this.sparks(at, 0xffffff, 8);
+  }
+
+  /** Koşu adımı: ayağın arkasında küçük, yükselip dağılan toz pufu */
+  footDust(at: THREE.Vector3, speedK: number): void {
+    if (this.effectScale < 1 && Math.random() > this.effectScale) return;
+    const mat = new THREE.MeshBasicMaterial({ color: 0xd8c6a8, transparent: true, depthWrite: false });
+    const m = new THREE.Mesh(this.sphere, mat);
+    m.position.copy(at);
+    const rise = 0.4 + Math.random() * 0.3;
+    const size = 0.09 + 0.05 * Math.min(2, speedK);
+    this.add({
+      obj: m,
+      mats: [mat],
+      life: 0,
+      max: 0.45,
+      tick: (t, dt) => {
+        m.position.y += rise * dt * (1 - t);
+        m.scale.set(size * (0.5 + t * 1.4), size * (0.4 + t), size * (0.5 + t * 1.4));
+        mat.opacity = 0.32 * (1 - t) * (1 - t);
+      },
+    });
   }
 
   /** Genişleyen toz halkası */

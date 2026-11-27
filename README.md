@@ -15,6 +15,7 @@ npm run build      # typecheck + production build
 
 - Masaüstünde dokunmatik arayüzü zorlamak için: `http://localhost:5173/?touch`
 - FPS / durum panelini göstermek için: `?debug` (yayında varsayılan olarak gizli)
+- Bloom + renk düzenleme (son işlem) kapatmak için: `?nofx` (FPS uzun süre düşük kalırsa kendiliğinden kapanır)
 - Canlı adres: https://aang.dorukplays.com (Cloudflare Pages, `main` dalından otomatik derlenir)
 - Konsolda hata ayıklama: `__game.player`, `__game.camera`, `__game.config`
 
