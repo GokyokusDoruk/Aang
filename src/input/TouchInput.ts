@@ -1,5 +1,6 @@
 import { GameConfig } from '../config/gameConfig';
 import type { Action, InputSink, InputSource } from './InputActions';
+import { initMobileLayout, mobileMetrics, onMobileLayout } from '../ui/MobileLayout';
 
 interface ButtonDef {
   action: Action;
@@ -15,6 +16,8 @@ export const TOUCH_BUTTONS: ButtonDef[] = [
   { action: 'jump', label: 'ZIPLA', cls: 'jump' },
   { action: 'dash', label: 'DASH', cls: 'dash' },
   { action: 'slide', label: 'KAY', cls: 'slide' },
+  // Başparmak yanında element değiştirme kısayolu (üstteki çiplere uzanmadan)
+  { action: 'elementNext', label: 'ELEMENT', cls: 'elem' },
 ];
 
 /**
@@ -47,7 +50,7 @@ export class TouchInput implements InputSource {
     const signal = this.ac.signal;
     this.ui = document.createElement('div');
     this.ui.className = 'touch-ui';
-    this.ui.style.setProperty('--joy-r', `${GameConfig.input.joystickRadius}px`);
+    initMobileLayout();
 
     this.joyBase = document.createElement('div');
     this.joyBase.className = 'joy-base';
@@ -65,16 +68,26 @@ export class TouchInput implements InputSource {
     this.ui.appendChild(reset);
 
     root.appendChild(this.ui);
-    this.placeJoystickRest();
+    this.applyScale();
+    onMobileLayout(() => this.applyScale());
 
     root.addEventListener('pointerdown', (e) => this.onDown(e), { signal });
     root.addEventListener('pointermove', (e) => this.onMove(e), { signal });
     root.addEventListener('pointerup', (e) => this.onUp(e), { signal });
     root.addEventListener('pointercancel', (e) => this.onUp(e), { signal });
-    window.addEventListener('resize', () => this.joyId === null && this.placeJoystickRest(), { signal });
     // iOS Safari: pinch-zoom / çift dokunma jestlerini engelle
     document.addEventListener('gesturestart', (e) => e.preventDefault(), { signal, passive: false } as AddEventListenerOptions);
-    document.addEventListener('touchmove', (e) => e.preventDefault(), { signal, passive: false });
+    // Sayfa kaymasın / yakınlaşmasın; yalnızca kaydırılabilir menü kartı (alçak ekranlarda) kayabilir
+    document.addEventListener(
+      'touchmove',
+      (e) => {
+        if (e.touches.length === 1 && (e.target as Element | null)?.closest?.('.menu .card')) return;
+        e.preventDefault();
+      },
+      { signal, passive: false },
+    );
+    // Uzun basınca açılan bağlam menüsü / metin seçimi (Android) oyunu bölmesin
+    document.addEventListener('contextmenu', (e) => e.preventDefault(), { signal });
   }
 
   /** 0 = hazır, 1 = yeni kullanıldı */
@@ -162,10 +175,22 @@ export class TouchInput implements InputSource {
     return el;
   }
 
+  /** Ekran boyutuna göre ölçeklenmiş joystick yarıçapı (px) */
+  private get joyR(): number {
+    return Math.round(GameConfig.input.joystickRadius * mobileMetrics.scale);
+  }
+
+  private applyScale(): void {
+    this.ui.style.setProperty('--joy-r', `${this.joyR}px`);
+    if (this.joyId === null) this.placeJoystickRest();
+  }
+
+  /** Joystick'in boştayken durduğu yer: sol alt köşe, çentik / alt çubuk güvenli alanının içinde */
   private placeJoystickRest(): void {
-    const r = GameConfig.input.joystickRadius;
-    const x = r + 36;
-    const y = window.innerHeight - r - 36;
+    const r = this.joyR;
+    const m = mobileMetrics.inset;
+    const x = r + 28 + m.left;
+    const y = window.innerHeight - r - (mobileMetrics.portrait ? 44 : 28) - m.bottom;
     this.joyBase.style.left = `${x}px`;
     this.joyBase.style.top = `${y}px`;
     this.joyKnob.style.transform = 'translate(0px, 0px)';
@@ -177,7 +202,7 @@ export class TouchInput implements InputSource {
     const inJoyZone = e.clientX < window.innerWidth * GameConfig.input.joystickZoneWidth;
     if (inJoyZone && this.joyId === null) {
       this.joyId = e.pointerId;
-      const r = GameConfig.input.joystickRadius;
+      const r = this.joyR;
       // Taban ekran dışına taşmasın
       this.joyCx = Math.max(r + 8, Math.min(window.innerWidth - r - 8, e.clientX));
       this.joyCy = Math.max(r + 8, Math.min(window.innerHeight - r - 8, e.clientY));
@@ -217,7 +242,7 @@ export class TouchInput implements InputSource {
   }
 
   private updateJoystick(px: number, py: number): void {
-    const r = GameConfig.input.joystickRadius;
+    const r = this.joyR;
     let dx = px - this.joyCx;
     let dy = py - this.joyCy;
     const len = Math.hypot(dx, dy);

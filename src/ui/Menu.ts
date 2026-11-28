@@ -55,9 +55,10 @@ export class Menu {
   private controls(): string {
     return this.touch
       ? `<ul class="help">
-          <li>Sol yarı: hareket · Sağ yarı: bakış</li>
-          <li>Üstteki çipler: element seç</li>
+          <li>Sol yarı: hareket · Sağ yarı: sürükleyerek bakış</li>
+          <li>Element: üstteki çipler veya sağdaki element butonu</li>
           <li>Sağ alt: saldırı, yetenek, zıpla, dash, kay</li>
+          <li>Yetenek butonunu basılı tut: güçlü versiyon</li>
         </ul>`
       : `<ul class="help">
           <li><b>WASD</b> hareket · <b>Fare</b> bakış · <b>Space</b> zıpla</li>
@@ -77,6 +78,7 @@ export class Menu {
        <div class="segs">${diffs}</div>
        <button class="btn primary" id="m-match">Bota Karşı Maç</button>
        <button class="btn" id="m-train">Antrenman (Kuklalar)</button>
+       ${this.touch ? '<p class="rotate-hint">📱↻ En rahat oyun için telefonu yan çevir</p>' : ''}
        ${this.controls()}`,
       {
         '#m-match': () => this.cb.onStart('match', this.difficulty),

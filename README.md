@@ -15,6 +15,7 @@ npm run build      # typecheck + production build
 
 - Masaüstünde dokunmatik arayüzü zorlamak için: `http://localhost:5173/?touch`
 - FPS / durum panelini göstermek için: `?debug` (yayında varsayılan olarak gizli)
+- Mobil yerleşim: dokunmatik butonlar ve joystick ekranın kısa kenarına göre ölçeklenir (`src/ui/MobileLayout.ts`); dikey ve yatay için ayrı yerleşim, çentik güvenli alanları. Masaüstü (fareli) görünüm bu kurallardan etkilenmez.
 - Bloom + renk düzenleme (son işlem) kapatmak için: `?nofx` (FPS uzun süre düşük kalırsa kendiliğinden kapanır)
 - Canlı adres: https://aang.dorukplays.com (Cloudflare Pages, `main` dalından otomatik derlenir)
 - Konsolda hata ayıklama: `__game.player`, `__game.camera`, `__game.config`
@@ -29,7 +30,7 @@ npm run build      # typecheck + production build
 | Dash (havada 1 kez) | Shift | DASH |
 | Kayma / eğilme | C (basılı tut = eğik kal, eğikken yürü ve ateş et) | KAY (basılı tut) |
 | Yeniden doğ | R | ↺ |
-| Element seç | 1-4 · Q · fare tekerleği | Üstteki element çipleri |
+| Element seç | 1-4 · Q · fare tekerleği | Üstteki element çipleri · sağ kümedeki element butonu (sıradakine geçer) |
 | Ana / ikincil yetenek | Sol tık (basılı tut = tekrar) / Sağ tık | Büyük / küçük yetenek butonu (aktif yeteneğin ikonu ve adı) |
 | 3. yetenek (her elementte; basılı tutunca güçlü versiyonu) | E | Yetenek butonlarının solundaki 3. buton |
 | Ses aç/kapa | M | Menüdeki ses düğmesi |

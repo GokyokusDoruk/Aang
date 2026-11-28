@@ -29,7 +29,7 @@ import { AbilityBar } from './ui/AbilityBar';
 import { WorldOverlay } from './ui/WorldOverlay';
 import { PlayerStatus } from './ui/PlayerStatus';
 import { MatchHud } from './ui/MatchHud';
-import { abilityIcon } from './ui/icons';
+import { abilityIcon, elementIcon } from './ui/icons';
 import { ABILITY_SLOTS } from './abilities/types';
 import { SoundSystem } from './audio/SoundSystem';
 import { Menu } from './ui/Menu';
@@ -228,6 +228,8 @@ function refreshTouchLabels(): void {
     input.touch?.setButton(slot, def?.name ?? '—', color, def ? abilityIcon(def.id, abilities.activeElement) : '');
     input.touch?.setEmpty(slot, !def);
   }
+  // Element kısayolu: aktif elementin ikonu; dokununca sıradakine geçer
+  input.touch?.setButton('elementNext', ELEMENTS[abilities.activeElement].short, color, elementIcon(abilities.activeElement));
 }
 refreshTouchLabels();
 bus.on('element:changed', (e) => e.casterId === 'player' && refreshTouchLabels());
